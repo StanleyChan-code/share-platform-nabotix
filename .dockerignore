@@ -1,0 +1,18 @@
+# 忽略不必要的文件
+.git
+.gitignore
+README.md
+Dockerfile
+docker-compose.yml
+deploy.ps1
+manage.ps1
+node_modules
+npm-debug.log
+yarn-error.log
+.env
+.env.local
+.vscode
+.idea
+*.log
+*.tmp
+*.temp

@@ -1,0 +1,61 @@
+-- Create sample research outputs with correct enum values
+INSERT INTO public.research_outputs (
+  id, 
+  dataset_id, 
+  submitter_id, 
+  title, 
+  abstract, 
+  type, 
+  publication_url, 
+  citation_count
+) VALUES 
+(
+  gen_random_uuid(),
+  gen_random_uuid(), -- fake dataset ID for now
+  gen_random_uuid(), -- fake user ID for now  
+  '基于多中心数据的心血管风险预测模型', 
+  '本研究基于华西医院等多中心冠心病队列数据，采用机器学习方法构建心血管风险预测模型。研究纳入2847例患者，建立了包含临床指标、生化指标的综合预测模型，AUC达到0.85，为临床风险评估提供了有效工具。', 
+  'paper', 
+  'https://doi.org/10.1161/CIRCULATIONAHA.123.456789', 
+  12
+),
+(
+  gen_random_uuid(),
+  gen_random_uuid(),
+  gen_random_uuid(),
+  '糖尿病并发症早期识别算法研究', 
+  '基于1563例2型糖尿病患者的生物标志物数据，开发了糖尿病并发症早期识别算法。研究发现多个新的预警指标，算法敏感性达92%，特异性达88%，为糖尿病并发症的早期干预提供了科学依据。', 
+  'paper', 
+  'https://doi.org/10.2337/dc23-1234', 
+  8
+),
+(
+  gen_random_uuid(),
+  gen_random_uuid(),
+  gen_random_uuid(),
+  '脑卒中康复效果影响因素分析', 
+  '通过对892例急性脑卒中患者康复数据的分析，识别了影响康复效果的关键因素。研究建立了康复效果预测模型，为个体化康复方案制定提供了参考，相关成果已应用于临床实践。', 
+  'paper', 
+  'https://doi.org/10.1161/STROKEAHA.123.789012', 
+  5
+),
+(
+  gen_random_uuid(),
+  gen_random_uuid(),
+  gen_random_uuid(),
+  '肺癌精准治疗靶点发现专利', 
+  '基于肺癌基因组学数据发现的新型治疗靶点，已申请国家发明专利。该靶点在非小细胞肺癌中具有重要作用，为肺癌精准治疗提供了新的方向。', 
+  'patent', 
+  NULL, 
+  2
+),
+(
+  gen_random_uuid(),
+  gen_random_uuid(),
+  gen_random_uuid(),
+  '心血管疾病风险评估系统专利', 
+  '基于冠心病队列研究数据开发的心血管疾病风险评估系统，已获得国家发明专利。该系统整合了多项临床指标，能够快速准确地评估患者心血管风险。', 
+  'patent', 
+  NULL, 
+  0
+);
