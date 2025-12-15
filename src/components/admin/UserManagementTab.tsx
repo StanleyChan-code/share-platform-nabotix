@@ -4,7 +4,7 @@ import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/c
 import {Badge} from "@/components/ui/badge";
 import {supabase} from "@/integrations/supabase/client";
 import {useEffect, useState} from "react";
-import {getRoleDisplayName} from "@/lib/roleUtils";
+import {getPermissionRoleDisplayName} from "@/lib/permissionUtils";
 import AddUserToInstitutionForm from "@/components/admin/AddUserToInstitutionForm";
 
 const UserManagementTab = ({institutionId}: { institutionId?: string }) => {
@@ -26,7 +26,8 @@ const UserManagementTab = ({institutionId}: { institutionId?: string }) => {
         if (users && users.length > 0) {
             const fetchUserRoles = async () => {
                 const userIds = users.map(user => user.id);
-
+                
+                // TODO: 迁移到新的API端点获取用户权限角色
                 const {data: rolesData, error} = await supabase
                     .from('user_roles')
                     .select('user_id, role')
@@ -79,12 +80,14 @@ const UserManagementTab = ({institutionId}: { institutionId?: string }) => {
                 <CardHeader>
                     <CardTitle>用户管理</CardTitle>
                     <CardDescription>
-                        {institutionId ? "查看和管理机构内的用户" : "查看和管理所有注册用户"}
+                        管理平台用户及其权限角色
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                     {usersLoading ? (
-                        <div>正在加载用户...</div>
+                        <div className="flex items-center justify-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        </div>
                     ) : (
                         <Table>
                             <TableHeader>
@@ -103,7 +106,7 @@ const UserManagementTab = ({institutionId}: { institutionId?: string }) => {
                                         <TableCell>
                                             {userRoles[user.id]?.map((role, index) => (
                                                 <Badge key={index} variant="outline" className="mr-1">
-                                                    {getRoleDisplayName(role)}
+                                                    {getPermissionRoleDisplayName(role)}
                                                 </Badge>
                                             ))}
                                         </TableCell>

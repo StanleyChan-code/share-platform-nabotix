@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,62 +6,158 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { User, Session } from "@supabase/supabase-js";
-import { Shield, Mail, Lock, User as UserIcon } from "lucide-react";
+import {api, ApiError} from "@/integrations/api/client";
+import { login, register, sendVerificationCode } from "@/integrations/api/authApi.ts";
+import { Shield, Phone, Lock, User as UserIcon, Mail, Send } from "lucide-react";
 
 const Auth = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<any | null>(null);
+  const [session, setSession] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState("");
+  const [sendCodeLoading, setSendCodeLoading] = useState(false);
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [username, setUsername] = useState("");
   const [realName, setRealName] = useState("");
+  const [email, setEmail] = useState("");
   const [activeTab, setActiveTab] = useState("login");
+  const [loginType, setLoginType] = useState("PASSWORD"); // PASSWORD or VERIFICATION_CODE
+  const [loginCountdown, setLoginCountdown] = useState(0); // 登录验证码倒计时状态
+  const [signupCountdown, setSignupCountdown] = useState(0); // 注册验证码倒计时状态
+  const loginCountdownRef = useRef<NodeJS.Timeout | null>(null);
+  const signupCountdownRef = useRef<NodeJS.Timeout | null>(null);
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // 清理定时器
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Redirect authenticated users to home page
-        if (session?.user) {
-          navigate('/');
-        }
+    return () => {
+      if (loginCountdownRef.current) {
+        clearInterval(loginCountdownRef.current);
       }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        navigate('/');
+      if (signupCountdownRef.current) {
+        clearInterval(signupCountdownRef.current);
       }
-    });
+    };
+  }, []);
 
-    // Check if we came from email verification
-    const tab = searchParams.get("tab");
-    if (tab) {
-      setActiveTab(tab);
+  // 处理登录倒计时
+  useEffect(() => {
+    if (loginCountdown > 0) {
+      loginCountdownRef.current = setTimeout(() => {
+        setLoginCountdown(loginCountdown - 1);
+      }, 1000);
+    }
+    return () => {
+      if (loginCountdownRef.current) {
+        clearTimeout(loginCountdownRef.current);
+      }
+    };
+  }, [loginCountdown]);
+
+  // 处理注册倒计时
+  useEffect(() => {
+    if (signupCountdown > 0) {
+      signupCountdownRef.current = setTimeout(() => {
+        setSignupCountdown(signupCountdown - 1);
+      }, 1000);
+    }
+    return () => {
+      if (signupCountdownRef.current) {
+        clearTimeout(signupCountdownRef.current);
+      }
+    };
+  }, [signupCountdown]);
+
+  const handleSendVerificationCode = async (businessType: string) => {
+    if (!phone) {
+      toast({
+        title: "错误",
+        description: "请输入手机号。",
+        variant: "destructive",
+      });
+      return;
     }
 
-    return () => subscription.unsubscribe();
-  }, [navigate, searchParams]);
+    // 根据业务类型检查对应的倒计时
+    if (businessType === "LOGIN" && loginCountdown > 0) {
+      toast({
+        title: "提示",
+        description: `请在 ${loginCountdown} 秒后重新发送验证码`,
+      });
+      return;
+    }
+    
+    if (businessType === "REGISTER" && signupCountdown > 0) {
+      toast({
+        title: "提示",
+        description: `请在 ${signupCountdown} 秒后重新发送验证码`,
+      });
+      return;
+    }
+
+    setSendCodeLoading(true);
+    try {
+      const response = await sendVerificationCode(phone, businessType);
+
+      if (response.data.success) {
+        toast({
+          title: "发送成功",
+          description: "验证码已发送至您的手机。",
+        });
+        // 根据业务类型启动对应倒计时
+        if (businessType === "LOGIN") {
+          setLoginCountdown(60);
+        } else if (businessType === "REGISTER") {
+          setSignupCountdown(60);
+        }
+      } else {
+        toast({
+          title: "发送失败",
+          description: response.data.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      toast({
+        title: "错误",
+        description: apiError.response?.data?.message || "发送验证码过程中发生错误。",
+        variant: "destructive",
+      });
+    } finally {
+      setSendCodeLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
+    
+    if (!phone) {
       toast({
         title: "错误",
-        description: "请填写邮箱和密码。",
+        description: "请输入手机号。",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (loginType === "PASSWORD" && !password) {
+      toast({
+        title: "错误",
+        description: "请输入密码。",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (loginType === "VERIFICATION_CODE" && !verificationCode) {
+      toast({
+        title: "错误",
+        description: "请输入验证码。",
         variant: "destructive",
       });
       return;
@@ -69,27 +165,43 @@ const Auth = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const requestData: any = {
+        phone,
+        loginType
+      };
 
-      if (error) {
-        toast({
-          title: "登录失败",
-          description: error.message,
-          variant: "destructive",
-        });
+      if (loginType === "PASSWORD") {
+        requestData.password = password;
       } else {
+        requestData.verificationCode = verificationCode;
+      }
+
+      const response = await login(requestData);
+
+      if (response.data.success) {
+        const token = response.data.data.token;
+        api.setAuthToken(token);
+        localStorage.setItem('authToken', token); // 保存令牌到localStorage
+        setUser({ id: response.data.data.user.id, user: response.data.data.user });
+        setSession({ token });
         toast({
           title: "登录成功",
           description: "欢迎回来！",
         });
+        navigate('/');
+      } else {
+        toast({
+          title: "登录失败",
+          description: response.data.message || "登录失败，请稍后重试。",
+          variant: "destructive",
+        });
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      console.error("Login error:", error);
       toast({
         title: "错误",
-        description: "登录过程中发生错误。",
+        description: apiError.response?.data?.message || "登录过程中发生错误。",
         variant: "destructive",
       });
     } finally {
@@ -99,7 +211,7 @@ const Auth = () => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password || !confirmPassword || !realName) {
+    if (!phone || !verificationCode || !username || !realName || !password) {
       toast({
         title: "错误",
         description: "请填写所有必填字段。",
@@ -128,37 +240,34 @@ const Auth = () => {
 
     setLoading(true);
     try {
-      const redirectUrl = `${window.location.origin}/auth/v1/verify`;
-      
-      const { error } = await supabase.auth.signUp({
+      const response = await register({
+        phone,
+        verificationCode,
+        username,
+        realName,
         email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            real_name: realName,
-          }
-        }
+        password
       });
 
-      if (error) {
-        toast({
-          title: "注册失败",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
+      if (response.data.success) {
         toast({
           title: "注册成功",
-          description: "请检查您的邮箱以确认账户。",
+          description: "账户已创建，请登录。",
         });
         // Switch to login tab after successful signup
         setActiveTab("login");
+      } else {
+        toast({
+          title: "注册失败",
+          description: response.data.message,
+          variant: "destructive",
+        });
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       toast({
         title: "错误",
-        description: "注册过程中发生错误。",
+        description: apiError.response?.data?.message || "注册过程中发生错误。",
         variant: "destructive",
       });
     } finally {
@@ -188,35 +297,81 @@ const Auth = () => {
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="login-email">邮箱</Label>
+                  <Label htmlFor="login-phone">手机号</Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
-                      id="login-email"
-                      type="email"
-                      placeholder="请输入邮箱"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      id="login-phone"
+                      type="tel"
+                      placeholder="请输入手机号"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
                       className="pl-10"
                       required
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">密码</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="login-password"
-                      type="password"
-                      placeholder="请输入密码"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10"
-                      required
-                    />
-                  </div>
+                
+                <div className="flex space-x-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setLoginType("PASSWORD")}
+                    className={loginType === "PASSWORD" ? "bg-primary text-primary-foreground" : ""}
+                  >
+                    密码登录
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setLoginType("VERIFICATION_CODE")}
+                    className={loginType === "VERIFICATION_CODE" ? "bg-primary text-primary-foreground" : ""}
+                  >
+                    验证码登录
+                  </Button>
                 </div>
+                
+                {loginType === "PASSWORD" ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="login-password">密码</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="login-password"
+                        type="password"
+                        placeholder="请输入密码"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="pl-10"
+                        required
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="login-verification-code">验证码</Label>
+                    <div className="flex space-x-2">
+                      <div className="relative flex-1">
+                        <Input
+                          id="login-verification-code"
+                          type="text"
+                          placeholder="请输入验证码"
+                          value={verificationCode}
+                          onChange={(e) => setVerificationCode(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <Button 
+                        type="button" 
+                        onClick={() => handleSendVerificationCode("LOGIN")}
+                        disabled={sendCodeLoading || !phone || loginCountdown > 0}
+                      >
+                        {sendCodeLoading ? "发送中..." : loginCountdown > 0 ? `${loginCountdown}秒后重发` : "发送"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "登录中..." : "登录"}
                 </Button>
@@ -226,11 +381,67 @@ const Auth = () => {
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-name">真实姓名</Label>
+                  <Label htmlFor="signup-phone">手机号 *</Label>
+                  <div className="flex space-x-2">
+                    <div className="relative flex-1">
+                      <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="signup-phone"
+                        type="tel"
+                        placeholder="请输入手机号"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="pl-10"
+                        required
+                      />
+                    </div>
+                    <Button 
+                      type="button" 
+                      onClick={() => handleSendVerificationCode("REGISTER")}
+                      disabled={sendCodeLoading || !phone || signupCountdown > 0}
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      {sendCodeLoading ? "发送中..." : signupCountdown > 0 ? `${signupCountdown}秒后重发` : "发送"}
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="signup-verification-code">验证码 *</Label>
+                  <div className="relative">
+                    <Input
+                      id="signup-verification-code"
+                      type="text"
+                      placeholder="请输入验证码"
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="signup-username">用户名 *</Label>
                   <div className="relative">
                     <UserIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
-                      id="signup-name"
+                      id="signup-username"
+                      type="text"
+                      placeholder="请输入用户名"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="signup-realname">真实姓名 *</Label>
+                  <div className="relative">
+                    <UserIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="signup-realname"
                       type="text"
                       placeholder="请输入真实姓名"
                       value={realName}
@@ -240,6 +451,7 @@ const Auth = () => {
                     />
                   </div>
                 </div>
+                
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">邮箱</Label>
                   <div className="relative">
@@ -251,12 +463,12 @@ const Auth = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-10"
-                      required
                     />
                   </div>
                 </div>
+                
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">密码</Label>
+                  <Label htmlFor="signup-password">密码 *</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -270,8 +482,9 @@ const Auth = () => {
                     />
                   </div>
                 </div>
+                
                 <div className="space-y-2">
-                  <Label htmlFor="confirm-password">确认密码</Label>
+                  <Label htmlFor="confirm-password">确认密码 *</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -285,6 +498,7 @@ const Auth = () => {
                     />
                   </div>
                 </div>
+                
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "注册中..." : "注册"}
                 </Button>

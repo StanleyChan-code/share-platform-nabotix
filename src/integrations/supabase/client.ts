@@ -2,7 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "http://localhost:10020";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "http://8.155.163.227:10020";
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzYyOTYzMjAwLCJleHAiOjE5MjA3Mjk2MDB9.lXpDuiC0Dn2NwcQ7d7DCk7gbjWeUf8pSAKg7S0WhEZ8";
 
 // Import the supabase client like this:

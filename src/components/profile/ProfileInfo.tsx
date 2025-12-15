@@ -6,21 +6,30 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { User, Edit, Building2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { EducationLevels, InstitutionTypes } from "@/lib/enums";
+import {Institution} from "@/integrations/api/institutionApi.ts";
+
+// 证件类型映射
+const ID_TYPE_DISPLAY_NAMES: Record<string, string> = {
+  NATIONAL_ID: "身份证",
+  PASSPORT: "护照",
+  OTHER: "其他证件"
+};
 
 interface ProfileInfoProps {
   userProfile: any;
-  institutions: any;
+  institution: Institution;
   user: any;
   educationLabels: Record<string, string>;
   onUpdateProfile: (formData: any) => void;
 }
 
-const ProfileInfo = ({ userProfile, institutions, user, educationLabels, onUpdateProfile }: ProfileInfoProps) => {
+const ProfileInfo = ({ userProfile, institution, user, educationLabels, onUpdateProfile }: ProfileInfoProps) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [editForm, setEditForm] = useState({
     username: "",
-    real_name: "",
+    realName: "",
     title: "",
     field: "",
     phone: "",
@@ -33,7 +42,7 @@ const ProfileInfo = ({ userProfile, institutions, user, educationLabels, onUpdat
     if (userProfile) {
       setEditForm({
         username: userProfile.username || "",
-        real_name: userProfile.real_name || "",
+        realName: userProfile.realName || "",
         title: userProfile.title || "",
         field: userProfile.field || "",
         phone: userProfile.phone || "",
@@ -55,15 +64,7 @@ const ProfileInfo = ({ userProfile, institutions, user, educationLabels, onUpdat
   };
 
   // 机构类型标签
-  const institutionTypeLabels = {
-    hospital: "医院",
-    university: "大学",
-    research_center: "研究中心",
-    lab: "实验室",
-    government: "政府机构",
-    enterprise: "企业",
-    other: "其他"
-  };
+  const institutionTypeLabels = InstitutionTypes;
 
   return (
     <div className="space-y-6">
@@ -101,13 +102,13 @@ const ProfileInfo = ({ userProfile, institutions, user, educationLabels, onUpdat
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="real_name">真实姓名</Label>
+                    <Label htmlFor="realName">真实姓名</Label>
                     <Input
-                      id="real_name"
-                      value={editForm.real_name}
+                      id="realName"
+                      value={editForm.realName}
                       onChange={(e) => setEditForm(prev => ({
                         ...prev,
-                        real_name: e.target.value
+                        realName: e.target.value
                       }))}
                     />
                   </div>
@@ -127,12 +128,12 @@ const ProfileInfo = ({ userProfile, institutions, user, educationLabels, onUpdat
                         <SelectValue placeholder="选择学历" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="bachelor">本科</SelectItem>
-                        <SelectItem value="master">硕士</SelectItem>
-                        <SelectItem value="phd">博士</SelectItem>
-                        <SelectItem value="postdoc">博士后</SelectItem>
-                        <SelectItem value="professor">教授</SelectItem>
-                        <SelectItem value="other">其他</SelectItem>
+                        <SelectItem value="BACHELOR">本科</SelectItem>
+                        <SelectItem value="MASTER">硕士</SelectItem>
+                        <SelectItem value="PHD">博士</SelectItem>
+                        <SelectItem value="POSTDOC">博士后</SelectItem>
+                        <SelectItem value="PROFESSOR">教授</SelectItem>
+                        <SelectItem value="OTHER">其他</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -203,23 +204,41 @@ const ProfileInfo = ({ userProfile, institutions, user, educationLabels, onUpdat
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-2">
                 <Label className="text-muted-foreground">用户名</Label>
-                <div className="col-span-2">{userProfile?.username}</div>
+                <div className="col-span-2">{userProfile?.username || "未填写"}</div>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <Label className="text-muted-foreground">真实姓名</Label>
-                <div className="col-span-2">{userProfile?.real_name}</div>
+                <div className="col-span-2">{userProfile?.realName || "未填写"}</div>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                <Label className="text-muted-foreground">身份证号</Label>
+                <Label className="text-muted-foreground">
+                  {userProfile?.idType ? (ID_TYPE_DISPLAY_NAMES[userProfile.idType] || "证件号码") : "证件号码"}
+                </Label>
                 <div className="col-span-2">
-                  {userProfile?.id_number?
-                      userProfile?.id_number?.replace(/(\d{6})\d*(\d{4})/, '$1****$2') : "未填写"}
+                  {userProfile?.idNumber ?
+                    (() => {
+                      // 根据证件类型进行不同程度的脱敏处理
+                      switch (userProfile.idType) {
+                        case 'NATIONAL_ID':
+                          // 身份证：显示前6位和后4位，中间用*代替
+                          return userProfile.idNumber.replace(/(\d)\d*(\d)/, '$1****************$2');
+                        case 'PASSPORT':
+                          // 护照：显示前2位和后2位，中间用*代替
+                          return userProfile.idNumber.replace(/(.{2}).*(.{2})/, '$1******$2');
+                        default:
+                          // 其他类型：显示前1/3和后1/3，中间用*代替
+                          const showLength = Math.max(1, Math.floor(userProfile.idNumber.length / 3));
+                          const regExp = new RegExp(`(.{${showLength}}).*?(.{${showLength}})$`);
+                          return userProfile.idNumber.replace(regExp, `$1${'*'.repeat(Math.max(3, userProfile.idNumber.length - showLength * 2))}$2`);
+                      }
+                    })()
+                    : "未填写"}
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <Label className="text-muted-foreground">学历</Label>
                 <div className="col-span-2">
-                  {userProfile?.education ? (educationLabels[userProfile.education as keyof typeof educationLabels] || userProfile.education) : "未填写"}
+                  {userProfile?.education ? (EducationLevels[userProfile.education as keyof typeof EducationLevels] || userProfile.education) : "未填写"}
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2">
@@ -235,7 +254,7 @@ const ProfileInfo = ({ userProfile, institutions, user, educationLabels, onUpdat
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <Label className="text-muted-foreground">所属机构</Label>
-                <div className="col-span-2">{institutions?.full_name || "无"}</div>
+                <div className="col-span-2">{institution?.fullName || "无"}</div>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <Label className="text-muted-foreground">联系电话</Label>
@@ -243,12 +262,12 @@ const ProfileInfo = ({ userProfile, institutions, user, educationLabels, onUpdat
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <Label className="text-muted-foreground">邮箱地址</Label>
-                <div className="col-span-2">{userProfile?.email || user?.email}</div>
+                <div className="col-span-2">{userProfile?.email || user?.email || "未填写"}</div>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <Label className="text-muted-foreground">注册时间</Label>
                 <div className="col-span-2">
-                  {userProfile?.created_at ? new Date(userProfile.created_at).toLocaleDateString() : ""}
+                  {userProfile?.createdAt ? new Date(userProfile.createdAt).toLocaleDateString() : "未填写"}
                 </div>
               </div>
             </div>
@@ -257,7 +276,7 @@ const ProfileInfo = ({ userProfile, institutions, user, educationLabels, onUpdat
       </Card>
 
       {/* 机构详细信息卡片 */}
-      {userProfile.institution_id && (
+      {userProfile?.institutionId && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -270,16 +289,16 @@ const ProfileInfo = ({ userProfile, institutions, user, educationLabels, onUpdat
               <div className="space-y-4">
                 <div className="grid grid-cols-3 gap-2">
                   <Label className="text-muted-foreground">机构全称</Label>
-                  <div className="col-span-2">{institutions?.full_name || "未填写"}</div>
+                  <div className="col-span-2">{institution?.fullName || "未填写"}</div>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <Label className="text-muted-foreground">机构简称</Label>
-                  <div className="col-span-2">{institutions?.short_name || "未填写"}</div>
+                  <div className="col-span-2">{institution?.shortName || "未填写"}</div>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <Label className="text-muted-foreground">机构类型</Label>
                   <div className="col-span-2">
-                    {institutions?.type ? (institutionTypeLabels[institutions.type as keyof typeof institutionTypeLabels] || institutions.type) : "未填写"}
+                    {institution?.type ? (InstitutionTypes[institution.type as keyof typeof InstitutionTypes] || institution.type) : "未填写"}
                   </div>
                 </div>
               </div>
@@ -287,15 +306,15 @@ const ProfileInfo = ({ userProfile, institutions, user, educationLabels, onUpdat
               <div className="space-y-4">
                 <div className="grid grid-cols-3 gap-2">
                   <Label className="text-muted-foreground">联系人</Label>
-                  <div className="col-span-2">{institutions?.contact_person || "未填写"}</div>
+                  <div className="col-span-2">{institution?.contactPhone || "未填写"}</div>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <Label className="text-muted-foreground">联系电话</Label>
-                  <div className="col-span-2">{institutions?.contact_phone || "未填写"}</div>
+                  <div className="col-span-2">{institution?.contactPhone || "未填写"}</div>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <Label className="text-muted-foreground">联系邮箱</Label>
-                  <div className="col-span-2">{institutions?.contact_email || "未填写"}</div>
+                  <div className="col-span-2">{institution?.contactEmail || "未填写"}</div>
                 </div>
               </div>
             </div>

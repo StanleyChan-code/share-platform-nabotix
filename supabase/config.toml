@@ -1,5 +1,3 @@
-project_id = "hvsfzqgmtfbvrwiiksot"
-
 [functions.fetch-pubmed]
 verify_jwt = false
 

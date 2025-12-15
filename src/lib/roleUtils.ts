@@ -1,4 +1,4 @@
-// 角色中文映射
+// 角色中文映射 (已弃用 - 保留向后兼容)
 export const ROLE_DISPLAY_NAMES: Record<string, string> = {
   'public_visitor': '公共访客',
   'registered_researcher': '注册研究员',
@@ -8,19 +8,21 @@ export const ROLE_DISPLAY_NAMES: Record<string, string> = {
 };
 
 /**
- * 将英文角色名转换为中文显示名称
+ * 将英文角色名转换为中文显示名称 (已弃用 - 请使用 permissionUtils.ts 中的新方法)
  * @param role 英文角色名
  * @returns 中文显示名称，如果未定义则返回原始英文名
  */
 export function getRoleDisplayName(role: string): string {
+  console.warn('getRoleDisplayName is deprecated. Please use getPermissionRoleDisplayName from permissionUtils.ts');
   return ROLE_DISPLAY_NAMES[role] || role;
 }
 
 /**
- * 获取用户的所有角色并转换为中文显示名称
+ * 获取用户的所有角色并转换为中文显示名称 (已弃用 - 请使用 permissionUtils.ts 中的新方法)
  * @param roles 英文角色名数组
  * @returns 中文显示名称数组
  */
 export function getUserRoleDisplayNames(roles: string[]): string[] {
+  console.warn('getUserRoleDisplayNames is deprecated. Please use getUserPermissionRoleDisplayNames from permissionUtils.ts');
   return roles.map(role => getRoleDisplayName(role));
 }

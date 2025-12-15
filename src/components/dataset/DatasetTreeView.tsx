@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DatasetTypes } from "@/lib/enums";
 
 interface Dataset {
   id: string;
@@ -20,16 +21,7 @@ interface DatasetTreeViewProps {
   onDatasetClick: (dataset: Dataset) => void;
 }
 
-const typeLabels: Record<string, string> = {
-  cohort: '队列研究',
-  case_control: '病例对照研究',
-  cross_sectional: '横断面研究',
-  rct: '随机对照试验',
-  registry: '登记研究',
-  biobank: '生物样本库',
-  omics: '组学数据',
-  wearable: '可穿戴设备'
-};
+const typeLabels = DatasetTypes;
 
 export function DatasetTreeView({ datasets, onDatasetClick }: DatasetTreeViewProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());

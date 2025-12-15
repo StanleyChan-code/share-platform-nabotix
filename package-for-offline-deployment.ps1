@@ -13,10 +13,10 @@ try {
 }
 
 # 检查dist目录
-if (-not (Test-Path "dist")) {
+#if (-not (Test-Path "dist")) {
     Write-Host "正在构建项目..."
     npm run build
-}
+#}
 
 # 检查dist目录内容
 $distFiles = Get-ChildItem "dist"

@@ -15,18 +15,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { DatasetTypes } from "@/lib/enums";
 
 // Type mappings for database enum values
-const typeLabels = {
-  cohort: '队列研究',
-  case_control: '病例对照研究', 
-  cross_sectional: '横断面研究',
-  rct: '随机对照试验',
-  registry: '登记研究',
-  biobank: '生物样本库',
-  omics: '组学数据',
-  wearable: '可穿戴设备'
-};
+const typeLabels = DatasetTypes;
 
 const Datasets = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -124,14 +116,14 @@ const Datasets = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">全部类型</SelectItem>
-                  <SelectItem value="cohort">队列研究</SelectItem>
-                  <SelectItem value="cross_sectional">横断面研究</SelectItem>
-                  <SelectItem value="case_control">病例对照研究</SelectItem>
-                  <SelectItem value="rct">随机对照试验</SelectItem>
-                  <SelectItem value="registry">登记研究</SelectItem>
-                  <SelectItem value="biobank">生物样本库</SelectItem>
-                  <SelectItem value="omics">组学数据</SelectItem>
-                  <SelectItem value="wearable">可穿戴设备</SelectItem>
+                  <SelectItem value="COHORT">队列研究</SelectItem>
+                  <SelectItem value="CROSS_SECTIONAL">横断面研究</SelectItem>
+                  <SelectItem value="CASE_CONTROL">病例对照研究</SelectItem>
+                  <SelectItem value="RCT">随机对照试验</SelectItem>
+                  <SelectItem value="REGISTRY">登记研究</SelectItem>
+                  <SelectItem value="BIOBANK">生物样本库</SelectItem>
+                  <SelectItem value="OMICS">组学数据</SelectItem>
+                  <SelectItem value="WEARABLE">可穿戴设备</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>

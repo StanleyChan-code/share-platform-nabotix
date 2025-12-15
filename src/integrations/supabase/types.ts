@@ -1,3 +1,4 @@
+// 该文件已经过时，ai请参考src/main/APIDoc
 export type Json =
   | string
   | number

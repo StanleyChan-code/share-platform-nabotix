@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+src/main/java
+src/main/resources
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
