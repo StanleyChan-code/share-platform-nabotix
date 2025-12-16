@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Shield, Key } from "lucide-react";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { sendVerificationCode } from "@/integrations/api/authApi";
+import {api, ApiError} from "@/integrations/api/client";
 
 interface SettingsTabProps {
   user: any;
@@ -12,31 +14,116 @@ interface SettingsTabProps {
 
 const SettingsTab = ({ user }: SettingsTabProps) => {
   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const { toast } = useToast();
 
-  const handleResetPassword = async () => {
-    if (!user?.email) return;
+  const handleSendVerificationCode = async () => {
+    if (!user?.phone) {
+      toast({
+        title: "无法发送验证码",
+        description: "用户手机号不存在",
+        variant: "destructive",
+      });
+      return;
+    }
 
+    setIsSendingCode(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/auth/v1/verify?redirect_to=/profile&tab=reset`
+      await sendVerificationCode(user.phone, "UPDATE_PASSWORD");
+      setPhone(user.phone);
+      toast({
+        title: "验证码已发送",
+        description: "验证码已发送至您的手机，请注意查收",
+      });
+    } catch (error: any) {
+      console.error('Error sending verification code:', error);
+      toast({
+        title: "发送失败",
+        description: error.response?.data?.message || "发送验证码时发生错误",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!user?.phone) {
+      toast({
+        title: "无法重置密码",
+        description: "用户手机号不存在",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!verificationCode) {
+      toast({
+        title: "请输入验证码",
+        description: "验证码不能为空",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!newPassword) {
+      toast({
+        title: "请输入新密码",
+        description: "新密码不能为空",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "密码不匹配",
+        description: "两次输入的密码不一致",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast({
+        title: "密码长度不足",
+        description: "密码至少需要6位字符",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsResettingPassword(true);
+    try {
+      await api.put('/users/password', {
+        phone: user.phone,
+        verificationCode,
+        newPassword
       });
 
-      if (error) throw error;
-
       toast({
-        title: "密码重置邮件已发送",
-        description: "请检查您的邮箱并按照邮件中的指示重置密码",
+        title: "密码修改成功",
+        description: "您的密码已成功修改，请使用新密码登录",
       });
 
       setIsResetPasswordDialogOpen(false);
+      setVerificationCode("");
+      setNewPassword("");
+      setConfirmPassword("");
     } catch (error: any) {
-      console.error('Error sending reset password email:', error);
+      console.error('Error resetting password:', error);
       toast({
-        title: "发送失败",
-        description: error.message || "发送密码重置邮件时发生错误",
+        title: "修改失败",
+        description: error.response?.data?.message || "修改密码时发生错误",
         variant: "destructive",
       });
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
@@ -54,7 +141,7 @@ const SettingsTab = ({ user }: SettingsTabProps) => {
             <div>
               <h4 className="font-medium">修改密码</h4>
               <p className="text-sm text-muted-foreground">
-                通过邮箱验证修改密码
+                通过手机验证码修改密码
               </p>
             </div>
             <Dialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
@@ -64,32 +151,83 @@ const SettingsTab = ({ user }: SettingsTabProps) => {
                   修改密码
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                  <DialogTitle>确认密码重置</DialogTitle>
+                  <DialogTitle>修改密码</DialogTitle>
                   <DialogDescription>
-                    您确定要重置密码吗？系统将向您的邮箱 {user?.email} 发送密码重置链接。
+                    通过手机验证码修改您的登录密码
                   </DialogDescription>
                 </DialogHeader>
-                <div className="flex justify-end space-x-2 mt-4">
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label htmlFor="phone" className="text-right">
+                      手机号
+                    </label>
+                    <div className="col-span-3 flex gap-2">
+                      <Input
+                        id="phone"
+                        value={user?.phone || ""}
+                        disabled
+                        className="flex-1"
+                      />
+                      <Button 
+                        onClick={handleSendVerificationCode} 
+                        disabled={isSendingCode || !user?.phone}
+                        variant="outline"
+                      >
+                        {isSendingCode ? "发送中..." : "发送验证码"}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label htmlFor="code" className="text-right">
+                      验证码
+                    </label>
+                    <Input
+                      id="code"
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value)}
+                      placeholder="请输入验证码"
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label htmlFor="new-password" className="text-right">
+                      新密码
+                    </label>
+                    <Input
+                      id="new-password"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="请输入新密码"
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label htmlFor="confirm-password" className="text-right">
+                      确认密码
+                    </label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="请再次输入新密码"
+                      className="col-span-3"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end space-x-2">
                   <Button variant="outline" onClick={() => setIsResetPasswordDialogOpen(false)}>
                     取消
                   </Button>
-                  <Button onClick={handleResetPassword}>
-                    确认发送
+                  <Button onClick={handleResetPassword} disabled={isResettingPassword}>
+                    {isResettingPassword ? "提交中..." : "确认修改"}
                   </Button>
                 </div>
               </DialogContent>
             </Dialog>
-          </div>
-
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-            <div>
-              <h4 className="font-medium">登录记录</h4>
-              <p className="text-sm text-muted-foreground">
-                最后登录：{user?.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : "未知"}
-              </p>
-            </div>
           </div>
         </CardContent>
       </Card>

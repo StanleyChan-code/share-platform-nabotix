@@ -6,46 +6,33 @@
 
 ## 1. 公共数据集接口
 
-### 1.1 根据标题模糊搜索公开数据集
+### 1.1 通用数据集查询接口
 
-**接口地址**: `GET /api/datasets/search`
-
-**权限要求**: 无需认证，所有用户均可访问
-
-**请求参数**:
-
-| 参数名     | 类型     | 必填 | 默认值       | 描述             |
-|---------|--------|----|-----------|----------------|
-| title   | string | 是  | -         | 搜索关键词          |
-| page    | int    | 否  | 0         | 页码             |
-| size    | int    | 否  | 10        | 每页大小           |
-| sortBy  | string | 否  | updatedAt | 排序字段           |
-| sortDir | string | 否  | desc      | 排序方向（asc/desc） |
-
-**说明**: 
-- 根据标题对公开数据集进行模糊搜索
-- 匿名用户：只能搜索已批准且已发布的数据集
-- 已登录用户：能搜索已批准且已发布的数据集 + 已批准但未公开的用户所属机构能够申请的数据集
-
-### 1.2 获取所有公开数据集列表
-
-**接口地址**: `GET /api/datasets`
+**接口地址**: `GET /api/datasets/query`
 
 **权限要求**: 无需认证，所有用户均可访问
 
 **请求参数**:
 
-| 参数名     | 类型     | 必填 | 默认值       | 描述             |
-|---------|--------|----|-----------|----------------|
-| page    | int    | 否  | 0         | 页码             |
-| size    | int    | 否  | 10        | 每页大小           |
-| sortBy  | string | 否  | updatedAt | 排序字段           |
-| sortDir | string | 否  | desc      | 排序方向（asc/desc） |
+| 参数名                  | 类型      | 必填 | 默认值                 | 描述                               |
+|-----------------------|---------|----|---------------------|----------------------------------|
+| subjectAreaId         | UUID    | 否  | -                   | 学科领域ID                           |
+| titleCnOrKey          | string  | 否  | -                   | 中文标题或关键词                         |
+| providerId            | UUID    | 否  | -                   | 提供者ID                            |
+| isTopLevel            | Boolean | 否  | true                | 是否只显示顶级数据集                       |
+| currentVersionDateFrom| Instant | 否  | -                   | 当前版本日期起始时间                       |
+| currentVersionDateTo  | Instant | 否  | -                   | 当前版本日期结束时间                       |
+| page                  | int     | 否  | 0                   | 页码                               |
+| size                  | int     | 否  | 10                  | 每页大小                             |
+| sortBy                | string  | 否  | currentVersionDate  | 排序字段                             |
+| sortDir               | string  | 否  | desc                | 排序方向（asc/desc）                   |
 
 **说明**: 
-- 获取所有公开数据集列表（分页），不含随访数据集的信息
+- 支持多种查询条件组合
 - 匿名用户：只能看到已批准且已发布的数据集
 - 已登录用户：能看到已批准且已发布的数据集 + 已批准但未公开的用户所属机构能够申请的数据集
+
+
 
 **响应示例**:
 ```json
@@ -107,7 +94,7 @@
 }
 ```
 
-### 1.3 获取指定数据集的所有随访数据集（时间轴视图）
+### 1.2 获取指定数据集的所有随访数据集（时间轴视图）
 
 **接口地址**: `GET /api/datasets/{id}/timeline`
 
@@ -123,6 +110,7 @@
 - 获取指定id数据集的所有随访数据集，（parentDatasetId = id，时间轴视图）
 - 匿名用户：只能看到已批准且已发布的数据集
 - 已登录用户：能看到已批准且已发布的数据集 + 已批准但未公开的用户所属机构能够申请的数据集
+- 用户需要具有访问父数据集的权限
 
 **响应示例**:
 ```json
@@ -151,8 +139,8 @@
       "shareAllData": true,
       "contactPerson": "王五",
       "contactInfo": "wangwu@example.com",
-      "demographicFields": ["年龄", "性别"],
-      "outcomeFields": ["结果1", "结果2"],
+      "demographicFields": {"年龄": "数值型", "性别": "分类型"},
+      "outcomeFields": {"结果1": "数值型", "结果2": "分类型"},
       "firstPublishedDate": "2023-06-01T00:00:00Z",
       "currentVersionDate": "2023-06-01T00:00:00Z",
       "updatedAt": "2023-06-01T00:00:00Z",
@@ -176,7 +164,7 @@
 }
 ```
 
-### 1.4 根据ID获取特定公开数据集
+### 1.3 根据ID获取特定公开数据集
 
 **接口地址**: `GET /api/datasets/{id}`
 
@@ -219,8 +207,8 @@
     "shareAllData": true,
     "contactPerson": "王五",
     "contactInfo": "wangwu@example.com",
-    "demographicFields": ["年龄", "性别"],
-    "outcomeFields": ["结果1", "结果2"],
+    "demographicFields": {"年龄": "数值型", "性别": "分类型"},
+    "outcomeFields": {"结果1": "数值型", "结果2": "分类型"},
     "firstPublishedDate": "2023-01-01T00:00:00Z",
     "currentVersionDate": "2023-01-01T00:00:00Z",
     "updatedAt": "2023-01-01T00:00:00Z",
@@ -246,8 +234,8 @@
         "shareAllData": true,
         "contactPerson": "王五",
         "contactInfo": "wangwu@example.com",
-        "demographicFields": ["年龄", "性别"],
-        "outcomeFields": ["结果1", "结果2"],
+        "demographicFields": {"年龄": "数值型", "性别": "分类型"},
+        "outcomeFields": {"结果1": "数值型", "结果2": "分类型"},
         "firstPublishedDate": "2023-06-01T00:00:00Z",
         "currentVersionDate": "2023-06-01T00:00:00Z",
         "updatedAt": "2023-06-01T00:00:00Z",
@@ -357,7 +345,7 @@
 }
 ```
 
-### 1.6 下载数据集版本的数据字典文件
+### 1.5 下载数据集版本的数据字典文件
 
 **接口地址**: `GET /api/datasets/{datasetId}/versions/{versionId}/data-dictionary`
 
@@ -372,8 +360,9 @@
 
 **说明**: 
 - 需要用户登录才能下载
+- 返回的是文件下载流
 
-### 1.7 下载数据集版本的使用协议文件
+### 1.6 下载数据集版本的使用协议文件
 
 **接口地址**: `GET /api/datasets/{datasetId}/versions/{versionId}/terms-agreement`
 
@@ -388,8 +377,9 @@
 
 **说明**: 
 - 需要用户登录才能下载
+- 返回的是文件下载流
 
-### 1.8 下载数据集版本的数据分享文件
+### 1.7 下载数据集版本的数据分享文件
 
 **接口地址**: `GET /api/datasets/{datasetId}/versions/{versionId}/data-sharing`
 
@@ -404,8 +394,10 @@
 
 **说明**: 
 - 需要用户登录并且有相应的申请审批通过记录，或者自己是提供者
+- 需要经过申请数据集的下载权限
+- 返回的是文件下载流
 
-### 1.9 软删除数据集
+### 1.8 软删除数据集
 
 **接口地址**: `DELETE /api/datasets/{id}`
 
@@ -419,6 +411,7 @@
 
 **说明**: 
 - 平台管理员可删除任意数据集，数据集上传员只能删除自己上传的数据集
+- 需要用户已认证
 
 **响应示例**:
 ```json

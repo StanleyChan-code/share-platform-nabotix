@@ -6,7 +6,33 @@
 
 ## 1. 公共研究成果接口
 
-### 1.1 分页获取已审核通过的研究成果列表
+### 1.1 获取研究成果统计信息
+
+**接口地址**: `GET /api/research-outputs/statistics`
+
+**权限要求**: 无需认证，所有用户均可访问
+
+**请求参数**: 无
+
+**说明**: 
+- 获取已审批通过的研究成果总数、学术论文数、专利成果数和总引用次数
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "获取研究成果统计信息成功",
+  "data": {
+    "totalApprovedOutputs": 125,
+    "academicPapers": 80,
+    "patentOutputs": 35,
+    "totalCitations": 1250
+  },
+  "timestamp": "2025-12-01T10:00:00Z"
+}
+```
+
+### 1.2 分页获取已审核通过的研究成果列表
 
 **接口地址**: `GET /api/research-outputs/public`
 
@@ -73,7 +99,7 @@
 }
 ```
 
-### 1.2 用户提交新的研究成果
+### 1.3 用户提交新的研究成果
 
 **接口地址**: `POST /api/research-outputs`
 
@@ -133,7 +159,7 @@
 }
 ```
 
-### 1.3 用户查询自己提交的研究成果列表
+### 1.4 用户查询自己提交的研究成果列表
 
 **接口地址**: `GET /api/research-outputs/my-submissions`
 
@@ -201,7 +227,7 @@
 }
 ```
 
-### 1.4 用户查询自己提交的特定研究成果
+### 1.5 用户查询自己提交的特定研究成果
 
 **接口地址**: `GET /api/research-outputs/my-submissions/{id}`
 
@@ -255,7 +281,7 @@
 }
 ```
 
-### 1.5 根据PubMed ID获取文章信息
+### 1.6 根据PubMed ID获取文章信息
 
 **接口地址**: `GET /api/research-outputs/pubmed/{pubMedId}`
 
@@ -307,7 +333,7 @@
 }
 ```
 
-### 1.6 用户删除自己提交的研究成果
+### 1.7 用户删除自己提交的研究成果
 
 **接口地址**: `DELETE /api/research-outputs/{id}`
 

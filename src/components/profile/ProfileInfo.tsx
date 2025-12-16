@@ -37,30 +37,41 @@ const ProfileInfo = ({ userProfile, institution, user, educationLabels, onUpdate
     education: ""
   });
 
-  // 当 userProfile 改变时，更新表单初始值
+  // 当对话框打开时，初始化表单数据
   useEffect(() => {
-    if (userProfile) {
+    if (isEditDialogOpen && userProfile) {
       setEditForm({
-        username: userProfile.username || "",
+        username: userProfile.username || null,
         realName: userProfile.realName || "",
-        title: userProfile.title || "",
-        field: userProfile.field || "",
+        title: userProfile.title || null,
+        field: userProfile.field || null,
         phone: userProfile.phone || "",
-        email: userProfile.email || "",
-        education: userProfile.education || ""
+        email: userProfile.email || null,
+        education: userProfile.education || null
       });
     }
-  }, [userProfile]);
+  }, [isEditDialogOpen, userProfile]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // 验证用户名不为空
+    if (!editForm.username || editForm.username.trim() === "") {
+      alert("用户名不能为空");
+      return;
+    }
+    
     setUpdating(true);
     
-    // 调用父组件传递的更新函数
-    onUpdateProfile(editForm);
-    
-    setUpdating(false);
-    setIsEditDialogOpen(false);
+    try {
+      // 调用父组件传递的更新函数
+      onUpdateProfile(editForm);
+      setIsEditDialogOpen(false);
+    } catch (error) {
+      console.error("更新失败:", error);
+    } finally {
+      setUpdating(false);
+    }
   };
 
   // 机构类型标签
@@ -90,15 +101,12 @@ const ProfileInfo = ({ userProfile, institution, user, educationLabels, onUpdate
               <form onSubmit={handleUpdateProfile} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="username">用户名</Label>
+                    <Label htmlFor="phone">联系电话</Label>
                     <Input
-                      id="username"
-                      required={true}
-                      value={editForm.username}
-                      onChange={(e) => setEditForm(prev => ({
-                        ...prev,
-                        username: e.target.value
-                      }))}
+                        id="phone"
+                        value={editForm.phone}
+                        disabled
+                        readOnly
                     />
                   </div>
                   <div className="space-y-2">
@@ -106,10 +114,34 @@ const ProfileInfo = ({ userProfile, institution, user, educationLabels, onUpdate
                     <Input
                       id="realName"
                       value={editForm.realName}
-                      onChange={(e) => setEditForm(prev => ({
-                        ...prev,
-                        realName: e.target.value
-                      }))}
+                      disabled
+                      readOnly
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="username">用户名</Label>
+                    <Input
+                        id="username"
+                        required={true}
+                        value={editForm.username}
+                        onChange={(e) => setEditForm(prev => ({
+                          ...prev,
+                          username: e.target.value
+                        }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">邮箱地址</Label>
+                    <Input
+                        id="email"
+                        type="email"
+                        value={editForm.email}
+                        onChange={(e) => setEditForm(prev => ({
+                          ...prev,
+                          email: e.target.value
+                        }))}
                     />
                   </div>
                 </div>
@@ -162,31 +194,7 @@ const ProfileInfo = ({ userProfile, institution, user, educationLabels, onUpdate
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">联系电话</Label>
-                    <Input
-                      id="phone"
-                      value={editForm.phone}
-                      onChange={(e) => setEditForm(prev => ({
-                        ...prev,
-                        phone: e.target.value
-                      }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">邮箱地址</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={editForm.email}
-                      onChange={(e) => setEditForm(prev => ({
-                        ...prev,
-                        email: e.target.value
-                      }))}
-                    />
-                  </div>
-                </div>
+                
                 <div className="flex justify-end space-x-2">
                   <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                     取消

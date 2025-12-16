@@ -15,7 +15,7 @@
 **请求体**:
 ```json
 {
-  "datasetVersionId": "550e8400-e29b-41d4-a716-446655440000",
+  "datasetId": "550e8400-e29b-41d4-a716-446655440000",
   "applicantRole": "TEAM_RESEARCHER",
   "applicantType": "内部研究人员",
   "projectTitle": "研究项目标题",
@@ -37,7 +37,7 @@
   "message": "申请提交成功",
   "data": {
     "id": "550e8400-e29b-41d4-a716-446655440002",
-    "datasetVersionId": "550e8400-e29b-41d4-a716-446655440000",
+    "datasetId": "550e8400-e29b-41d4-a716-446655440000",
     "datasetTitle": "数据集标题",
     "applicantId": "550e8400-e29b-41d4-a716-446655440003",
     "applicantName": "申请人姓名",
@@ -63,7 +63,57 @@
 }
 ```
 
-### 1.2 数据集提供者审核申请
+### 1.2 根据数据集ID获取当前用户的申请记录
+
+**接口地址**: `GET /api/applications/by-dataset/{datasetId}`
+
+**权限要求**: 需要认证
+
+**请求参数**:
+
+| 参数名     | 类型   | 必填 | 描述       |
+|---------|------|----|----------|
+| datasetId | UUID | 是  | 数据集ID    |
+
+**说明**: 
+- 已认证用户可以通过数据集ID获取自己的申请记录
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "查询成功",
+  "data": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440002",
+      "datasetId": "550e8400-e29b-41d4-a716-446655440000",
+      "datasetTitle": "数据集标题",
+      "applicantId": "550e8400-e29b-41d4-a716-446655440003",
+      "applicantName": "申请人姓名",
+      "supervisorId": null,
+      "supervisorName": null,
+      "applicantRole": "TEAM_RESEARCHER",
+      "applicantType": "内部研究人员",
+      "projectTitle": "研究项目标题",
+      "projectDescription": "研究项目描述",
+      "fundingSource": "国家自然科学基金",
+      "purpose": "研究目的",
+      "projectLeader": "项目负责人",
+      "approvalDocumentId": "550e8400-e29b-41d4-a716-446655440001",
+      "status": "PENDING_INSTITUTION_REVIEW",
+      "adminNotes": null,
+      "providerNotes": "审核备注",
+      "submittedAt": "2025-12-01T10:00:00Z",
+      "providerReviewedAt": "2025-12-01T11:00:00Z",
+      "institutionReviewedAt": null,
+      "approvedAt": null
+    }
+  ],
+  "timestamp": "2025-12-01T10:00:00Z"
+}
+```
+
+### 1.3 数据集提供者审核申请
 
 **接口地址**: `PUT /api/applications/{id}/provider-review`
 
@@ -101,7 +151,7 @@
   "message": "审核完成",
   "data": {
     "id": "550e8400-e29b-41d4-a716-446655440002",
-    "datasetVersionId": "550e8400-e29b-41d4-a716-446655440000",
+    "datasetId": "550e8400-e29b-41d4-a716-446655440000",
     "datasetTitle": "数据集标题",
     "applicantId": "550e8400-e29b-41d4-a716-446655440003",
     "applicantName": "申请人姓名",
@@ -127,7 +177,7 @@
 }
 ```
 
-### 1.3 申请者查询自己的申请记录
+### 1.4 申请者查询自己的申请记录
 
 **接口地址**: `GET /api/applications/my-applications`
 
@@ -154,7 +204,7 @@
     "content": [
       {
         "id": "550e8400-e29b-41d4-a716-446655440002",
-        "datasetVersionId": "550e8400-e29b-41d4-a716-446655440000",
+        "datasetId": "550e8400-e29b-41d4-a716-446655440000",
         "datasetTitle": "数据集标题",
         "applicantId": "550e8400-e29b-41d4-a716-446655440003",
         "applicantName": "申请人姓名",
@@ -188,7 +238,7 @@
 }
 ```
 
-### 1.4 数据集提供者查看申请记录列表
+### 1.5 数据集提供者查看申请记录列表
 
 **接口地址**: `GET /api/applications/provider-applications`
 
@@ -215,7 +265,7 @@
     "content": [
       {
         "id": "550e8400-e29b-41d4-a716-446655440002",
-        "datasetVersionId": "550e8400-e29b-41d4-a716-446655440000",
+        "datasetId": "550e8400-e29b-41d4-a716-446655440000",
         "datasetTitle": "数据集标题",
         "applicantId": "550e8400-e29b-41d4-a716-446655440003",
         "applicantName": "申请人姓名",
@@ -249,7 +299,7 @@
 }
 ```
 
-### 1.5 软删除申请记录
+### 1.6 软删除申请记录
 
 **接口地址**: `DELETE /api/applications/{id}`
 
@@ -271,7 +321,7 @@
   "message": "删除成功",
   "data": {
     "id": "550e8400-e29b-41d4-a716-446655440002",
-    "datasetVersionId": "550e8400-e29b-41d4-a716-446655440000",
+    "datasetId": "550e8400-e29b-41d4-a716-446655440000",
     "datasetTitle": "数据集标题",
     "applicantId": "550e8400-e29b-41d4-a716-446655440003",
     "applicantName": "申请人姓名",
@@ -299,7 +349,119 @@
 
 ## 2. 管理申请接口
 
-### 2.1 申请审核员审核申请
+### 2.1 根据数据集ID获取申请记录列表
+
+**接口地址**: `GET /api/manage/applications/by-dataset/{datasetId}`
+
+**权限要求**: PLATFORM_ADMIN、INSTITUTION_SUPERVISOR、DATASET_APPROVER
+
+**请求参数**:
+
+| 参数名     | 类型   | 必填 | 描述    |
+|---------|------|----|-------|
+| datasetId | UUID | 是  | 数据集ID |
+
+**说明**: 
+- 申请审核员可以通过数据集ID获取所有相关的申请记录列表
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "查询成功",
+  "data": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440002",
+      "datasetId": "550e8400-e29b-41d4-a716-446655440000",
+      "datasetTitle": "数据集标题",
+      "applicantId": "550e8400-e29b-41d4-a716-446655440003",
+      "applicantName": "申请人姓名",
+      "supervisorId": null,
+      "supervisorName": null,
+      "applicantRole": "TEAM_RESEARCHER",
+      "applicantType": "内部研究人员",
+      "projectTitle": "研究项目标题",
+      "projectDescription": "研究项目描述",
+      "fundingSource": "国家自然科学基金",
+      "purpose": "研究目的",
+      "projectLeader": "项目负责人",
+      "approvalDocumentId": "550e8400-e29b-41d4-a716-446655440001",
+      "status": "PENDING_INSTITUTION_REVIEW",
+      "adminNotes": null,
+      "providerNotes": "审核备注",
+      "submittedAt": "2025-12-01T10:00:00Z",
+      "providerReviewedAt": "2025-12-01T11:00:00Z",
+      "institutionReviewedAt": null,
+      "approvedAt": null
+    }
+  ],
+  "timestamp": "2025-12-01T10:00:00Z"
+}
+```
+
+### 2.2 根据数据集ID分页获取申请记录列表
+
+**接口地址**: `GET /api/manage/applications/by-dataset/{datasetId}/page`
+
+**权限要求**: PLATFORM_ADMIN、INSTITUTION_SUPERVISOR、DATASET_APPROVER
+
+**请求参数**:
+
+| 参数名     | 类型     | 必填 | 默认值         | 描述             |
+|---------|--------|----|-------------|----------------|
+| datasetId | UUID   | 是  | -           | 数据集ID          |
+| page    | int    | 否  | 0           | 页码             |
+| size    | int    | 否  | 10          | 每页大小           |
+| sortBy  | string | 否  | submittedAt | 排序字段           |
+| sortDir | string | 否  | desc        | 排序方向（asc/desc） |
+
+**说明**: 
+- 申请审核员可以通过数据集ID分页获取相关的申请记录列表
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "查询成功",
+  "data": {
+    "content": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440002",
+        "datasetId": "550e8400-e29b-41d4-a716-446655440000",
+        "datasetTitle": "数据集标题",
+        "applicantId": "550e8400-e29b-41d4-a716-446655440003",
+        "applicantName": "申请人姓名",
+        "supervisorId": null,
+        "supervisorName": null,
+        "applicantRole": "TEAM_RESEARCHER",
+        "applicantType": "内部研究人员",
+        "projectTitle": "研究项目标题",
+        "projectDescription": "研究项目描述",
+        "fundingSource": "国家自然科学基金",
+        "purpose": "研究目的",
+        "projectLeader": "项目负责人",
+        "approvalDocumentId": "550e8400-e29b-41d4-a716-446655440001",
+        "status": "PENDING_INSTITUTION_REVIEW",
+        "adminNotes": null,
+        "providerNotes": "审核备注",
+        "submittedAt": "2025-12-01T10:00:00Z",
+        "providerReviewedAt": "2025-12-01T11:00:00Z",
+        "institutionReviewedAt": null,
+        "approvedAt": null
+      }
+    ],
+    "page": {
+      "size": 10,
+      "number": 0,
+      "totalElements": 1,
+      "totalPages": 1
+    }
+  },
+  "timestamp": "2025-12-01T10:00:00Z"
+}
+```
+
+### 2.3 申请审核员审核申请
 
 **接口地址**: `PUT /api/manage/applications/{id}/approver-review`
 
@@ -337,7 +499,7 @@
   "message": "审核完成",
   "data": {
     "id": "550e8400-e29b-41d4-a716-446655440002",
-    "datasetVersionId": "550e8400-e29b-41d4-a716-446655440000",
+    "datasetId": "550e8400-e29b-41d4-a716-446655440000",
     "datasetTitle": "数据集标题",
     "applicantId": "550e8400-e29b-41d4-a716-446655440003",
     "applicantName": "申请人姓名",
@@ -363,7 +525,7 @@
 }
 ```
 
-### 2.2 申请审核员查看待审核申请记录列表
+### 2.4 申请审核员查看待审核申请记录列表
 
 **接口地址**: `GET /api/manage/applications/pending-applications`
 
@@ -390,7 +552,7 @@
     "content": [
       {
         "id": "550e8400-e29b-41d4-a716-446655440002",
-        "datasetVersionId": "550e8400-e29b-41d4-a716-446655440000",
+        "datasetId": "550e8400-e29b-41d4-a716-446655440000",
         "datasetTitle": "数据集标题",
         "applicantId": "550e8400-e29b-41d4-a716-446655440003",
         "applicantName": "申请人姓名",
@@ -424,7 +586,7 @@
 }
 ```
 
-### 2.3 申请审核员查看已处理申请记录列表
+### 2.5 申请审核员查看已处理申请记录列表
 
 **接口地址**: `GET /api/manage/applications/processed-applications`
 
@@ -452,7 +614,7 @@
       "content": [
         {
           "id": "550e8400-e29b-41d4-a716-446655440002",
-          "datasetVersionId": "550e8400-e29b-41d4-a716-446655440000",
+          "datasetId": "550e8400-e29b-41d4-a716-446655440000",
           "datasetTitle": "数据集标题",
           "applicantId": "550e8400-e29b-41d4-a716-446655440003",
           "applicantName": "申请人姓名",

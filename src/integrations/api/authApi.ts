@@ -32,6 +32,9 @@ export interface RegisterData {
   realName: string;
   email?: string;
   password: string;
+  idType: string;
+  idNumber: string;
+  institutionId: string;
 }
 
 export const register = async (userData: RegisterData) => {
@@ -74,6 +77,19 @@ export const getCurrentUser = async () => {
 // 获取当前用户角色
 export const getCurrentUserRoles = async () => {
   return api.get<string[]>('/users/authorities');
+};
+
+// 更新用户信息请求
+export interface UpdateUserProfileData {
+  username: string;
+  email: string;
+  education: string;
+  field: string;
+  title: string;
+}
+
+export const updateUserProfile = async (userData: UpdateUserProfileData) => {
+  return api.put<UserProfile>('/users/profile', userData);
 };
 
 // 登出请求

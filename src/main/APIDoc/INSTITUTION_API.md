@@ -70,6 +70,42 @@
 }
 ```
 
+### 1.3 根据名称模糊搜索机构（公共接口）
+
+**接口地址**: `GET /api/institutions/search`
+
+**权限要求**: 无需认证，所有用户均可访问
+
+**请求参数**:
+- `name`: 搜索关键词（必填）
+
+**说明**: 此接口根据机构全称进行模糊搜索，只返回已验证通过的机构，最多返回10个结果
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "搜索机构成功",
+  "data": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "fullName": "某某医院",
+      "shortName": "某医",
+      "type": "hospital",
+      "contactPerson": "张三",
+      "contactIdType": "NATIONAL_ID",
+      "contactIdNumber": "11010119900307XXXX",
+      "contactPhone": "13800138000",
+      "contactEmail": "contact@example.com",
+      "verified": true,
+      "createdAt": "2025-01-01T00:00:00Z",
+      "updatedAt": "2025-01-01T00:00:00Z"
+    }
+  ],
+  "timestamp": "2025-12-01T10:00:00Z"
+}
+```
+
 ## 2. 管理机构接口
 
 ### 2.1 获取所有机构列表（管理接口）
@@ -332,5 +368,90 @@
     "updatedAt": "2025-12-01T11:00:00Z"
   },
   "timestamp": "2025-12-01T11:00:00Z"
+}
+```
+
+### 2.9 为机构添加用户
+
+**接口地址**: `POST /api/manage/institutions/users`
+
+**权限要求**: 仅机构管理员或机构用户管理员可访问
+
+**请求体**:
+```json
+{
+  "phone": "13800138000",
+  "realName": "新用户"
+}
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "用户创建成功",
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440002",
+    "username": "13800138000",
+    "realName": "新用户",
+    "phone": "13800138000",
+    "email": null,
+    "institutionId": "550e8400-e29b-41d4-a716-446655440000",
+    "supervisorId": "550e8400-e29b-41d4-a716-446655440001",
+    "education": null,
+    "field": null,
+    "title": null,
+    "enabled": true,
+    "accountNonExpired": true,
+    "credentialsNonExpired": true,
+    "accountNonLocked": true
+  },
+  "timestamp": "2025-12-01T10:00:00Z"
+}
+```
+
+### 2.10 获取机构用户列表
+
+**接口地址**: `GET /api/manage/institutions/users`
+
+**权限要求**: 平台管理员可查看所有机构的用户，机构管理员和机构用户管理员可查看本机构用户
+
+**请求参数**:
+- `institutionId`: 机构ID（平台管理员必填）
+- `page`: 页码，默认为0
+- `size`: 每页大小，默认为10
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "获取用户列表成功",
+  "data": {
+    "content": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440002",
+        "username": "13800138000",
+        "realName": "新用户",
+        "phone": "13800138000",
+        "email": null,
+        "institutionId": "550e8400-e29b-41d4-a716-446655440000",
+        "supervisorId": "550e8400-e29b-41d4-a716-446655440001",
+        "education": null,
+        "field": null,
+        "title": null,
+        "enabled": true,
+        "accountNonExpired": true,
+        "credentialsNonExpired": true,
+        "accountNonLocked": true
+      }
+    ],
+    "page": {
+      "size": 10,
+      "number": 0,
+      "totalElements": 3,
+      "totalPages": 1
+    }
+  },
+  "timestamp": "2025-12-01T10:00:00Z"
 }
 ```

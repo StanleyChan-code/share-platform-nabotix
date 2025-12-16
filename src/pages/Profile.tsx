@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { getCurrentUser, getCurrentUserRoles } from "@/integrations/api/authApi";
+import { getCurrentUser, getCurrentUserRoles, updateUserProfile } from "@/integrations/api/authApi";
 import { getInstitutionById } from "@/integrations/api/institutionApi";
 import { getPermissionRoleDisplayName } from "@/lib/permissionUtils";
 import ProfileInfo from "@/components/profile/ProfileInfo";
@@ -102,6 +102,35 @@ const Profile = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdateProfile = async (formData: any) => {
+    try {
+      const response = await updateUserProfile({
+        username: formData.username,
+        email: formData.email,
+        education: formData.education,
+        field: formData.field,
+        title: formData.title
+      });
+  
+      if (response.data.success) {
+        toast({
+          title: "成功",
+          description: "个人信息更新成功",
+        });
+        fetchUserProfile(); // 重新获取用户信息以更新界面
+      } else {
+        throw new Error(response.data.message || "更新失败");
+      }
+    } catch (error: any) {
+      console.error("更新用户信息失败:", error);
+      toast({
+        title: "错误",
+        description: error?.response?.data?.message || "更新个人信息失败，请稍后重试",
+        variant: "destructive",
+      });
     }
   };
 
@@ -201,7 +230,7 @@ const Profile = () => {
             institution={institution}
             user={user}
             educationLabels={{}}
-            onUpdateProfile={fetchUserProfile}
+            onUpdateProfile={handleUpdateProfile}
           />
         )}
         

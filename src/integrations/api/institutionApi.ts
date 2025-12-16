@@ -1,4 +1,5 @@
 import { api } from './client';
+import { Page } from './client';
 
 // 机构信息接口
 export interface Institution {
@@ -37,13 +38,20 @@ export const verifyInstitution = async (id: string) => {
 };
 
 // 获取所有机构列表（公共接口）
-export const getAllInstitutions = async () => {
-  return api.get<Institution[]>('/institutions');
+export const getAllInstitutions = async (page: number = 0, size: number = 10) => {
+  return api.get<Page<Institution>>(`/institutions?page=${page}&size=${size}`);
+};
+
+// 根据名称搜索机构（公共接口）
+export const searchInstitutions = async (name: string) => {
+  return api.get<Page<Institution>>(`/institutions/search?name=${encodeURIComponent(name)}`);
 };
 
 // 获取所有机构列表（管理接口，平台管理员专用）
-export const getAllInstitutionsForAdmin = async () => {
-  return api.get<Institution[]>('/manage/institutions');
+export const getAllInstitutionsForAdmin = async (page: number = 0, size: number = 10) => {
+  return api.get<Page<Institution>>('/manage/institutions', {
+    params: { page, size }
+  });
 };
 
 // 创建新机构（平台管理员专用）

@@ -6,12 +6,20 @@
 
 **接口地址**: `POST /api/auth/send-verification-code`
 
+**请求体**:
+```json
+{
+  "phone": "13800138000",
+  "businessType": "LOGIN"
+}
+```
+
 **请求参数**:
 
-| 参数名          | 类型     | 必填 | 描述             |
-|--------------|--------|----|----------------|
-| phone        | String | 是  | 手机号码           |
-| businessType | String | 否  | 业务类型，默认为 LOGIN |
+| 参数名          | 类型     | 必填 | 描述                           |
+|----------------|----------|------|------------------------------|
+| phone          | String   | 是   | 手机号码                         |
+| businessType   | String   | 否   | 业务类型，默认为 LOGIN，可选 REGISTER |
 
 **businessType 可选值**:
 - LOGIN: 登录
@@ -55,12 +63,12 @@
 
 **请求参数**:
 
-| 参数名              | 类型     | 必填 | 描述                                |
-|------------------|--------|----|-----------------------------------|
-| phone            | String | 是  | 手机号                               |
-| password         | String | 否  | 密码（密码登录时必填）                       |
-| verificationCode | String | 否  | 验证码（验证码登录时必填）                     |
-| loginType        | String | 是  | 登录类型：PASSWORD 或 VERIFICATION_CODE |
+| 参数名              | 类型     | 必填 | 描述                                       |
+|--------------------|----------|------|------------------------------------------|
+| phone              | String   | 是   | 手机号                                     |
+| password           | String   | 否   | 密码（密码登录时必填）                          |
+| verificationCode   | String   | 否   | 验证码（验证码登录时必填）                       |
+| loginType          | String   | 是   | 登录类型：PASSWORD 或 VERIFICATION_CODE      |
 
 **响应示例**:
 ```json
@@ -69,8 +77,15 @@
   "message": "登录成功",
   "data": {
     "token": "eyJhbGciOiJIUzI1NiJ9.xxxx",
-    "phone": "13800138000",
-    "authorities": ["registered_researcher"]
+    "type": "Bearer",
+    "user": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "username": "testUser",
+      "realName": "测试用户",
+      "title": "高级工程师",
+      "phone": "13800138000"
+    },
+    "roles": ["registered_researcher"]
   },
   "timestamp": "2025-12-01T10:00:00Z"
 }
@@ -88,20 +103,31 @@
   "username": "testUser",
   "realName": "测试用户",
   "email": "test@example.com",
-  "password": "password123"
+  "password": "password123",
+  "institutionId": "550e8400-e29b-41d4-a716-446655440001",
+  "idType": "NATIONAL_ID",
+  "idNumber": "110101199003072918"
 }
 ```
 
 **请求参数**:
 
-| 参数名              | 类型     | 必填 | 描述   |
-|------------------|--------|----|------|
-| phone            | String | 是  | 手机号码 |
-| verificationCode | String | 是  | 验证码  |
-| username         | String | 是  | 用户名  |
-| realName         | String | 是  | 真实姓名 |
-| email            | String | 否  | 邮箱地址 |
-| password         | String | 是  | 密码   |
+| 参数名              | 类型     | 必填 | 描述                   |
+|--------------------|----------|------|----------------------|
+| phone              | String   | 是   | 手机号码               |
+| verificationCode   | String   | 是   | 验证码                |
+| username           | String   | 是   | 用户名                |
+| realName           | String   | 是   | 真实姓名               |
+| email              | String   | 否   | 邮箱地址               |
+| password           | String   | 是   | 密码                  |
+| institutionId      | UUID     | 否   | 机构ID               |
+| idType             | IdType   | 否   | 证件类型              |
+| idNumber           | String   | 否   | 证件号码              |
+
+**IdType 枚举值**:
+- NATIONAL_ID: 身份证
+- PASSPORT: 护照
+- OTHER: 其他
 
 **响应示例**:
 ```json
@@ -113,9 +139,7 @@
     "username": "testUser",
     "realName": "测试用户",
     "phone": "13800138000",
-    "email": "test@example.com",
-    "createdAt": "2025-12-01T10:00:00Z",
-    "updatedAt": "2025-12-01T10:00:00Z"
+    "email": "test@example.com"
   },
   "timestamp": "2025-12-01T10:00:00Z"
 }
@@ -126,6 +150,8 @@
 **接口地址**: `POST /api/auth/logout`
 
 **权限要求**: 需要认证（携带有效的JWT Token）
+
+**说明**: JWT是无状态的，服务器端不需要特殊处理，客户端只需删除本地存储的token即可
 
 **响应示例**:
 ```json

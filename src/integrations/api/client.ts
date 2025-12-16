@@ -4,11 +4,22 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
 // 定义标准API响应结构
-interface ApiResponse<T = any> {
+export interface ApiResponse<T = any> {
   success: boolean;
   message: string;
   data: T;
   timestamp: string;
+}
+
+// 定义分页响应结构
+export interface Page<T> {
+  content: T[];
+  page: {
+    size: number;
+    number: number;
+    totalElements: number;
+    totalPages: number;
+  };
 }
 
 // 创建axios实例
@@ -74,6 +85,13 @@ class ApiClient {
 
   async delete<T = any>(endpoint: string, config?: AxiosRequestConfig) {
     return this.client.delete<ApiResponse<T>>(endpoint, config);
+  }
+
+  async downloadFile(endpoint: string, config?: AxiosRequestConfig) {
+    return this.client.get(endpoint, {
+      ...config,
+      responseType: 'blob',
+    });
   }
 
   // 设置认证token

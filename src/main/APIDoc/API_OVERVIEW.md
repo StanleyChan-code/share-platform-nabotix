@@ -74,7 +74,10 @@
 ### 5.9 数据集统计接口
 - [数据集统计接口](DATASET_STATISTIC_API.md)
 
-### 5.10 热度统计接口
+### 5.10 平台统计接口
+- [平台统计接口](PLATFORM_STATISTIC_API.md)
+
+### 5.11 热度统计接口
 - [热度统计接口](POPULARITY_API.md)
 
 ## 6. 枚举类型和权限说明
