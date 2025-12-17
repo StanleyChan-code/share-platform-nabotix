@@ -6,7 +6,7 @@ import { FileText, BookOpen, Award } from "lucide-react";
  * @returns 显示名称
  */
 export const getOutputTypeDisplayName = (type: string): string => {
-  switch (type) {
+  switch (type.toLowerCase()) {
     case "project": return "项目/课题";
     case "paper": return "论文";
     case "publication": return "出版物";
@@ -26,7 +26,7 @@ export const getOutputTypeDisplayName = (type: string): string => {
  * @returns 图标名称
  */
 export const getOutputTypeIcon = (type: string): string => {
-  switch (type) {
+  switch (type.toLowerCase()) {
     case "paper":
     case "publication":
       return "file-text";
@@ -43,7 +43,7 @@ export const getOutputTypeIcon = (type: string): string => {
  * @returns 图标组件
  */
 export const getOutputTypeIconComponent = (type: string) => {
-  const iconName = getOutputTypeIcon(type);
+  const iconName = getOutputTypeIcon(type.toLowerCase());
   
   switch (iconName) {
     case "file-text":

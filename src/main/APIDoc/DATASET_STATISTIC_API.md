@@ -13,25 +13,32 @@
 **请求体**:
 ```json
 {
+  "id": "550e8400-e29b-41d4-a716-446655440001",
   "datasetVersionId": "550e8400-e29b-41d4-a716-446655440000",
   "version": "1.0",
+  "metadata": {
+    "variableCount": 100,
+    "recordCount": 1000
+  },
   "variables": [
     {
       "type": "categorical",
-      "variables": ["性别", "具体情况"],
-      "fileIndex": 0
+      "name": "gender",
+      "label": "性别",
+      "description": "患者的性别信息",
+      "otherInfo": {}
     }
   ],
-  "statisticalFiles": [
-    "姓名,性别,年龄\n张三,男,25\n李四,女,30"
-  ],
-  "createdAt": "2025-12-01T10:00:00Z"
+  "statisticalFile": "H4sIAAAAAAAAAOPg4hLjYmBg4ODyTSxJLS5hKGaoAQAQ0uMaGwAAAA==",
+  "createdAt": "2025-12-01T10:00:00Z",
+  "variableCount": 100,
+  "recordCount": 1000
 }
 ```
 
 **说明**: 
 - 用于创建或更新特定数据集版本的统计信息
-- statisticalFiles中的字符串数据会被压缩后存储
+- statisticalFile中的数据是经过Base64编码后的统计数据
 
 **响应示例**:
 ```json
@@ -42,15 +49,23 @@
     "id": "550e8400-e29b-41d4-a716-446655440001",
     "datasetVersionId": "550e8400-e29b-41d4-a716-446655440000",
     "version": "1.0",
+    "metadata": {
+      "variableCount": 100,
+      "recordCount": 1000
+    },
     "variables": [
       {
         "type": "categorical",
-        "variables": ["性别", "具体情况"],
-        "fileIndex": 0
+        "name": "gender",
+        "label": "性别",
+        "description": "患者的性别信息",
+        "otherInfo": {}
       }
     ],
-    "statisticalFiles": [],
-    "createdAt": "2025-12-01T10:00:00Z"
+    "statisticalFile": "H4sIAAAAAAAAAOPg4hLjYmBg4ODyTSxJLS5hKGaoAQAQ0uMaGwAAAA==",
+    "createdAt": "2025-12-01T10:00:00Z",
+    "variableCount": 100,
+    "recordCount": 1000
   },
   "timestamp": "2025-12-01T10:00:00Z"
 }
@@ -80,15 +95,23 @@
     "id": "550e8400-e29b-41d4-a716-446655440001",
     "datasetVersionId": "550e8400-e29b-41d4-a716-446655440000",
     "version": "1.0",
+    "metadata": {
+      "variableCount": 100,
+      "recordCount": 1000
+    },
     "variables": [
       {
         "type": "categorical",
-        "variables": ["性别", "具体情况"],
-        "fileIndex": 0
+        "name": "gender",
+        "label": "性别",
+        "description": "患者的性别信息",
+        "otherInfo": {}
       }
     ],
-    "statisticalFiles": [],
-    "createdAt": "2025-12-01T10:00:00Z"
+    "statisticalFile": "H4sIAAAAAAAAAOPg4hLjYmBg4ODyTSxJLS5hKGaoAQAQ0uMaGwAAAA==",
+    "createdAt": "2025-12-01T10:00:00Z",
+    "variableCount": 100,
+    "recordCount": 1000
   },
   "timestamp": "2025-12-01T10:00:00Z"
 }
@@ -118,15 +141,23 @@
     "id": "550e8400-e29b-41d4-a716-446655440001",
     "datasetVersionId": "550e8400-e29b-41d4-a716-446655440000",
     "version": "1.0",
+    "metadata": {
+      "variableCount": 100,
+      "recordCount": 1000
+    },
     "variables": [
       {
         "type": "categorical",
-        "variables": ["性别", "具体情况"],
-        "fileIndex": 0
+        "name": "gender",
+        "label": "性别",
+        "description": "患者的性别信息",
+        "otherInfo": {}
       }
     ],
-    "statisticalFiles": [],
-    "createdAt": "2025-12-01T10:00:00Z"
+    "statisticalFile": "H4sIAAAAAAAAAOPg4hLjYmBg4ODyTSxJLS5hKGaoAQAQ0uMaGwAAAA==",
+    "createdAt": "2025-12-01T10:00:00Z",
+    "variableCount": 100,
+    "recordCount": 1000
   },
   "timestamp": "2025-12-01T10:00:00Z"
 }
@@ -136,7 +167,7 @@
 
 **接口地址**: `POST /api/datasets/statistics/dataset-statistics/analyze`
 
-**权限要求**: 需要认证
+**权限要求**: PLATFORM_ADMIN 或 INSTITUTION_SUPERVISOR 或 DATASET_UPLOADER
 
 **请求体**:
 ```json
@@ -156,17 +187,26 @@
   "success": true,
   "message": "数据分析成功",
   "data": {
+    "id": null,
+    "datasetVersionId": null,
+    "version": "1.0",
+    "metadata": {
+      "variableCount": 100,
+      "recordCount": 1000
+    },
     "variables": [
       {
         "type": "categorical",
-        "variables": ["性别", "具体情况"],
-        "fileIndex": 0
+        "name": "gender",
+        "label": "性别",
+        "description": "患者的性别信息",
+        "otherInfo": {}
       }
     ],
-    "version": "1.0",
-    "statisticalFiles": [
-      "姓名,性别,年龄\n张三,男,25\n李四,女,30"
-    ]
+    "statisticalFile": "H4sIAAAAAAAAAOPg4hLjYmBg4ODyTSxJLS5hKGaoAQAQ0uMaGwAAAA==",
+    "createdAt": "2025-12-01T10:00:00Z",
+    "variableCount": 100,
+    "recordCount": 1000
   },
   "timestamp": "2025-12-01T10:00:00Z"
 }
@@ -174,45 +214,4 @@
 
 ## 2. 数据分析服务接口
 
-数据分析服务运行在本地服务器上，地址为 `http://localhost:10021`。
-
-### 2.1 数据分析接口
-
-**接口地址**: `POST http://localhost:10021/analyze`
-
-**权限要求**: 仅允许本地访问
-
-**请求体**:
-```json
-{
-  "dataFile": "/home/user/.clinical-research-data-sharing-platform/tmp/550e8400-e29b-41d4-a716-446655440002.csv",
-  "dictionaryFile": "/home/user/.clinical-research-data-sharing-platform/tmp/550e8400-e29b-41d4-a716-446655440003.dict"
-}
-```
-
-**说明**: 
-- dataFile: 数据文件的绝对路径
-- dictionaryFile: 数据字典文件的绝对路径
-
-**响应示例**:
-```json
-{
-  "variables": [
-    {
-      "type": "categorical",
-      "variables": ["性别", "具体情况"],
-      "fileIndex": 0
-    },
-    {
-      "type": "numeric",
-      "variables": ["年龄", "收入"],
-      "fileIndex": 1
-    }
-  ],
-  "version": "1.0",
-  "statisticalFiles": [
-    "姓名,性别,年龄\n张三,男,25\n李四,女,30",
-    "统计项,平均值,中位数\n年龄,27.5,27.5\n收入,8000,7500"
-  ]
-}
-```
+数据分析服务运行在本地服务器上，地址为 `http://localhost:10022`。

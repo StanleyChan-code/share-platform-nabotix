@@ -8,6 +8,7 @@ import { User, Edit, Building2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { EducationLevels, InstitutionTypes } from "@/lib/enums";
 import {Institution} from "@/integrations/api/institutionApi.ts";
+import {formatDate} from "@/lib/utils.ts";
 
 // 证件类型映射
 const ID_TYPE_DISPLAY_NAMES: Record<string, string> = {
@@ -273,9 +274,9 @@ const ProfileInfo = ({ userProfile, institution, user, educationLabels, onUpdate
                 <div className="col-span-2">{userProfile?.email || user?.email || "未填写"}</div>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                <Label className="text-muted-foreground">注册时间</Label>
+                <Label className="text-muted-foreground">注册日期</Label>
                 <div className="col-span-2">
-                  {userProfile?.createdAt ? new Date(userProfile.createdAt).toLocaleDateString() : "未填写"}
+                  {userProfile?.createdAt ? formatDate(userProfile.createdAt) : "未填写"}
                 </div>
               </div>
             </div>

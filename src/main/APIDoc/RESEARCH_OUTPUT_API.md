@@ -46,9 +46,11 @@
 | size    | int    | 否  | 10        | 每页大小           |
 | sortBy  | string | 否  | createdAt | 排序字段           |
 | sortDir | string | 否  | desc      | 排序方向（asc/desc） |
+| type    | string | 否  | -         | 成果类型筛选         |
 
 **说明**: 
 - 任何人都可以查看已审核通过的研究成果
+- 可通过[type](file://D:\Code\web\share-platform\src\main\java\cn\com\nabotix\shareplatform\dataset\entity\Dataset.java#L45-L46)参数筛选特定类型的研究成果，类型值参考枚举[OutputType](file:///D:/Code/web/share-platform/src/main/java/cn/com/nabotix/shareplatform/researchoutput/entity/OutputType.java#L10-L15)
 
 **响应示例**:
 ```json

@@ -9,6 +9,27 @@ interface PlatformStatistics {
   datasetCountByType: Record<string, number>;
 }
 
+// 定义数据集统计信息结构
+interface DatasetStatistics {
+  id: string;
+  datasetVersionId: string;
+  version: string;
+  metadata: {
+    variableCount: number;
+    recordCount: number;
+  };
+  variables: Array<{
+    type: string;
+    name: string;
+    label: string;
+    description: string;
+    otherInfo: any;
+  }>;
+  statisticalFile: string;
+  createdAt: string;
+  variableCount: number;
+  recordCount: number;
+}
 
 // 定义年度数据集统计结构
 interface AnnualDatasetStatistics {
@@ -34,4 +55,9 @@ export const getSubjectPopularity = async (subjectId: string) => {
 // 获取年度数据集统计
 export const getAnnualDatasetStatistics = async () => {
   return api.get<AnnualDatasetStatistics[]>('/datasets/annual');
+};
+
+// 根据数据集版本ID获取数据集统计信息
+export const getDatasetStatisticsByVersionId = async (datasetVersionId: string) => {
+  return api.get<DatasetStatistics>(`/datasets/statistics/dataset-statistics/by-dataset-version/${datasetVersionId}`);
 };

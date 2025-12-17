@@ -232,36 +232,36 @@ const SettingsTab = ({ user }: SettingsTabProps) => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>通知设置</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-medium">申请状态更新</h4>
-              <p className="text-sm text-muted-foreground">
-                当数据申请状态发生变化时通知我
-              </p>
-            </div>
-            <Button variant="outline" size="sm">
-              已开启
-            </Button>
-          </div>
+      {/*<Card>*/}
+      {/*  <CardHeader>*/}
+      {/*    <CardTitle>通知设置</CardTitle>*/}
+      {/*  </CardHeader>*/}
+      {/*  <CardContent className="space-y-4">*/}
+      {/*    <div className="flex items-center justify-between">*/}
+      {/*      <div>*/}
+      {/*        <h4 className="font-medium">申请状态更新</h4>*/}
+      {/*        <p className="text-sm text-muted-foreground">*/}
+      {/*          当数据申请状态发生变化时通知我*/}
+      {/*        </p>*/}
+      {/*      </div>*/}
+      {/*      <Button variant="outline" size="sm">*/}
+      {/*        已开启*/}
+      {/*      </Button>*/}
+      {/*    </div>*/}
 
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-medium">新数据集发布</h4>
-              <p className="text-sm text-muted-foreground">
-                有新的数据集发布时通知我
-              </p>
-            </div>
-            <Button variant="outline" size="sm">
-              已开启
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/*    <div className="flex items-center justify-between">*/}
+      {/*      <div>*/}
+      {/*        <h4 className="font-medium">新数据集发布</h4>*/}
+      {/*        <p className="text-sm text-muted-foreground">*/}
+      {/*          有新的数据集发布时通知我*/}
+      {/*        </p>*/}
+      {/*      </div>*/}
+      {/*      <Button variant="outline" size="sm">*/}
+      {/*        已开启*/}
+      {/*      </Button>*/}
+      {/*    </div>*/}
+      {/*  </CardContent>*/}
+      {/*</Card>*/}
     </>
   );
 };

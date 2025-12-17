@@ -1,12 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText } from "lucide-react";
+import {Download, FileText} from "lucide-react";
 
 const ApplicationsTab = () => {
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5" />
+            <Download className="h-5 w-5" />
           数据申请记录
         </CardTitle>
       </CardHeader>

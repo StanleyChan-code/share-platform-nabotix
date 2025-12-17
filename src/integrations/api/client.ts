@@ -64,7 +64,7 @@ apiClient.interceptors.response.use(
 
 // API客户端类
 class ApiClient {
-  private client: AxiosInstance;
+  public client: AxiosInstance;
 
   constructor() {
     this.client = apiClient;

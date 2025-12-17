@@ -22,12 +22,39 @@
 **响应示例**:
 ```json
 {
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "fileName": "example.pdf",
-  "fileSize": 102400,
-  "fileType": "application/pdf",
-  "uploaderId": "550e8400-e29b-41d4-a716-446655440001"
+  "success": true,
+  "message": "操作成功",
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "fileName": "example.pdf",
+    "fileSize": 102400,
+    "fileType": "application/pdf",
+    "uploaderId": "550e8400-e29b-41d4-a716-446655440001"
+  },
+  "timestamp": "2025-12-01T10:00:00Z"
 }
+```
+
+## 2. 文件下载接口
+
+### 2.1 下载文件
+
+**接口地址**: `GET /api/files/{fileId}/download`
+
+**权限要求**: 需要认证
+
+**路径参数**:
+
+| 参数名   | 类型   | 必填 | 描述   |
+|--------|------|----|------|
+| fileId | UUID | 是  | 文件ID |
+
+**说明**: 
+- 根据文件ID下载对应的文件
+
+**响应示例**:
+```
+返回文件二进制流
 ```
 
 ## 3. 文件信息查询接口
@@ -50,12 +77,46 @@
 **响应示例**:
 ```json
 {
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "fileName": "example.pdf",
-  "fileSize": 102400,
-  "fileType": "application/pdf",
-  "deleted": false,
-  "deletedAt": null
+  "success": true,
+  "message": "操作成功",
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "fileName": "example.pdf",
+    "fileSize": 102400,
+    "fileType": "application/pdf",
+    "deleted": false,
+    "deletedAt": null
+  },
+  "timestamp": "2025-12-01T10:00:00Z"
+}
+```
+
+## 4. 文件删除接口
+
+### 4.1 删除临时文件及分片
+
+**接口地址**: `DELETE /api/files/tmp/{fileId}`
+
+**权限要求**: 需要认证
+
+**路径参数**:
+
+| 参数名   | 类型   | 必填 | 描述   |
+|--------|------|----|------|
+| fileId | UUID | 是  | 文件ID |
+
+**说明**: 
+- 物理删除临时文件及其相关的所有分片文件
+- 同时删除数据库中的文件记录和分片记录
+- 该操作不可逆，请谨慎使用
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "文件删除成功",
+  "data": null,
+  "timestamp": "2025-12-01T10:00:00Z"
 }
 ```
 
@@ -82,14 +143,19 @@
 **响应示例**:
 ```json
 {
-  "uploadId": "550e8400-e29b-41d4-a716-446655440002",
-  "fileName": "large_file.zip",
-  "fileSize": 104857600,
-  "totalChunks": 100
+  "success": true,
+  "message": "操作成功",
+  "data": {
+    "uploadId": "550e8400-e29b-41d4-a716-446655440002",
+    "fileName": "large_file.zip",
+    "fileSize": 104857600,
+    "totalChunks": 100
+  },
+  "timestamp": "2025-12-01T10:00:00Z"
 }
 ```
 
-### 2.2 上传文件分片
+### 5.2 上传文件分片
 
 **接口地址**: `POST /api/files/chunked-upload/chunk`
 
@@ -111,14 +177,19 @@
 **响应示例**:
 ```json
 {
-  "uploadId": "550e8400-e29b-41d4-a716-446655440002",
-  "chunkNumber": 1,
   "success": true,
-  "message": "分片上传成功"
+  "message": "操作成功",
+  "data": {
+    "uploadId": "550e8400-e29b-41d4-a716-446655440002",
+    "chunkNumber": 1,
+    "success": true,
+    "message": "分片上传成功"
+  },
+  "timestamp": "2025-12-01T10:00:00Z"
 }
 ```
 
-### 2.3 查询分片上传状态
+### 5.3 查询分片上传状态
 
 **接口地址**: `GET /api/files/chunked-upload/status`
 
@@ -136,16 +207,21 @@
 **响应示例**:
 ```json
 {
-  "uploadId": "550e8400-e29b-41d4-a716-446655440002",
-  "fileName": "large_file.zip",
-  "fileSize": 104857600,
-  "totalChunks": 100,
-  "uploadedChunks": [1, 2, 3, 5],
-  "missingChunks": [4, 6, 7, 8]
+  "success": true,
+  "message": "操作成功",
+  "data": {
+    "uploadId": "550e8400-e29b-41d4-a716-446655440002",
+    "fileName": "large_file.zip",
+    "fileSize": 104857600,
+    "totalChunks": 100,
+    "uploadedChunks": [1, 2, 3, 5],
+    "missingChunks": [4, 6, 7, 8]
+  },
+  "timestamp": "2025-12-01T10:00:00Z"
 }
 ```
 
-### 2.4 合并分片
+### 5.4 合并分片
 
 **接口地址**: `POST /api/files/chunked-upload/merge`
 
@@ -163,10 +239,15 @@
 **响应示例**:
 ```json
 {
-  "id": "550e8400-e29b-41d4-a716-446655440003",
-  "fileName": "large_file.zip",
-  "fileSize": 104857600,
-  "fileType": "application/zip",
-  "uploaderId": "550e8400-e29b-41d4-a716-446655440001"
+  "success": true,
+  "message": "操作成功",
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440003",
+    "fileName": "large_file.zip",
+    "fileSize": 104857600,
+    "fileType": "application/zip",
+    "uploaderId": "550e8400-e29b-41d4-a716-446655440001"
+  },
+  "timestamp": "2025-12-01T10:00:00Z"
 }
 ```
