@@ -18,7 +18,7 @@ import {getOutputTypeDisplayName} from "@/lib/outputUtils";
 import {outputApi} from "@/integrations/api/outputApi";
 import {Dataset} from "@/integrations/api/datasetApi";
 import {DatasetTypes} from "@/lib/enums";
-import {DatasetSelector} from "./DatasetSelector";
+import {DatasetSelector} from "../dataset/DatasetSelector.tsx";
 import {formatDate} from "@/lib/utils";
 import FileUploader from "@/components/upload/FileUploader";
 import {FileInfo} from "@/integrations/api/fileApi";
@@ -214,6 +214,7 @@ const SubmitOutputDialog = ({open, onOpenChange, onSubmit}: SubmitOutputDialogPr
                 abstractText: newOutput.abstract,
                 outputNumber:
                     newOutput.type === 'project' ? newOutput.projectId :
+                        newOutput.type === 'paper' && newOutput.pubmedId ? newOutput.pubmedId :
                         newOutput.type === 'publication' ? newOutput.publicationNumber :
                             (newOutput.type === 'invention_patent' || newOutput.type === 'utility_patent') ? newOutput.patentNumber :
                                 newOutput.type === 'software_copyright' ? newOutput.patentNumber :
@@ -222,6 +223,7 @@ const SubmitOutputDialog = ({open, onOpenChange, onSubmit}: SubmitOutputDialogPr
                 publicationUrl: newOutput.publicationUrl || '',
                 fileId: newOutput.fileId || '',
                 otherInfo: {
+                    pubmedId: newOutput.type === 'paper' && newOutput.pubmedId ? newOutput.pubmedId : undefined,
                     journal: newOutput.type === 'paper' ? newOutput.journal : undefined,
                     authors: newOutput.type === 'paper' ? newOutput.authors :
                         newOutput.type === 'publication' ? newOutput.authors :
@@ -321,7 +323,7 @@ const SubmitOutputDialog = ({open, onOpenChange, onSubmit}: SubmitOutputDialogPr
             }
         }}>
             <DialogContent
-                className="sm:max-w-[425px] md:max-w-[500px] lg:max-w-[600px] max-h-[85vh] overflow-hidden flex flex-col">
+                className="sm:max-w-[425px] md:max-w-[500px] lg:max-w-[700px] max-h-[85vh] min-h-[20vh] overflow-hidden flex flex-col">
                 <DialogHeader>
                     <DialogTitle>提交研究成果</DialogTitle>
                 </DialogHeader>

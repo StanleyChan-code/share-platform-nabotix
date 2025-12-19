@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,15 +8,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { getCurrentUser, getCurrentUserRoles, updateUserProfile } from "@/integrations/api/authApi";
-import { getInstitutionById } from "@/integrations/api/institutionApi";
-import { getPermissionRoleDisplayName } from "@/lib/permissionUtils";
+import { institutionApi } from "@/integrations/api/institutionApi";
+import { getPermissionRoleDisplayName, PermissionRoles } from "@/lib/permissionUtils";
 import ProfileInfo from "@/components/profile/ProfileInfo";
 import ApplicationsTab from "@/components/profile/ApplicationsTab";
 import OutputsTab from "@/components/profile/OutputsTab";
 import SettingsTab from "@/components/profile/SettingsTab";
+import DatasetsTab from "@/components/profile/DatasetsTab";
 
 const Profile = () => {
-  const [activeTab, setActiveTab] = useState<"profile" | "applications" | "outputs" | "settings">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "applications" | "outputs" | "datasets" | "settings">("profile");
   const [user, setUser] = useState<{id: string, email: string} | null>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [userRoles, setUserRoles] = useState<string[]>([]);
@@ -24,6 +25,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [editForm, setEditForm] = useState({
     username: "",
@@ -44,6 +46,11 @@ const Profile = () => {
       setLoading(false);
     }
 
+    // 检查URL参数，如果tab=outputs，则切换到成果标签页
+    const params = new URLSearchParams(location.search);
+    if (params.get('tab') === 'outputs') {
+      setActiveTab('outputs');
+    }
   }, []);
 
   const fetchUserProfile = async () => {
@@ -79,9 +86,9 @@ const Profile = () => {
       // 如果用户有机构ID，获取机构信息
       if (profileData.institutionId) {
         try {
-          const institutionResponse = await getInstitutionById(profileData.institutionId);
-          if (institutionResponse.data.success) {
-            setInstitution(institutionResponse.data.data);
+          const institutionResponse = await institutionApi.getInstitutionById(profileData.institutionId);
+          if (institutionResponse.success) {
+            setInstitution(institutionResponse.data);
           }
         } catch (error) {
           console.error("获取机构信息失败:", error);
@@ -210,6 +217,18 @@ const Profile = () => {
             >
               研究成果
             </button>
+            {userRoles.includes(PermissionRoles.DATASET_UPLOADER) && (
+              <button
+                onClick={() => setActiveTab("datasets")}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === "datasets"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-foreground"
+                }`}
+              >
+                我的数据集
+              </button>
+            )}
             <button
               onClick={() => setActiveTab("settings")}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
@@ -237,6 +256,8 @@ const Profile = () => {
         {activeTab === "applications" && <ApplicationsTab />}
         
         {activeTab === "outputs" && <OutputsTab />}
+        
+        {activeTab === "datasets" && userRoles.includes(PermissionRoles.DATASET_UPLOADER) && <DatasetsTab />}
         
         {activeTab === "settings" && (
           <SettingsTab 

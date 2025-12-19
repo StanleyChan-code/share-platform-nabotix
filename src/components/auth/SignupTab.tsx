@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { ApiError } from "@/integrations/api/client";
 import { register, sendVerificationCode } from "@/integrations/api/authApi";
-import { getAllInstitutions, searchInstitutions, Institution } from "@/integrations/api/institutionApi";
+import {Institution, institutionApi} from "@/integrations/api/institutionApi";
 import { Page } from "@/integrations/api/client";
 import { Phone, Lock, User as UserIcon, Mail, Send, Building, CreditCard, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -31,35 +31,12 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
   const [idType, setIdType] = useState("");
   const [idNumber, setIdNumber] = useState("");
   const [institutionId, setInstitutionId] = useState("");
-  const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [countdown, setCountdown] = useState(0); // 注册验证码倒计时状态
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [searchResults, setSearchResults] = useState<Institution[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const { toast } = useToast();
-
-  // 加载机构列表
-  useEffect(() => {
-    const loadInstitutions = async () => {
-      try {
-        const response = await getAllInstitutions(0, 100); // 获取前100个机构
-        if (response.data.success) {
-          const paginatedData = response.data.data as Page<Institution>;
-          setInstitutions(paginatedData.content || []); // 使用 content 字段
-        }
-      } catch (error) {
-        console.error("加载机构列表失败:", error);
-        toast({
-          title: "错误",
-          description: "加载机构列表失败，请稍后重试。",
-          variant: "destructive",
-        });
-      }
-    };
-
-    loadInstitutions();
-  }, [toast]);
 
   // 处理倒计时
   useEffect(() => {
@@ -81,9 +58,9 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
 
       setIsSearching(true);
       try {
-        const response = await searchInstitutions(searchValue);
-        if (response.data.success) {
-          setSearchResults(response.data.data.content || []);
+        const response = await institutionApi.searchInstitutions(searchValue);
+        if (response.success) {
+          setSearchResults(response.data.content || []);
         }
       } catch (error) {
         console.error("搜索机构失败:", error);
@@ -215,10 +192,9 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
   // 获取选中机构的名称用于显示
   const selectedInstitution = useMemo(() => {
     if (!institutionId) return "";
-    const institution = institutions.find(inst => inst.id === institutionId) || 
-                       searchResults.find(inst => inst.id === institutionId);
+    const institution = searchResults.find(inst => inst.id === institutionId);
     return institution ? institution.fullName : "";
-  }, [institutionId, institutions, searchResults]);
+  }, [institutionId, searchResults]);
 
   return (
     <form onSubmit={handleSignup} className="space-y-4">
@@ -322,7 +298,7 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
                     {isSearching ? "搜索中..." : "未找到相关机构"}
                   </CommandEmpty>
                   <CommandGroup>
-                    {(searchValue ? searchResults : institutions).map((institution) => (
+                    {(searchValue ? searchResults : []).map((institution) => (
                       <CommandItem
                         key={institution.id}
                         value={institution.id}

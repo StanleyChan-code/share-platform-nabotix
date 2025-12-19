@@ -7,6 +7,8 @@ import { useEffect, useState } from "react";
 import { getPlatformStatistics } from "@/integrations/api/statisticsApi";
 import { api } from "@/integrations/api/client";
 import { DatasetTypes, OutputTypes } from "@/lib/enums";
+import {formatDate} from "@/lib/utils.ts";
+import {Dataset} from "@/integrations/api/datasetApi.ts";
 
 // 定义平台统计数据结构
 interface PlatformStatistics {
@@ -43,7 +45,7 @@ const Index = () => {
     const fetchRecentDatasets = async () => {
       try {
         setDatasetsLoading(true);
-        const response = await api.get('/datasets/query?size=3');
+        const response = await api.get('/datasets/query?size=6&sortBy=currentVersionDate&sortDir=desc');
         if (response.data.success) {
           setRecentDatasets(response.data.data.content);
         }
@@ -57,7 +59,7 @@ const Index = () => {
     const fetchRecentOutputs = async () => {
       try {
         setOutputsLoading(true);
-        const response = await api.get('/research-outputs/public?size=3&sortBy=createdAt&sortDir=desc');
+        const response = await api.get('/research-outputs/public?size=6&sortBy=createdAt&sortDir=desc');
         if (response.data.success) {
           setRecentOutputs(response.data.data.content);
         }
@@ -126,41 +128,53 @@ const Index = () => {
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-4">
             <h2 className="text-2xl font-semibold">最新数据集</h2>
-            <div className="space-y-3">
+            <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
               {datasetsLoading ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="col-span-2 text-center py-8 text-muted-foreground">
                   加载中...
                 </div>
               ) : recentDatasets && recentDatasets.length > 0 ? (
-                recentDatasets.map((dataset: any) => (
-                  <div key={dataset.id} className="flex flex-col p-4 border rounded-lg hover:shadow-md transition-shadow">
-                    <h3 className="font-medium text-lg mb-2 truncate">{dataset.titleCn.length > 30 ? `${dataset.titleCn.substring(0, 30)}...` : dataset.titleCn}</h3>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="bg-secondary px-2 py-1 rounded text-xs">
+                recentDatasets.map((dataset: Dataset) => (
+                  <div 
+                    key={dataset.id} 
+                    className="flex flex-col p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <h3 
+                        className="font-medium text-lg leading-tight truncate" 
+                        title={dataset.titleCn}
+                      >
+                        {dataset.titleCn}
+                      </h3>
+                      <span className="bg-secondary px-2 py-1 rounded text-xs whitespace-nowrap ml-2">
                         {DatasetTypes[dataset.type as keyof typeof DatasetTypes] || dataset.type}
                       </span>
-                      <span className="text-sm text-muted-foreground">
-                        {new Date(dataset.createdAt).toLocaleDateString('zh-CN')}
+                    </div>
+                    
+                    {dataset.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3" title={dataset.description}>
+                        {dataset.description}
+                      </p>
+                    )}
+                    
+                    <div className="flex items-center justify-between text-sm mb-2">
+                      <span className="text-muted-foreground truncate" title={dataset.provider?.realName || '未知'}>
+                        提供者: {dataset.provider?.realName || '未知'}
+                      </span>
+                      <span className="text-muted-foreground whitespace-nowrap ml-2">
+                        {formatDate(dataset.currentVersionDate || dataset.createdAt)}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <div className="flex flex-col w-full">
-                        {dataset.provider?.institution?.fullName && (
-                          <span className="text-sm text-muted-foreground truncate" title={dataset.provider.institution.fullName}>
-                            机构: {dataset.provider.institution.fullName.length > 30 ? `${dataset.provider.institution.fullName.substring(0, 30)}...` : dataset.provider.institution.fullName}
-                          </span>
-                        )}
-                        {dataset.subjectArea?.name && (
-                          <span className="text-sm text-muted-foreground truncate" title={dataset.subjectArea.name}>
-                            学科: {dataset.subjectArea.name.length > 30 ? `${dataset.subjectArea.name.substring(0, 30)}...` : dataset.subjectArea.name}
-                          </span>
-                        )}
+                    
+                    {dataset.dataCollectionUnit && (
+                      <div className="text-xs text-muted-foreground truncate mb-1" title={`采集单位: ${dataset.dataCollectionUnit}`}>
+                        采集单位: {dataset.dataCollectionUnit}
                       </div>
-                    </div>
+                    )}
                   </div>
                 ))
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="col-span-2 text-center py-8 text-muted-foreground">
                   暂无数据集
                 </div>
               )}
@@ -169,35 +183,59 @@ const Index = () => {
 
           <div className="space-y-4">
             <h2 className="text-2xl font-semibold">最新研究成果</h2>
-            <div className="space-y-3">
+            <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
               {outputsLoading ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="col-span-2 text-center py-8 text-muted-foreground">
                   加载中...
                 </div>
               ) : recentOutputs && recentOutputs.length > 0 ? (
                 recentOutputs.map((output: any) => (
-                  <div key={output.id} className="flex flex-col p-4 border rounded-lg hover:shadow-md transition-shadow">
-                    <h3 className="font-medium text-lg mb-2 truncate">{output.title.length > 30 ? `${output.title.substring(0, 30)}...` : output.title}</h3>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="bg-secondary px-2 py-1 rounded text-xs">
+                  <div 
+                    key={output.id} 
+                    className="flex flex-col p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <h3 
+                        className="font-medium text-lg leading-tight truncate" 
+                        title={output.title}
+                      >
+                        {output.title}
+                      </h3>
+                      <span className="bg-secondary px-2 py-1 rounded text-xs whitespace-nowrap ml-2">
                         {OutputTypes[output.type as keyof typeof OutputTypes] || output.type}
                       </span>
-                      <span className="text-sm text-muted-foreground">
-                        {new Date(output.createdAt).toLocaleDateString('zh-CN')}
+                    </div>
+                    
+                    {output.abstractText && (
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3" title={output.abstractText}>
+                        {output.abstractText}
+                      </p>
+                    )}
+                    
+                    <div className="flex items-center justify-between text-sm mb-2">
+                      <span className="text-muted-foreground truncate" title={output.submitter?.realName || '未知'}>
+                        提交者: {output.submitter?.realName || '未知'}
+                      </span>
+                      <span className="text-muted-foreground whitespace-nowrap ml-2">
+                        {formatDate(output.createdAt)}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground truncate" title={output.submitter?.realName || '未知'}>
-                        提交者: {(output.submitter?.realName || '未知').length > 30 ? `${(output.submitter?.realName || '未知').substring(0, 30)}...` : (output.submitter?.realName || '未知')}
-                      </span>
+                    
+                    <div className="flex items-center justify-between">
+                      {output.dataset?.titleCn && (
+                        <div className="text-xs text-muted-foreground truncate max-w-[60%]" title={`基于数据集: ${output.dataset.titleCn}`}>
+                          基于: {output.dataset.titleCn}
+                        </div>
+                      )}
                       <span className="inline-flex items-center gap-1 text-sm">
-                        引用数: {output.citationCount || 0}
+                        <TrendingUp className="h-4 w-4" />
+                        {output.citationCount || 0}
                       </span>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="col-span-2 text-center py-8 text-muted-foreground">
                   暂无研究成果
                 </div>
               )}

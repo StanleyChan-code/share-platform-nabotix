@@ -26,7 +26,7 @@ interface DatasetGridProps {
 
 export const DatasetGrid = ({ datasets, onDatasetClick }: DatasetGridProps) => {
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+    <>
       {datasets.map((dataset: any) => {
         const latestApprovedVersion = getLatestApprovedVersion(dataset.versions);
         const recordCount = latestApprovedVersion?.recordCount;
@@ -35,7 +35,7 @@ export const DatasetGrid = ({ datasets, onDatasetClick }: DatasetGridProps) => {
         return (
           <Card 
             key={dataset.id} 
-            className="hover:shadow-md transition-shadow cursor-pointer"
+            className="hover:shadow-md transition-shadow cursor-pointer h-full w-full max-w-lg"
             onClick={() => onDatasetClick(dataset)}
           >
             <CardHeader>
@@ -96,15 +96,15 @@ export const DatasetGrid = ({ datasets, onDatasetClick }: DatasetGridProps) => {
                     发布于 {formatDate(dataset.currentVersionDate || dataset.createdAt)}
                   </p>
                 </div>
-                <Button size="sm" className="gap-2">
-                  <Download className="h-4 w-4" />
-                  申请数据
+                <Button size="sm" variant="outline" className="gap-2">
+                  <Database className="h-4 w-4" />
+                  查看详情
                 </Button>
               </div>
             </CardContent>
           </Card>
         );
       })}
-    </div>
+    </>
   );
 };

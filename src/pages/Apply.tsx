@@ -12,6 +12,7 @@ import { useState } from "react";
 import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {formatDate, formatDateTime} from "@/lib/utils.ts";
 
 // Mock data for application statuses
 const mockApplications = [
@@ -427,9 +428,9 @@ const Apply = () => {
                               申请数据集：{application.datasets?.title_cn || '未知数据集'}
                             </p>
                             <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                              <span>提交时间：{new Date(application.submitted_at).toLocaleDateString('zh-CN')}</span>
+                              <span>提交时间：{formatDateTime(new Date(application.submitted_at))}</span>
                               {application.reviewed_at && (
-                                <span>审核时间：{new Date(application.reviewed_at).toLocaleDateString('zh-CN')}</span>
+                                <span>审核时间：{formatDateTime(new Date(application.reviewed_at))}</span>
                               )}
                             </div>
                           </div>

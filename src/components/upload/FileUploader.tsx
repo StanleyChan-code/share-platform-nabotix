@@ -3,6 +3,7 @@ import {Button} from "@/components/ui/button";
 import {Progress} from "@/components/ui/progress";
 import {Alert, AlertDescription} from "@/components/ui/alert";
 import {fileApi, FileInfo} from "@/integrations/api/fileApi";
+import { X } from 'lucide-react';
 
 // 创建一个共享的暂停控制器类
 class PauseController {
@@ -74,8 +75,8 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState('');
-    const [isRetryNeeded, setIsRetryNeeded] = useState(false); // 新增：是否需要重试
-    const [retryError, setRetryError] = useState(''); // 新增：重试错误信息
+    const [isRetryNeeded, setIsRetryNeeded] = useState(false);
+    const [retryError, setRetryError] = useState('');
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
@@ -563,12 +564,17 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>
                     className="flex-1 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                 />
                 {file && !isUploading && !isPaused && !errorMessage && (
-                    <Button onClick={handleReset} variant="outline">
-                        清除
+                    <Button 
+                        type="button"
+                        onClick={() => handleReset()} 
+                        variant="outline"
+                        size="icon"
+                    >
+                        <X className="h-4 w-4" />
                     </Button>
                 )}
                 {(file && errorMessage) && (
-                    <Button onClick={handleRetry} variant="outline">
+                    <Button onClick={() => handleRetry()} variant="outline">
                         重试
                     </Button>
                 )}
@@ -610,7 +616,7 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>
                                 </Button>
                                 <Button
                                     type="button"
-                                    onClick={handleCancel}
+                                    onClick={() => handleCancel()}
                                     variant="outline"
                                     disabled={isCancelled}
                                 >
@@ -621,7 +627,7 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>
                         {isCancelled && (
                             <Button
                                 type="button"
-                                onClick={handleReset}
+                                onClick={() => handleReset()}
                                 variant="outline"
                             >
                                 重新选择文件

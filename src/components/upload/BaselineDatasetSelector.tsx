@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
+import { datasetApi } from '@/integrations/api/datasetApi';
+import {getCurrentUser} from "@/integrations/api/authApi.ts";
 
 interface BaselineDatasetSelectorProps {
   value: string;
@@ -17,20 +18,19 @@ export function BaselineDatasetSelector({ value, onChange }: BaselineDatasetSele
     const fetchBaselineDatasets = async () => {
       setLoading(true);
       try {
-        const { data: user } = await supabase.auth.getUser();
-        
-        // Fetch datasets without parent_dataset_id (baseline datasets) from current user
-        const { data, error } = await supabase
-          .from('datasets')
-          .select('id, title_cn, type, created_at')
-          .eq('provider_id', user.user?.id || '')
-          .is('parent_dataset_id', null)
-          .order('created_at', { ascending: false });
+        const userResponse = await getCurrentUser();
 
-        if (error) {
-          console.error('Error fetching baseline datasets:', error);
+
+        const response = await datasetApi.advancedSearchDatasets( {
+          isTopLevel: true,
+          providerId: userResponse.data.data.id,
+        });
+        if (response.success) {
+          // 过滤出没有父数据集的数据集（基线数据集）
+          const baselineData = response.data.content.filter((dataset: any) => !dataset.parentDatasetId);
+          setBaselineDatasets(baselineData);
         } else {
-          setBaselineDatasets(data || []);
+          console.error('Error fetching baseline datasets:', response.message);
         }
       } catch (err) {
         console.error('Error:', err);
@@ -77,13 +77,13 @@ export function BaselineDatasetSelector({ value, onChange }: BaselineDatasetSele
         <SelectContent>
           {baselineDatasets.map((dataset) => (
             <SelectItem key={dataset.id} value={dataset.id}>
-              {dataset.title_cn} ({new Date(dataset.created_at).toLocaleDateString('zh-CN')})
+              {dataset.titleCn}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
       <p className="text-xs text-muted-foreground">
-        只显示您上传的基线数据集（没有父数据集的数据集）
+        只显示您上传的基线数据集
       </p>
     </div>
   );

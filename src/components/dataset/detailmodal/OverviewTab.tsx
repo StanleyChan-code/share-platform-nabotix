@@ -1,8 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table.tsx";
-import { Users, Database, Calendar, TrendingUp, Building } from "lucide-react";
+import { Users, Database, Calendar, TrendingUp, Building, Link } from "lucide-react";
 import { formatDate } from "@/lib/utils.ts";
+import { Button } from "@/components/ui/button.tsx";
+import { useState } from "react";
+import { DatasetDetailModal } from "@/components/dataset/DatasetDetailModal.tsx";
 
 interface OverviewTabProps {
   dataset: any;
@@ -11,6 +14,8 @@ interface OverviewTabProps {
   demographicFields: any[];
   outcomeFields: any[];
   institution?: any;
+  parentDataset?: any;
+  onViewParentDataset?: () => void;
 }
 
 export function OverviewTab({ 
@@ -19,8 +24,12 @@ export function OverviewTab({
   variableCount, 
   demographicFields, 
   outcomeFields,
-  institution
+  institution,
+  parentDataset,
+  onViewParentDataset
 }: OverviewTabProps) {
+  const [isParentDatasetModalOpen, setIsParentDatasetModalOpen] = useState(false);
+
   return (
     <>
       {/* Basic Information */}
@@ -32,8 +41,8 @@ export function OverviewTab({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-2">
               <p className="text-sm text-muted-foreground">标题</p>
               <p className="font-semibold">{dataset.titleCn}</p>
             </div>
@@ -106,6 +115,21 @@ export function OverviewTab({
                   <Building className="h-4 w-4" />
                   {institution.fullName}
                 </p>
+              </div>
+            )}
+            
+            {/* 显示父数据集链接 */}
+            {parentDataset && (
+              <div>
+                <p className="text-sm text-muted-foreground">基线数据集</p>
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto font-semibold justify-start"
+                  onClick={() => setIsParentDatasetModalOpen(true)}
+                >
+                  <Link className="h-4 w-4 mr-1" />
+                  {parentDataset.titleCn}
+                </Button>
               </div>
             )}
           </div>
@@ -238,6 +262,16 @@ export function OverviewTab({
             </Table>
           </CardContent>
         </Card>
+      )}
+      
+      {/* 父数据集详情模态框 */}
+      {parentDataset && (
+        <DatasetDetailModal
+          dataset={parentDataset}
+          open={isParentDatasetModalOpen}
+          useAdvancedQuery={true}
+          onOpenChange={setIsParentDatasetModalOpen}
+        />
       )}
     </>
   );

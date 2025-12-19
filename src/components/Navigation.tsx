@@ -10,7 +10,6 @@ import {logout, getCurrentUser, getCurrentUserRoles} from "@/integrations/api/au
 const navigationItems = [
     {name: "首页", name_en: "Home", href: "/", icon: BarChart3},
     {name: "数据集", name_en: "Datasets", href: "/datasets", icon: Database},
-    {name: "申请", name_en: "Apply", href: "/apply", icon: FileText},
     {name: "成果", name_en: "Outputs", href: "/outputs", icon: Upload},
     {name: "关于", name_en: "About", href: "/about", icon: Info},
     {name: "个人中心", name_en: "My Center", href: "/profile", icon: User},

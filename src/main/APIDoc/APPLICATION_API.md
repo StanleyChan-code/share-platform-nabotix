@@ -43,6 +43,8 @@
     "applicantName": "申请人姓名",
     "supervisorId": null,
     "supervisorName": null,
+    "providerId": null,
+    "providerName": null,
     "applicantRole": "TEAM_RESEARCHER",
     "applicantType": "内部研究人员",
     "projectTitle": "研究项目标题",
@@ -157,6 +159,8 @@
     "applicantName": "申请人姓名",
     "supervisorId": null,
     "supervisorName": null,
+    "providerId": "550e8400-e29b-41d4-a716-446655440004",
+    "providerName": "数据集提供者",
     "applicantRole": "TEAM_RESEARCHER",
     "applicantType": "内部研究人员",
     "projectTitle": "研究项目标题",
@@ -327,6 +331,8 @@
     "applicantName": "申请人姓名",
     "supervisorId": null,
     "supervisorName": null,
+    "providerId": "550e8400-e29b-41d4-a716-446655440004",
+    "providerName": "数据集提供者",
     "applicantRole": "TEAM_RESEARCHER",
     "applicantType": "内部研究人员",
     "projectTitle": "研究项目标题",
@@ -340,6 +346,70 @@
     "providerNotes": "审核备注",
     "submittedAt": "2025-12-01T10:00:00Z",
     "providerReviewedAt": "2025-12-01T11:00:00Z",
+    "institutionReviewedAt": null,
+    "approvedAt": null
+  },
+  "timestamp": "2025-12-01T12:00:00Z"
+}
+```
+
+### 1.7 用户更新自己的申请（仅在未被数据集提供者审核前允许）
+
+**接口地址**: `PUT /api/applications/{id}`
+
+**权限要求**: 需要认证
+
+**请求参数**:
+
+| 参数名 | 类型   | 必填 | 描述   |
+|-----|------|----|------|
+| id  | UUID | 是  | 申请ID |
+
+**请求体**:
+```json
+{
+  "applicantRole": "TEAM_RESEARCHER",
+  "applicantType": "内部研究人员",
+  "projectTitle": "研究项目标题",
+  "projectDescription": "研究项目描述",
+  "fundingSource": "国家自然科学基金",
+  "purpose": "研究目的",
+  "projectLeader": "项目负责人",
+  "approvalDocumentId": "550e8400-e29b-41d4-a716-446655440001"
+}
+```
+
+**说明**: 
+- 只有申请人在数据集提供者审核前可以更新申请信息
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "更新申请成功",
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440002",
+    "datasetId": "550e8400-e29b-41d4-a716-446655440000",
+    "datasetTitle": "数据集标题",
+    "applicantId": "550e8400-e29b-41d4-a716-446655440003",
+    "applicantName": "申请人姓名",
+    "supervisorId": null,
+    "supervisorName": null,
+    "providerId": null,
+    "providerName": null,
+    "applicantRole": "TEAM_RESEARCHER",
+    "applicantType": "内部研究人员",
+    "projectTitle": "研究项目标题",
+    "projectDescription": "研究项目描述",
+    "fundingSource": "国家自然科学基金",
+    "purpose": "研究目的",
+    "projectLeader": "项目负责人",
+    "approvalDocumentId": "550e8400-e29b-41d4-a716-446655440001",
+    "status": "SUBMITTED",
+    "adminNotes": null,
+    "providerNotes": null,
+    "submittedAt": "2025-12-01T10:00:00Z",
+    "providerReviewedAt": null,
     "institutionReviewedAt": null,
     "approvedAt": null
   },
@@ -378,6 +448,8 @@
       "applicantName": "申请人姓名",
       "supervisorId": null,
       "supervisorName": null,
+      "providerId": "550e8400-e29b-41d4-a716-446655440004",
+      "providerName": "数据集提供者",
       "applicantRole": "TEAM_RESEARCHER",
       "applicantType": "内部研究人员",
       "projectTitle": "研究项目标题",
@@ -433,6 +505,8 @@
         "applicantName": "申请人姓名",
         "supervisorId": null,
         "supervisorName": null,
+        "providerId": "550e8400-e29b-41d4-a716-446655440004",
+        "providerName": "数据集提供者",
         "applicantRole": "TEAM_RESEARCHER",
         "applicantType": "内部研究人员",
         "projectTitle": "研究项目标题",
@@ -620,6 +694,8 @@
           "applicantName": "申请人姓名",
           "supervisorId": null,
           "supervisorName": null,
+          "providerId": "550e8400-e29b-41d4-a716-446655440004",
+          "providerName": "数据集提供者",
           "applicantRole": "TEAM_RESEARCHER",
           "applicantType": "内部研究人员",
           "projectTitle": "研究项目标题",

@@ -1,15 +1,20 @@
-import {Button} from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import {ScrollArea} from "@/components/ui/scroll-area";
-import {Badge} from "@/components/ui/badge";
-import {getOutputTypeDisplayName, getOutputTypeIconComponent} from "@/lib/outputUtils";
-import {formatDate, formatDateTime} from "@/lib/utils";
-import {ResearchOutput} from "@/integrations/api/outputApi";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { getOutputTypeDisplayName, getOutputTypeIconComponent } from "@/lib/outputUtils";
+import { formatDate, formatDateTime, formatFileSize } from "@/lib/utils";
+import { ResearchOutput, outputApi } from "@/integrations/api/outputApi";
+import { getCurrentUser, getCurrentUserRoles } from "@/integrations/api/authApi";
+import React, { useEffect, useState } from "react";
+import { fileApi, FileInfo } from "@/integrations/api/fileApi";
+import {Download} from "lucide-react";
+import {toast} from "@/hooks/use-toast.ts"; // 添加导入
 
 interface OutputDetailDialogProps {
     open: boolean;
@@ -17,12 +22,88 @@ interface OutputDetailDialogProps {
     output: ResearchOutput | null;
 }
 
-const OutputDetailDialog = ({open, onOpenChange, output}: OutputDetailDialogProps) => {
+const OutputDetailDialog = ({ open, onOpenChange, output }: OutputDetailDialogProps) => {
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [isAdmin, setIsAdmin] = useState<boolean>(false);
+    const [fileInfo, setFileInfo] = useState<FileInfo | null>(null); // 添加文件信息状态
+
+    useEffect(() => {
+        const fetchCurrentUser = async () => {
+            try {
+                const currentUser = await getCurrentUser();
+                setCurrentUserId(currentUser.data.data.id);
+
+                // 获取用户角色以确定是否为管理员
+                // const rolesResponse = await getCurrentUserRoles();
+                // const roles = rolesResponse.data.data.roles || [];
+                // setIsAdmin(roles.includes('ADMIN'));
+            } catch (error) {
+                console.error("Failed to fetch current user:", error);
+            }
+        };
+
+        // 获取文件信息
+        const fetchFileInfo = async () => {
+            if (output?.fileId && (currentUserId && output.submitter && output.submitter.id === currentUserId || isAdmin)) {
+                try {
+                    const info = await fileApi.getFileInfo(output.fileId);
+                    setFileInfo(info.data);
+                } catch (error) {
+                    console.error("Failed to fetch file info:", error);
+                }
+            }
+        };
+
+        if (open && output) {
+            fetchCurrentUser();
+            fetchFileInfo(); // 获取文件信息
+        }
+    }, [open, output, currentUserId, isAdmin]);
+
     if (!output) return null;
+
+    // 检查当前用户是否是提交者或管理员
+    const isSubmitter = currentUserId && output.submitter && output.submitter.id === currentUserId;
+    const canViewSensitiveInfo = isSubmitter || isAdmin;
+
+    // 添加下载文件函数
+    const handleDownloadFile = async () => {
+        if (!output?.id || !output?.fileId) return;
+
+        try {
+            let response;
+            if (isSubmitter) {
+                // 如果是提交者，使用用户下载接口
+                response = await outputApi.downloadOutputFile(output.id, output.fileId);
+            } else if (isAdmin) {
+                // 如果是管理员，使用管理下载接口
+                response = await outputApi.downloadManagedOutputFile(output.id, output.fileId);
+            } else {
+                // 其他情况不应当能够下载
+                return;
+            }
+            
+            // 创建下载链接
+            const url = window.URL.createObjectURL(new Blob([response]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', fileInfo?.fileName || 'file');
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            toast({
+                title: "开始下载",
+                description: `文件 "${fileInfo.fileName}" 已开始下载`
+            });
+        } catch (error) {
+            console.error("Failed to download file:", error);
+        }
+    };
 
     const getTypeIcon = (type: string) => {
         const IconComponent = getOutputTypeIconComponent(type);
-        return <IconComponent className="h-4 w-4"/>;
+        return <IconComponent className="h-4 w-4" />;
     };
 
     const getStatusBadge = (approved: boolean | null) => {
@@ -41,7 +122,7 @@ const OutputDetailDialog = ({open, onOpenChange, output}: OutputDetailDialogProp
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         {getTypeIcon(output.type)}
-                        {getOutputTypeDisplayName(output.type)}详情
+                        成果详情 - {getOutputTypeDisplayName(output.type)}
                     </DialogTitle>
                 </DialogHeader>
 
@@ -81,13 +162,6 @@ const OutputDetailDialog = ({open, onOpenChange, output}: OutputDetailDialogProp
                                             <p>{output.dataset.titleCn}</p>
                                         </div>
                                     )}
-
-                                    {output.fileId && (
-                                        <div>
-                                            <p className="font-medium text-muted-foreground">文件ID</p>
-                                            <p>{output.fileId}</p>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
 
@@ -101,8 +175,9 @@ const OutputDetailDialog = ({open, onOpenChange, output}: OutputDetailDialogProp
                                 </div>
                             )}
 
+
                             {/* 特定类型信息 */}
-                            <div className="space-y-4">
+                            <div className="space-y-4 pt-4 border-t">
                                 <h3 className="text-lg font-semibold">详细信息</h3>
 
                                 <div className="space-y-4 text-sm">
@@ -252,8 +327,38 @@ const OutputDetailDialog = ({open, onOpenChange, output}: OutputDetailDialogProp
                                 </div>
                             </div>
 
-                            {/* 审核信息 */}
-                            {output.approved !== null && (
+                            {/* 文件信息 - 只有提交者或管理员可以看到 */}
+                            {canViewSensitiveInfo && fileInfo && (
+                                <div className="space-y-4 border-t pt-4">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-lg font-semibold">说明文件</h3>
+                                    </div>
+                                    <div className="bg-muted rounded-lg p-4">
+                                        <div className="grid grid-cols-3 gap-3 text-sm">
+                                            <div className={"col-span-2"}>
+                                                <label className="text-muted-foreground">文件名:</label>
+                                                <p className="font-medium break-all">
+                                                    {fileInfo.fileName}（{formatFileSize(fileInfo.fileSize)}）
+                                                </p>
+                                            </div>
+                                            <div className="flex items-end">
+                                                <Button
+                                                    onClick={handleDownloadFile}
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="w-full"
+                                                >
+                                                    <Download className="h-4 w-4 mr-2" />
+                                                    下载
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 审核信息 - 只有提交者或管理员可以看到 */}
+                            {canViewSensitiveInfo && output.approved !== null && (
                                 <div className="space-y-4 border-t pt-4">
                                     <h3 className="text-lg font-semibold">审核信息</h3>
                                     <div className="space-y-4 text-sm">

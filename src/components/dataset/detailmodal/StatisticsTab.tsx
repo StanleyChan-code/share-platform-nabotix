@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Download, ChevronDown, ChevronRight, Layers, Eye, EyeOff, Filter } from 'lucide-react';
 import Papa from 'papaparse';
+import {toast} from "@/hooks/use-toast.ts";
 
 interface StatisticsTabProps {
     stats: ColumnStats[];
@@ -40,7 +41,6 @@ export function StatisticsTab({
                                   outcomeFields,
                                   totalRows
                               }: StatisticsTabProps) {
-    console.log('Statistics:', stats)
     const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
     const [hiddenVariables, setHiddenVariables] = useState<Set<string>>(new Set());
     const [showFilter, setShowFilter] = useState(false);
@@ -106,6 +106,11 @@ export function StatisticsTab({
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+
+        toast({
+            title: "开始下载",
+            description: `文件 "${filename}" 已开始下载`
+        });
     };
 
     const handleDownloadNumeric = () => {

@@ -1,4 +1,4 @@
-import {api, Page, ResearchSubject} from './client';
+import {api, Page} from './client';
 
 // 定义平台统计数据结构
 interface PlatformStatistics {

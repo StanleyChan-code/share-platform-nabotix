@@ -1,40 +1,17 @@
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card.tsx";
 import {Button} from "@/components/ui/button.tsx";
-import {FileText, Download, Shield, AlertTriangle} from "lucide-react";
+import {FileText, Download, Shield, AlertTriangle, CheckCircle, ClockIcon, XCircle} from "lucide-react";
 import {api} from "@/integrations/api/client.ts";
 import {useToast} from "@/hooks/use-toast.ts";
 import {useNavigate} from "react-router-dom";
 import {useEffect, useState} from "react";
+import ApplyDialog from "@/components/application/ApplyDialog.tsx";
 
 interface TermsAndFilesTabProps {
     dataset: any;
+    useAdvancedQuery?: boolean; // 新增属性，控制是否使用高级查询
 }
 
-// 定义申请状态类型
-//    {
-//       "id": "550e8400-e29b-41d4-a716-446655440002",
-//       "datasetId": "550e8400-e29b-41d4-a716-446655440000",
-//       "datasetTitle": "数据集标题",
-//       "applicantId": "550e8400-e29b-41d4-a716-446655440003",
-//       "applicantName": "申请人姓名",
-//       "supervisorId": null,
-//       "supervisorName": null,
-//       "applicantRole": "TEAM_RESEARCHER",
-//       "applicantType": "内部研究人员",
-//       "projectTitle": "研究项目标题",
-//       "projectDescription": "研究项目描述",
-//       "fundingSource": "国家自然科学基金",
-//       "purpose": "研究目的",
-//       "projectLeader": "项目负责人",
-//       "approvalDocumentId": "550e8400-e29b-41d4-a716-446655440001",
-//       "status": "PENDING_INSTITUTION_REVIEW",
-//       "adminNotes": null,
-//       "providerNotes": "审核备注",
-//       "submittedAt": "2025-12-01T10:00:00Z",
-//       "providerReviewedAt": "2025-12-01T11:00:00Z",
-//       "institutionReviewedAt": null,
-//       "approvedAt": null
-//     }
 interface Application {
     id: string;
     datasetId: string;
@@ -60,11 +37,13 @@ interface Application {
     approvedAt: string | null;
 }
 
-export function TermsAndFilesTab({dataset}: TermsAndFilesTabProps) {
+export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFilesTabProps) {
     const {toast} = useToast();
     const navigate = useNavigate();
     const [applicationStatus, setApplicationStatus] = useState<Application | null>(null);
     const [loadingApplication, setLoadingApplication] = useState(true);
+    const [applyDialogOpen, setApplyDialogOpen] = useState(false);
+    const [selectedVersion, setSelectedVersion] = useState<any>(null); // 新增状态用于跟踪选中的版本
 
     // 获取最新审核通过的版本
     const getLatestApprovedVersion = (versions: any[]) => {
@@ -77,8 +56,17 @@ export function TermsAndFilesTab({dataset}: TermsAndFilesTabProps) {
         return approvedVersions.length > 0 ? approvedVersions[0] : null;
     };
 
+    // 初始化选中的版本
+    useEffect(() => {
+        if (dataset?.versions && dataset.versions.length > 0) {
+            // 默认选择最新审核通过的版本
+            const latestApproved = getLatestApprovedVersion(dataset.versions);
+            setSelectedVersion(latestApproved || dataset.versions[0]);
+        }
+    }, [dataset]);
+
     // 获取当前显示的数据集版本
-    const currentVersion = getLatestApprovedVersion(dataset.versions);
+    const currentVersion = selectedVersion || getLatestApprovedVersion(dataset.versions);
 
     // 检查用户是否已认证
     const isAuthenticated = api.isAuthenticated();
@@ -131,7 +119,7 @@ export function TermsAndFilesTab({dataset}: TermsAndFilesTabProps) {
 
         // 只有数据分享文件需要检查申请状态
         if (fileType === 'data') {
-            const isApproved = applicationStatus?.status === "APPROVED";
+            const isApproved = applicationStatus?.status === "APPROVED" || useAdvancedQuery;
             if (!isApproved) {
                 toast({
                     title: "无下载权限",
@@ -220,6 +208,11 @@ export function TermsAndFilesTab({dataset}: TermsAndFilesTabProps) {
             link.remove();
             window.URL.revokeObjectURL(url);
 
+            toast({
+                title: "开始下载",
+                description: `文件 "${filename}" 已开始下载`
+            });
+
         } catch (error) {
             console.error('下载失败:', error);
             toast({
@@ -227,6 +220,14 @@ export function TermsAndFilesTab({dataset}: TermsAndFilesTabProps) {
                 description: "文件下载过程中发生错误，请稍后重试",
                 variant: "destructive",
             });
+        }
+    };
+
+    // 处理版本变更
+    const handleVersionChange = (versionId: string) => {
+        const version = dataset.versions.find((v: any) => v.id === versionId);
+        if (version) {
+            setSelectedVersion(version);
         }
     };
 
@@ -243,10 +244,64 @@ export function TermsAndFilesTab({dataset}: TermsAndFilesTabProps) {
             </CardHeader>
             <CardContent className="space-y-6">
                 <div className="prose prose-sm max-w-none space-y-2">
+                    {/* 版本选择器 - 仅在使用高级查询且存在多个版本时显示 */}
+                    {useAdvancedQuery && dataset.versions && dataset.versions.length > 0 && (
+                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                <div>
+                                    <h3 className="font-medium text-gray-900">文件版本选择</h3>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        选择要下载文件的版本
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <select
+                                        value={currentVersion?.id || ""}
+                                        onChange={(e) => handleVersionChange(e.target.value)}
+                                        className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    >
+                                        {dataset.versions
+                                            .slice()
+                                            .sort((a: any, b: any) => 
+                                                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                                            )
+                                            .map((version: any) => (
+                                                <option key={version.id} value={version.id}>
+                                                    版本 {version.versionNumber} ({new Date(version.createdAt).toLocaleDateString()})
+                                                </option>
+                                            ))}
+                                    </select>
+                                    
+                                    {/* 版本状态指示器 */}
+                                    {currentVersion && (
+                                        <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-md border border-gray-200">
+                                            {currentVersion.approved === true ? (
+                                                <>
+                                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                                    <span className="text-sm font-medium text-green-700">已审核</span>
+                                                </>
+                                            ) : currentVersion.approved === false ? (
+                                                <>
+                                                    <XCircle className="h-4 w-4 text-red-500" />
+                                                    <span className="text-sm font-medium text-red-700">已拒绝</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <ClockIcon className="h-4 w-4 text-yellow-500" />
+                                                    <span className="text-sm font-medium text-yellow-700">待审核</span>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {currentVersion && (
                         <div className="bg-blue-50 p-3 rounded-md border border-blue-200">
                             <p className="text-sm font-medium text-blue-800">
-                                当前版本: v{currentVersion.versionNumber}
+                                当前版本: {currentVersion.versionNumber}
                             </p>
                         </div>
                     )}
@@ -300,11 +355,23 @@ export function TermsAndFilesTab({dataset}: TermsAndFilesTabProps) {
                             <Button
                                 size="sm"
                                 className="gap-2"
-                                onClick={() => handleDownload('data')}
-                                disabled={!currentVersion?.id || !currentVersion?.dataSharingRecordId || (isAuthenticated && !hasDataFilePermission)}
+                                onClick={() => {
+                                    if (hasDataFilePermission || useAdvancedQuery) {
+                                        handleDownload('data');
+                                    } else {
+                                        setApplyDialogOpen(true);
+                                    }
+                                }}
+                                disabled={!currentVersion?.id}
                             >
-                                <Download className="h-4 w-4"/>
-                                {hasDataFilePermission ? "下载" : "需要申请"}
+                                <>
+                                    {(hasDataFilePermission || useAdvancedQuery) ? (
+                                        <Download className="h-4 w-4"/>
+                                    ) : (
+                                        <FileText className="h-4 w-4"/>
+                                    )}
+                                    {(hasDataFilePermission || useAdvancedQuery) ? "下载" : "申请数据集"}
+                                </>
                             </Button>
                         </div>
 
@@ -357,6 +424,12 @@ export function TermsAndFilesTab({dataset}: TermsAndFilesTabProps) {
                         )}
                     </div>
                 )}
+                
+                <ApplyDialog 
+                    open={applyDialogOpen} 
+                    onOpenChange={setApplyDialogOpen} 
+                    datasetId={dataset.id}
+                />
             </CardContent>
         </Card>
     );

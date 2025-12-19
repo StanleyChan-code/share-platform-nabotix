@@ -130,7 +130,7 @@ export function DatasetFilters({
                 )}
               >
                 <Calendar className="mr-2 h-4 w-4" />
-                {dateFrom ? format(dateFrom, "yyyy-MM-dd") : "开始日期"}
+                {dateFrom ? format(dateFrom, "yyyy-MM-dd") : "采集开始"}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -167,7 +167,7 @@ export function DatasetFilters({
                 )}
               >
                 <Calendar className="mr-2 h-4 w-4" />
-                {dateTo ? format(dateTo, "yyyy-MM-dd") : "结束日期"}
+                {dateTo ? format(dateTo, "yyyy-MM-dd") : "采集结束"}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
