@@ -1,15 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { getCurrentUser, getCurrentUserRoles, updateUserProfile } from "@/integrations/api/authApi";
 import { institutionApi } from "@/integrations/api/institutionApi";
 import { getPermissionRoleDisplayName, PermissionRoles } from "@/lib/permissionUtils";
+import { getCurrentUserInfo, getCurrentUser as getCachedUser, getCurrentUserRoles as getCachedRoles, getCurrentUserInstitution } from "@/lib/authUtils";
 import ProfileInfo from "@/components/profile/ProfileInfo";
 import ApplicationsTab from "@/components/profile/ApplicationsTab";
 import OutputsTab from "@/components/profile/OutputsTab";
@@ -39,11 +36,43 @@ const Profile = () => {
 
   useEffect(() => {
     // Check for existing session
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      fetchUserProfile();
+    const userInfo = getCurrentUserInfo();
+    
+    if (userInfo) {
+      // 从sessionStorage中获取用户信息
+      try {
+        setUser({id: userInfo.user.id, email: userInfo.user.email});
+        setUserProfile(userInfo.user);
+        setUserRoles(userInfo.roles);
+        setInstitution(userInfo.institution);
+        
+        setEditForm({
+          username: userInfo.user.username || "",
+          realName: userInfo.user.realName || "",
+          title: userInfo.user.title || "",
+          field: userInfo.user.field || "",
+          phone: userInfo.user.phone || "",
+          email: userInfo.user.email || "",
+          education: userInfo.user.education || ""
+        });
+        
+        setLoading(false);
+      } catch (error) {
+        console.error("解析用户信息失败:", error);
+        // 如果解析失败，清除认证信息并跳转到登录页
+        localStorage.removeItem('authToken');
+        sessionStorage.removeItem('userInfo');
+        navigate('/auth');
+      }
     } else {
-      setLoading(false);
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        // 有token但没有用户信息，从API获取
+        fetchUserProfile();
+      } else {
+        // 没有token，跳转到登录页
+        navigate('/auth');
+      }
     }
 
     // 检查URL参数，如果tab=outputs，则切换到成果标签页
@@ -81,6 +110,18 @@ const Profile = () => {
       // 设置用户权限角色
       if (rolesResponse.data.success) {
         setUserRoles(rolesResponse.data.data);
+        
+        // 更新sessionStorage中的用户信息
+        const userInfoStr = sessionStorage.getItem('userInfo');
+        if (userInfoStr) {
+          try {
+            const userInfo = JSON.parse(userInfoStr);
+            userInfo.roles = rolesResponse.data.data;
+            sessionStorage.setItem('userInfo', JSON.stringify(userInfo));
+          } catch (error) {
+            console.error("更新sessionStorage中的角色信息失败:", error);
+          }
+        }
       }
 
       // 如果用户有机构ID，获取机构信息
@@ -89,6 +130,18 @@ const Profile = () => {
           const institutionResponse = await institutionApi.getInstitutionById(profileData.institutionId);
           if (institutionResponse.success) {
             setInstitution(institutionResponse.data);
+            
+            // 更新sessionStorage中的用户信息
+            const userInfoStr = sessionStorage.getItem('userInfo');
+            if (userInfoStr) {
+              try {
+                const userInfo = JSON.parse(userInfoStr);
+                userInfo.institution = institutionResponse.data;
+                sessionStorage.setItem('userInfo', JSON.stringify(userInfo));
+              } catch (error) {
+                console.error("更新sessionStorage中的机构信息失败:", error);
+              }
+            }
           }
         } catch (error) {
           console.error("获取机构信息失败:", error);
@@ -105,6 +158,7 @@ const Profile = () => {
       // 如果是认证错误，跳转到登录页
       if (error?.response?.status === 401) {
         localStorage.removeItem('authToken');
+        sessionStorage.removeItem('userInfo');
         navigate('/auth');
       }
     } finally {
@@ -152,6 +206,7 @@ const Profile = () => {
     );
   }
 
+  // 如果没有用户信息，跳转到登录页
   if (!user) {
     navigate('/auth');
     return null;
@@ -205,7 +260,7 @@ const Profile = () => {
                   : "border-transparent text-muted-foreground hover:text-foreground hover:border-foreground"
               }`}
             >
-              数据申请
+              我的申请
             </button>
             <button
               onClick={() => setActiveTab("outputs")}
@@ -217,18 +272,16 @@ const Profile = () => {
             >
               研究成果
             </button>
-            {userRoles.includes(PermissionRoles.DATASET_UPLOADER) && (
-              <button
-                onClick={() => setActiveTab("datasets")}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === "datasets"
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-foreground"
-                }`}
-              >
-                我的数据集
-              </button>
-            )}
+            <button
+              onClick={() => setActiveTab("datasets")}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "datasets"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-foreground"
+              }`}
+            >
+              我的数据集
+            </button>
             <button
               onClick={() => setActiveTab("settings")}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
@@ -243,30 +296,42 @@ const Profile = () => {
         </div>
 
         {/* Tab Content */}
-        {activeTab === "profile" && (
-          <ProfileInfo
-            userProfile={userProfile}
-            institution={institution}
-            user={user}
-            educationLabels={{}}
-            onUpdateProfile={handleUpdateProfile}
-          />
-        )}
-        
-        {activeTab === "applications" && <ApplicationsTab />}
-        
-        {activeTab === "outputs" && <OutputsTab />}
-        
-        {activeTab === "datasets" && userRoles.includes(PermissionRoles.DATASET_UPLOADER) && <DatasetsTab />}
-        
-        {activeTab === "settings" && (
-          <SettingsTab 
-            user={userProfile}
-          />
-        )}
+        <div className="mt-6">
+          {activeTab === "profile" && (
+            <ProfileInfo 
+              userProfile={userProfile} 
+              institution={institution}
+              onUpdateProfile={handleUpdateProfile}
+            />
+          )}
+          
+          {activeTab === "applications" && (
+            <ApplicationsTab />
+          )}
+          
+          {activeTab === "outputs" && (
+            <OutputsTab />
+          )}
+          
+          {activeTab === "datasets" && (
+            <DatasetsTab />
+          )}
+          
+          {activeTab === "settings" && (
+            <SettingsTab user={user} />
+          )}
+        </div>
       </main>
     </div>
   );
+};
+
+// 导出工具方法供外部使用
+export { 
+  getCurrentUserInfo, 
+  getCachedUser as getCurrentUser, 
+  getCachedRoles as getUserRoles, 
+  getCurrentUserInstitution 
 };
 
 export default Profile;

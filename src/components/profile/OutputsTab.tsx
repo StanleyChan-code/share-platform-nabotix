@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, FileText, Plus, Trash2, Pencil, Eye, Calendar, User, Building, CheckCircle, XCircle, Clock } from "lucide-react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { getOutputTypeDisplayName, getOutputTypeIconComponent } from "@/lib/outputUtils";
@@ -32,6 +32,7 @@ const OutputsTab = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedOutput, setSelectedOutput] = useState<ResearchOutput | null>(null);
   const { toast } = useToast();
+  const paginatedListRef = useRef<any>(null);
 
   const fetchUserOutputs = useCallback(async (page: number, size: number) => {
     return await outputApi.getMySubmissions({
@@ -113,6 +114,36 @@ const OutputsTab = () => {
     setDetailDialogOpen(true);
   };
 
+  const handleAddOutput = () => {
+    setSubmitDialogOpen(true);
+  };
+
+  const handleOutputSubmitted = () => {
+    // 成果提交后刷新列表
+    toast({
+      title: "提交成功",
+      description: "研究成果已成功提交，等待审核",
+    });
+    
+    // 刷新列表
+    if (paginatedListRef.current) {
+      paginatedListRef.current.refresh();
+    }
+  };
+
+  const handleOutputEdited = () => {
+    // 成果编辑后刷新列表
+    toast({
+      title: "更新成功",
+      description: "研究成果已成功更新",
+    });
+    
+    // 刷新列表
+    if (paginatedListRef.current) {
+      paginatedListRef.current.refresh();
+    }
+  };
+
   const confirmDelete = async () => {
     if (!outputToDelete) return;
 
@@ -124,6 +155,11 @@ const OutputsTab = () => {
         title: "删除成功",
         description: "研究成果已成功删除",
       });
+      
+      // 刷新列表
+      if (paginatedListRef.current) {
+        paginatedListRef.current.refresh();
+      }
     } catch (error) {
       console.error('Error deleting output:', error);
       toast({
@@ -135,26 +171,6 @@ const OutputsTab = () => {
       setDeleteDialogOpen(false);
       setOutputToDelete(null);
     }
-  };
-
-  const handleAddOutput = () => {
-    setSubmitDialogOpen(true);
-  };
-
-  const handleOutputSubmitted = () => {
-    // 成果提交后刷新列表
-    toast({
-      title: "提交成功",
-      description: "研究成果已成功提交，等待审核",
-    });
-  };
-
-  const handleOutputEdited = () => {
-    // 成果编辑后刷新列表
-    toast({
-      title: "更新成功",
-      description: "研究成果已成功更新",
-    });
   };
 
   const renderOutputItem = (output: ResearchOutput) => (
@@ -221,12 +237,6 @@ const OutputsTab = () => {
                 {output.outputNumber && (
                     <Badge variant="secondary" className="text-xs">
                       编号: {truncateText(output.outputNumber, 15)}
-                    </Badge>
-                )}
-
-                {output.citationCount > 0 && (
-                    <Badge variant="secondary" className="text-xs">
-                      引用: {output.citationCount}次
                     </Badge>
                 )}
 
@@ -333,6 +343,7 @@ const OutputsTab = () => {
           </CardHeader>
           <CardContent>
             <PaginatedList
+                ref={paginatedListRef}
                 fetchData={fetchUserOutputs}
                 renderItem={renderOutputItem}
                 renderEmptyState={renderEmptyState}

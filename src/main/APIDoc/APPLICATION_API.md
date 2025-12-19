@@ -115,7 +115,60 @@
 }
 ```
 
-### 1.3 数据集提供者审核申请
+### 1.3 检查当前用户对指定数据集是否有特定状态的申请记录
+
+**接口地址**: `GET /api/applications/check-by-dataset/{datasetId}`
+
+**权限要求**: 需要认证
+
+**请求参数**:
+
+| 参数名     | 类型            | 必填 | 描述       |
+|---------|---------------|----|----------|
+| datasetId | UUID          | 是  | 数据集ID    |
+| status  | ApplicationStatus | 是  | 申请状态     |
+
+**说明**: 
+- 已认证用户可以通过数据集ID和状态检查自己的申请记录
+- 如果有符合条件的申请记录，返回最新的申请记录
+- 如果没有符合条件的申请记录，则返回空数据
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "找到申请记录",
+  "data": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440002",
+      "datasetId": "550e8400-e29b-41d4-a716-446655440000",
+      "datasetTitle": "数据集标题",
+      "applicantId": "550e8400-e29b-41d4-a716-446655440003",
+      "applicantName": "申请人姓名",
+      "supervisorId": null,
+      "supervisorName": null,
+      "applicantRole": "TEAM_RESEARCHER",
+      "applicantType": "内部研究人员",
+      "projectTitle": "研究项目标题",
+      "projectDescription": "研究项目描述",
+      "fundingSource": "国家自然科学基金",
+      "purpose": "研究目的",
+      "projectLeader": "项目负责人",
+      "approvalDocumentId": "550e8400-e29b-41d4-a716-446655440001",
+      "status": "SUBMITTED",
+      "adminNotes": null,
+      "providerNotes": null,
+      "submittedAt": "2025-12-01T10:00:00Z",
+      "providerReviewedAt": null,
+      "institutionReviewedAt": null,
+      "approvedAt": null
+    }
+  ],
+  "timestamp": "2025-12-01T10:00:00Z"
+}
+```
+
+### 1.4 数据集提供者审核申请
 
 **接口地址**: `PUT /api/applications/{id}/provider-review`
 
@@ -180,7 +233,6 @@
   "timestamp": "2025-12-01T11:00:00Z"
 }
 ```
-
 ### 1.4 申请者查询自己的申请记录
 
 **接口地址**: `GET /api/applications/my-applications`
@@ -303,7 +355,23 @@
 }
 ```
 
-### 1.6 软删除申请记录
+### 1.6 下载申请中上传的审批文件
+
+**接口地址**: `GET /api/applications/{id}/files/{fileId}`
+
+**权限要求**: 需要认证
+
+**请求参数**:
+
+| 参数名 | 类型   | 必填 | 描述   |
+|-----|------|----|------|
+| id  | UUID | 是  | 申请ID |
+| fileId  | UUID | 是  | 文件ID |
+
+**说明**: 
+- 申请人、数据集提供者或平台管理员可以下载申请中上传的审批文件
+
+### 1.7 软删除申请记录
 
 **接口地址**: `DELETE /api/applications/{id}`
 
@@ -353,7 +421,7 @@
 }
 ```
 
-### 1.7 用户更新自己的申请（仅在未被数据集提供者审核前允许）
+### 1.8 用户更新自己的申请（仅在未被数据集提供者审核前允许）
 
 **接口地址**: `PUT /api/applications/{id}`
 
@@ -419,9 +487,70 @@
 
 ## 2. 管理申请接口
 
-### 2.1 根据数据集ID获取申请记录列表
+### 2.1 申请审核员审核申请
 
-**接口地址**: `GET /api/manage/applications/by-dataset/{datasetId}`
+**接口地址**: `PUT /api/manage/applications/{id}/approver-review`
+
+**权限要求**: PLATFORM_ADMIN、INSTITUTION_SUPERVISOR、DATASET_APPROVER
+
+**请求参数**:
+
+| 参数名 | 类型   | 必填 | 描述   |
+|-----|------|----|------|
+| id  | UUID | 是  | 申请ID |
+
+**请求体**:
+```json
+{
+  "notes": "审核备注",
+  "approved": true
+}
+```
+
+或者驳回:
+```json
+{
+  "notes": "审核备注",
+  "approved": false
+}
+```
+
+**说明**: 
+- 申请审核员可以审核申请
+
+### 2.2 根据数据集版本ID获取申请记录列表
+
+**接口地址**: `GET /api/manage/applications/by-dataset-version/{datasetVersionId}`
+
+**权限要求**: PLATFORM_ADMIN、INSTITUTION_SUPERVISOR、DATASET_APPROVER
+
+**请求参数**:
+
+| 参数名           | 类型   | 必填 | 描述        |
+|----------------|------|----|-----------|
+| datasetVersionId | UUID | 是  | 数据集版本ID   |
+
+**说明**: 
+- 申请审核员可以通过数据集版本ID获取所有相关的申请记录列表
+
+### 2.3 根据数据集版本ID分页获取申请记录列表
+
+**接口地址**: `GET /api/manage/applications/by-dataset-version/{datasetVersionId}/page`
+
+**权限要求**: PLATFORM_ADMIN、INSTITUTION_SUPERVISOR、DATASET_APPROVER
+
+**请求参数**:
+
+| 参数名           | 类型     | 必填 | 默认值         | 描述             |
+|----------------|--------|----|-------------|----------------|
+| datasetVersionId | UUID   | 是  | -           | 数据集版本ID        |
+| page           | int    | 否  | 0           | 页码             |
+| size           | int    | 否  | 10          | 每页大小           |
+| sortBy         | string | 否  | submittedAt | 排序字段           |
+| sortDir        | string | 否  | desc        | 排序方向（asc/desc） |
+
+**说明**: 
+- 申请审核员可以通过数据集版本ID分页获取相关的申请记录列表
 
 **权限要求**: PLATFORM_ADMIN、INSTITUTION_SUPERVISOR、DATASET_APPROVER
 
@@ -471,7 +600,7 @@
 }
 ```
 
-### 2.2 根据数据集ID分页获取申请记录列表
+### 2.4 根据数据集ID分页获取申请记录列表
 
 **接口地址**: `GET /api/manage/applications/by-dataset/{datasetId}/page`
 
@@ -535,7 +664,7 @@
 }
 ```
 
-### 2.3 申请审核员审核申请
+### 2.5 申请审核员审核申请
 
 **接口地址**: `PUT /api/manage/applications/{id}/approver-review`
 
@@ -599,7 +728,7 @@
 }
 ```
 
-### 2.4 申请审核员查看待审核申请记录列表
+### 2.6 申请审核员查看待审核申请记录列表
 
 **接口地址**: `GET /api/manage/applications/pending-applications`
 
@@ -660,7 +789,7 @@
 }
 ```
 
-### 2.5 申请审核员查看已处理申请记录列表
+### 2.7 申请审核员查看已处理申请记录列表
 
 **接口地址**: `GET /api/manage/applications/processed-applications`
 

@@ -95,7 +95,7 @@
 
 ### 4.1 删除临时文件及分片
 
-**接口地址**: `DELETE /api/files/tmp/{fileId}`
+**接口地址**: `DELETE /api/files/{fileId}`
 
 **权限要求**: 需要认证
 

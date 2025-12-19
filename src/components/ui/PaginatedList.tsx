@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -22,7 +22,7 @@ interface PaginatedListProps<T> {
   gap?: number; // 项目之间的间距，单位px，默认为16
 }
 
-const PaginatedList = <T,>({
+const PaginatedList = forwardRef(<T,>({
                              fetchData,
                              renderItem,
                              pageSize = 10,
@@ -32,7 +32,7 @@ const PaginatedList = <T,>({
                              showManualLoadButton = true,
                              gridLayout = false, // 默认不使用网格布局
                              gap = 16 // 默认间距16px
-                           }: PaginatedListProps<T>) => {
+                           }: PaginatedListProps<T>, ref) => {
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
@@ -157,6 +157,11 @@ const PaginatedList = <T,>({
     fetchInitialData();
   }, [fetchInitialData]);
 
+  // Expose refresh method to parent components
+  useImperativeHandle(ref, () => ({
+    refresh
+  }));
+
   // Remove duplicates (in case some slipped through)
   const uniqueItems = Array.from(
       new Map(items.map((item: any) => [item.id, item])).values()
@@ -256,6 +261,6 @@ const PaginatedList = <T,>({
         </div>
       </>
   );
-};
+});
 
 export default PaginatedList;

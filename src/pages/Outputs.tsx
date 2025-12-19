@@ -98,7 +98,7 @@ const Outputs = () => {
                                     {output.title}
                                 </h3>
                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                    <Badge variant={output.type === "paper" ? "default" : "secondary"}>
+                                    <Badge variant={output.type === "PAPER" ? "default" : "secondary"}>
                                         {getOutputTypeDisplayName(output.type)}
                                     </Badge>
                                     {output.otherInfo?.journal && (
@@ -114,14 +114,8 @@ const Outputs = () => {
                                 </div>
                             </div>
 
-                            {/* 引用计数和外部链接 */}
+                            {/* 外部链接 */}
                             <div className="flex items-center gap-4 text-sm shrink-0">
-                                {output.citationCount > 0 && (
-                                    <div className="text-center">
-                                        <p className="font-bold text-lg">{output.citationCount}</p>
-                                        <p className="text-xs text-muted-foreground">引用</p>
-                                    </div>
-                                )}
                                 {output.publicationUrl && (
                                     <Button variant="outline" size="sm" asChild>
                                         <a
@@ -205,7 +199,7 @@ const Outputs = () => {
                 </div>
 
                 {/* Statistics */}
-                <div className="grid gap-4 md:grid-cols-4">
+                <div className="grid gap-4 md:grid-cols-3">
                     <Card>
                         <CardContent className="p-6">
                             <div className="flex items-center space-x-2">
@@ -241,20 +235,6 @@ const Outputs = () => {
                                         {statistics.patentOutputs}
                                     </p>
                                     <p className="text-xs text-muted-foreground">专利成果</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="p-6">
-                            <div className="flex items-center space-x-2">
-                                <TrendingUp className="h-5 w-5 text-primary"/>
-                                <div>
-                                    <p className="text-2xl font-bold">
-                                        {statistics.totalCitations}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">总引用次数</p>
                                 </div>
                             </div>
                         </CardContent>

@@ -70,11 +70,11 @@ export const DatasetGrid = ({ datasets, onDatasetClick }: DatasetGridProps) => {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="flex items-center gap-1">
                   <Users className="h-4 w-4 text-muted-foreground" />
-                  <span>{recordCount?.toLocaleString() || '未知'} 条记录</span>
+                  <span>{recordCount?.toLocaleString() || '-'} 条记录</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Database className="h-4 w-4 text-muted-foreground" />
-                  <span>{variableCount || '未知'} 个变量</span>
+                  <span>{variableCount || '-'} 个变量</span>
                 </div>
                 <div className="flex items-center gap-1 col-span-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />

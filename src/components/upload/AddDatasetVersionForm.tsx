@@ -64,7 +64,7 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
     }
 
     if (!sharingFileInfo) {
-      toast.error('请上传数据共享协议');
+      toast.error('请上传数据分享文件');
       return;
     }
 
@@ -95,10 +95,10 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
         });
 
         // 重置文件上传组件
-        dataFileRef.current?.handleReset();
-        dictFileRef.current?.handleReset();
-        termsFileRef.current?.handleReset();
-        sharingFileRef.current?.handleReset();
+        dataFileRef.current?.handleReset(false);
+        dictFileRef.current?.handleReset(false);
+        termsFileRef.current?.handleReset(false);
+        sharingFileRef.current?.handleReset(false);
 
         // 重置文件信息
         setDataFileInfo(null);
@@ -161,12 +161,6 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                 onUploadComplete={setDataFileInfo}
                 maxSize={10 * 1024 * 1024 * 1024} // 10GB
               />
-              {dataFileInfo && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <File className="h-4 w-4" />
-                  {dataFileInfo.fileName} ({(dataFileInfo.fileSize / 1024 / 1024).toFixed(2)} MB)
-                </div>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -175,12 +169,6 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                 ref={dictFileRef}
                 onUploadComplete={setDictFileInfo}
               />
-              {dictFileInfo && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <File className="h-4 w-4" />
-                  {dictFileInfo.fileName} ({(dictFileInfo.fileSize / 1024 / 1024).toFixed(2)} MB)
-                </div>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -189,32 +177,14 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                 ref={termsFileRef}
                 onUploadComplete={setTermsFileInfo}
               />
-              {termsFileInfo && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <File className="h-4 w-4" />
-                  {termsFileInfo.fileName} ({(termsFileInfo.fileSize / 1024 / 1024).toFixed(2)} MB)
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                请上传数据集所属单位制定的数据使用协议（PDF或Word格式）
-              </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="sharingFile">数据共享协议 * (PDF, Word, etc.)</Label>
+              <Label htmlFor="sharingFile">数据分享文件 * (Excel, CSV, etc.)</Label>
               <FileUploader
                 ref={sharingFileRef}
                 onUploadComplete={setSharingFileInfo}
               />
-              {sharingFileInfo && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <File className="h-4 w-4" />
-                  {sharingFileInfo.fileName} ({(sharingFileInfo.fileSize / 1024 / 1024).toFixed(2)} MB)
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                请上传数据共享协议
-              </p>
             </div>
           </div>
         </div>

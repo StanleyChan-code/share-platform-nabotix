@@ -1,9 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {useState, useEffect, useRef} from "react";
+import {Button} from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
@@ -11,17 +7,15 @@ import {
     DialogHeader,
     DialogTitle
 } from "@/components/ui/dialog";
-import { Loader2 } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/hooks/use-toast";
-import { getOutputTypeDisplayName } from "@/lib/outputUtils";
-import { outputApi, ResearchOutput } from "@/integrations/api/outputApi";
-import { Dataset } from "@/integrations/api/datasetApi";
-import { DatasetTypes } from "@/lib/enums";
-import { DatasetSelector } from "../dataset/DatasetSelector.tsx";
-import { formatDate, formatFileSize } from "@/lib/utils";
+import {ScrollArea} from "@/components/ui/scroll-area";
+import {useToast} from "@/hooks/use-toast";
+import {outputApi, ResearchOutput} from "@/integrations/api/outputApi";
+import {Dataset} from "@/integrations/api/datasetApi";
+import {DatasetSelector} from "../dataset/DatasetSelector.tsx";
+import {fileApi, FileInfo} from "@/integrations/api/fileApi";
+import ResearchOutputForm from "@/components/outputs/ResearchOutputForm";
 import FileUploader from "@/components/upload/FileUploader";
-import { FileInfo, fileApi } from "@/integrations/api/fileApi";
+import {getJournalPartitionValue} from "@/lib/outputUtils.ts";
 
 interface EditOutputDialogProps {
     open: boolean;
@@ -30,7 +24,7 @@ interface EditOutputDialogProps {
     onEdit: () => void;
 }
 
-const EditOutputDialog = ({ open, onOpenChange, output, onEdit }: EditOutputDialogProps) => {
+const EditOutputDialog = ({open, onOpenChange, output, onEdit}: EditOutputDialogProps) => {
     const [editedOutput, setEditedOutput] = useState({
         title: "",
         abstract: "",
@@ -41,7 +35,7 @@ const EditOutputDialog = ({ open, onOpenChange, output, onEdit }: EditOutputDial
         publicationUrl: "",
         pubmedId: "",
         authors: "",
-        citationCount: 0,
+        value: 0,
         projectId: "",
         publicationAuthors: "",
         publicationNumber: "",
@@ -54,7 +48,8 @@ const EditOutputDialog = ({ open, onOpenChange, output, onEdit }: EditOutputDial
         awardIssuingAuthority: "",
         awardTime: "",
         competitionLevel: "",
-        fileId: ""
+        fileId: "",
+        journalPartition: "" // 添加期刊分区字段
     });
 
     // 添加文件信息状态
@@ -62,16 +57,14 @@ const EditOutputDialog = ({ open, onOpenChange, output, onEdit }: EditOutputDial
     const [loadingFileInfo, setLoadingFileInfo] = useState(false);
     const fileUploaderRef = useRef<any>(null);
     const resetUploadFile = (clearFile: boolean = false) => {
-        // 调用 FileUploader 的重置方法
-        if (fileUploaderRef.current && fileUploaderRef.current.handleReset) {
-            fileUploaderRef.current.handleReset(clearFile);
-        }
+        if (!fileUploaderRef.current) return;
+        fileUploaderRef.current.handleReset(clearFile);
     };
 
     const [isLoadingPubmed, setIsLoadingPubmed] = useState(false);
     const [pubmedError, setPubmedError] = useState("");
     const [lastPubmedFetchTime, setLastPubmedFetchTime] = useState<number>(0);
-    const { toast } = useToast();
+    const {toast} = useToast();
 
     // 数据集状态
     const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null);
@@ -79,17 +72,18 @@ const EditOutputDialog = ({ open, onOpenChange, output, onEdit }: EditOutputDial
     // 初始化表单数据
     useEffect(() => {
         if (output && open) {
+            console.log("output:", output)
             const formData = {
                 title: output.title || "",
                 abstract: output.abstractText || "",
-                type: output.type?.toLowerCase() || "",
+                type: output.type?.toUpperCase() || "",
                 journal: output.otherInfo?.journal || "",
-                patentNumber: (output.type === 'PAPER' && output.otherInfo?.pubmedId) || "",
+                patentNumber: (output.type === 'INVENTION_PATENT' || output.type === 'UTILITY_PATENT' || output.type === 'SOFTWARE_COPYRIGHT') ? output.outputNumber : "",
                 datasetId: output.dataset?.id || "",
                 publicationUrl: output.publicationUrl || "",
                 pubmedId: output.otherInfo?.pubmedId || "",
                 authors: output.otherInfo?.authors || "",
-                citationCount: output.citationCount || 0,
+                value: output.value || 0,
                 projectId: output.outputNumber || "",
                 publicationAuthors: "",
                 publicationNumber: output.outputNumber || "",
@@ -102,23 +96,26 @@ const EditOutputDialog = ({ open, onOpenChange, output, onEdit }: EditOutputDial
                 awardIssuingAuthority: output.otherInfo?.awardIssuingAuthority || "",
                 awardTime: output.otherInfo?.awardTime || "",
                 competitionLevel: output.otherInfo?.competitionLevel || "",
-                fileId: output.fileId || ""
+                fileId: output.fileId || "",
+                journalPartition: output.otherInfo?.journalPartition || "" // 添加期刊分区字段
             };
 
             setEditedOutput(formData);
-            
+
             // 设置选中的数据集
             if (output.dataset) {
                 setSelectedDataset(output.dataset);
+            } else {
+                setSelectedDataset(null);
             }
-            
+
             // 获取已上传文件的信息
             if (output.fileId) {
                 fetchFileInfo(output.fileId);
             } else {
                 setUploadedFile(null);
             }
-        } else {
+        } else if (!open) {
             // 重置表单
             setEditedOutput({
                 title: "",
@@ -130,7 +127,7 @@ const EditOutputDialog = ({ open, onOpenChange, output, onEdit }: EditOutputDial
                 publicationUrl: "",
                 pubmedId: "",
                 authors: "",
-                citationCount: 0,
+                value: 0,
                 projectId: "",
                 publicationAuthors: "",
                 publicationNumber: "",
@@ -143,7 +140,8 @@ const EditOutputDialog = ({ open, onOpenChange, output, onEdit }: EditOutputDial
                 awardIssuingAuthority: "",
                 awardTime: "",
                 competitionLevel: "",
-                fileId: ""
+                fileId: "",
+                journalPartition: "" // 添加期刊分区字段
             });
             setSelectedDataset(null);
             setUploadedFile(null);
@@ -170,21 +168,13 @@ const EditOutputDialog = ({ open, onOpenChange, output, onEdit }: EditOutputDial
     };
 
     const handlePubmedIdChange = (value: string) => {
-        setEditedOutput(prev => ({ ...prev, pubmedId: value }));
+        setEditedOutput(prev => ({...prev, pubmedId: value}));
         // 清除之前的错误信息
         setPubmedError("");
     };
 
     // 新增手动获取PubMed数据的函数
-    const handleFetchPubMedData = async () => {
-        const pubmedId = editedOutput.pubmedId.trim();
-
-        // 验证输入
-        if (!pubmedId) {
-            setPubmedError("请输入PubMed ID");
-            return;
-        }
-
+    const handleFetchPubMedData = async (pubmedId: string) => {
         // 验证是否为数字且长度在7-9位之间
         if (!/^\d{7,9}$/.test(pubmedId)) {
             setPubmedError("PubMed ID必须为7-9位数字");
@@ -212,9 +202,9 @@ const EditOutputDialog = ({ open, onOpenChange, output, onEdit }: EditOutputDial
                 abstract: data.abstractText || prev.abstract,
                 authors: data.otherInfo?.authors || prev.authors,
                 journal: data.otherInfo?.journal || prev.journal,
-                citationCount: data.citationCount || prev.citationCount,
+                value: data.value || prev.value,
                 publicationUrl: 'doi.org/' + data.otherInfo.doi || prev.publicationUrl,
-                type: "paper" // PubMed获取的通常是论文
+                type: "PAPER" // PubMed获取的通常是论文
             }));
         } catch (error) {
             setPubmedError("获取PubMed数据时出现错误");
@@ -226,7 +216,7 @@ const EditOutputDialog = ({ open, onOpenChange, output, onEdit }: EditOutputDial
 
     const handleDatasetSelect = (dataset: Dataset) => {
         setSelectedDataset(dataset);
-        setEditedOutput(prev => ({ ...prev, datasetId: dataset.id }));
+        setEditedOutput(prev => ({...prev, datasetId: dataset.id}));
     };
 
     const handleEditOutput = async (e: React.FormEvent) => {
@@ -254,7 +244,7 @@ const EditOutputDialog = ({ open, onOpenChange, output, onEdit }: EditOutputDial
             return;
         }
 
-        if (editedOutput.type === 'paper' && (!editedOutput.title || !editedOutput.abstract || !editedOutput.authors)) {
+        if (editedOutput.type === 'PAPER' && (!editedOutput.title || !editedOutput.abstract || !editedOutput.authors)) {
             toast({
                 title: "提交失败",
                 description: "请输入论文标题、摘要和作者",
@@ -263,7 +253,7 @@ const EditOutputDialog = ({ open, onOpenChange, output, onEdit }: EditOutputDial
             return;
         }
 
-        if (editedOutput.type === 'publication' && (!editedOutput.title || !editedOutput.abstract || !editedOutput.publicationNumber || !editedOutput.authors)) {
+        if (editedOutput.type === 'PUBLICATION' && (!editedOutput.title || !editedOutput.abstract || !editedOutput.publicationNumber || !editedOutput.authors)) {
             toast({
                 title: "提交失败",
                 description: "请输入出版物标题、摘要、作者和出版物编号",
@@ -272,7 +262,7 @@ const EditOutputDialog = ({ open, onOpenChange, output, onEdit }: EditOutputDial
             return;
         }
 
-        if ((editedOutput.type === 'invention_patent' || editedOutput.type === 'utility_patent') && (!editedOutput.title || !editedOutput.abstract || !editedOutput.patentNumber || !editedOutput.legalStatus || !editedOutput.authors)) {
+        if ((editedOutput.type === 'INVENTION_PATENT' || editedOutput.type === 'UTILITY_PATENT') && (!editedOutput.title || !editedOutput.abstract || !editedOutput.patentNumber || !editedOutput.legalStatus || !editedOutput.authors)) {
             toast({
                 title: "提交失败",
                 description: "请输入专利标题、摘要、专利识别号、法律状态和发明人",
@@ -281,7 +271,7 @@ const EditOutputDialog = ({ open, onOpenChange, output, onEdit }: EditOutputDial
             return;
         }
 
-        if (editedOutput.type === 'software_copyright' && (!editedOutput.title || !editedOutput.abstract || !editedOutput.patentNumber || !editedOutput.softwareName || !editedOutput.authors)) {
+        if (editedOutput.type === 'SOFTWARE_COPYRIGHT' && (!editedOutput.title || !editedOutput.abstract || !editedOutput.patentNumber || !editedOutput.softwareName || !editedOutput.authors)) {
             toast({
                 title: "提交失败",
                 description: "请输入软件著作权标题、摘要、登记号、软件名称和著作权人",
@@ -290,7 +280,7 @@ const EditOutputDialog = ({ open, onOpenChange, output, onEdit }: EditOutputDial
             return;
         }
 
-        if (editedOutput.type === 'other_award' && (!editedOutput.title || !editedOutput.abstract || !editedOutput.awardRecipient || !editedOutput.awardIssuingAuthority || !editedOutput.awardTime)) {
+        if (editedOutput.type === 'OTHER_AWARD' && (!editedOutput.title || !editedOutput.abstract || !editedOutput.awardRecipient || !editedOutput.awardIssuingAuthority || !editedOutput.awardTime)) {
             toast({
                 title: "提交失败",
                 description: "请输入奖项名称、成果简介、获奖人/单位、颁发单位和获奖时间",
@@ -308,30 +298,31 @@ const EditOutputDialog = ({ open, onOpenChange, output, onEdit }: EditOutputDial
                 title: editedOutput.title,
                 abstractText: editedOutput.abstract,
                 outputNumber:
-                    editedOutput.type === 'project' ? editedOutput.projectId :
-                        editedOutput.type === 'paper' && editedOutput.pubmedId ? editedOutput.pubmedId :
-                            editedOutput.type === 'publication' ? editedOutput.publicationNumber :
-                                (editedOutput.type === 'invention_patent' || editedOutput.type === 'utility_patent') ? editedOutput.patentNumber :
-                                    editedOutput.type === 'software_copyright' ? editedOutput.patentNumber :
+                    editedOutput.type === 'PROJECT' ? editedOutput.projectId :
+                        editedOutput.type === 'PAPER' && editedOutput.pubmedId ? editedOutput.pubmedId :
+                            editedOutput.type === 'PUBLICATION' ? editedOutput.publicationNumber :
+                                (editedOutput.type === 'INVENTION_PATENT' || editedOutput.type === 'UTILITY_PATENT') ? editedOutput.patentNumber :
+                                    editedOutput.type === 'SOFTWARE_COPYRIGHT' ? editedOutput.patentNumber :
                                         '',
-                citationCount: editedOutput.citationCount || 0,
+                value: editedOutput.type === 'PAPER' ? getJournalPartitionValue(editedOutput.journalPartition) : editedOutput.value,
                 publicationUrl: editedOutput.publicationUrl || '',
                 fileId: editedOutput.fileId || '',
                 otherInfo: {
-                    pubmedId: editedOutput.type === 'paper' && editedOutput.pubmedId ? editedOutput.pubmedId : undefined,
-                    journal: editedOutput.type === 'paper' ? editedOutput.journal : undefined,
-                    authors: editedOutput.type === 'paper' ? editedOutput.authors :
-                        editedOutput.type === 'publication' ? editedOutput.authors :
-                            (editedOutput.type === 'invention_patent' || editedOutput.type === 'utility_patent' || editedOutput.type === 'project' || editedOutput.type === 'software_copyright') ? editedOutput.authors : undefined,
-                    legalStatus: (editedOutput.type === 'invention_patent' || editedOutput.type === 'utility_patent') ? editedOutput.legalStatus : undefined,
-                    patentCountry: (editedOutput.type === 'invention_patent' || editedOutput.type === 'utility_patent') ? editedOutput.patentCountry : undefined,
-                    softwareName: editedOutput.type === 'software_copyright' ? editedOutput.softwareName : undefined,
-                    copyrightOwner: editedOutput.type === 'software_copyright' ? editedOutput.copyrightOwner : undefined,
-                    registrationDate: editedOutput.type === 'software_copyright' ? editedOutput.registrationDate : undefined,
-                    awardRecipient: editedOutput.type === 'other_award' ? editedOutput.awardRecipient : undefined,
-                    awardIssuingAuthority: editedOutput.type === 'other_award' ? editedOutput.awardIssuingAuthority : undefined,
-                    awardTime: editedOutput.type === 'other_award' ? editedOutput.awardTime : undefined,
-                    competitionLevel: editedOutput.type === 'other_award' ? editedOutput.competitionLevel : undefined
+                    pubmedId: editedOutput.type === 'PAPER' && editedOutput.pubmedId ? editedOutput.pubmedId : undefined,
+                    journal: editedOutput.type === 'PAPER' ? editedOutput.journal : undefined,
+                    authors: editedOutput.type === 'PAPER' ? editedOutput.authors :
+                        editedOutput.type === 'PUBLICATION' ? editedOutput.authors :
+                            (editedOutput.type === 'INVENTION_PATENT' || editedOutput.type === 'UTILITY_PATENT' || editedOutput.type === 'PROJECT' || editedOutput.type === 'SOFTWARE_COPYRIGHT') ? editedOutput.authors : undefined,
+                    legalStatus: (editedOutput.type === 'INVENTION_PATENT' || editedOutput.type === 'UTILITY_PATENT') ? editedOutput.legalStatus : undefined,
+                    patentCountry: (editedOutput.type === 'INVENTION_PATENT' || editedOutput.type === 'UTILITY_PATENT') ? editedOutput.patentCountry : undefined,
+                    softwareName: editedOutput.type === 'SOFTWARE_COPYRIGHT' ? editedOutput.softwareName : undefined,
+                    copyrightOwner: editedOutput.type === 'SOFTWARE_COPYRIGHT' ? editedOutput.copyrightOwner : undefined,
+                    registrationDate: editedOutput.type === 'SOFTWARE_COPYRIGHT' ? editedOutput.registrationDate : undefined,
+                    awardRecipient: editedOutput.type === 'OTHER_AWARD' ? editedOutput.awardRecipient : undefined,
+                    awardIssuingAuthority: editedOutput.type === 'OTHER_AWARD' ? editedOutput.awardIssuingAuthority : undefined,
+                    awardTime: editedOutput.type === 'OTHER_AWARD' ? editedOutput.awardTime : undefined,
+                    competitionLevel: editedOutput.type === 'OTHER_AWARD' ? editedOutput.competitionLevel : undefined,
+                    journalPartition: editedOutput.type === 'PAPER' ? editedOutput.journalPartition : undefined // 添加期刊分区信息
                 }
             };
 
@@ -341,6 +332,8 @@ const EditOutputDialog = ({ open, onOpenChange, output, onEdit }: EditOutputDial
                 title: "更新成功",
                 description: "研究成果已成功更新"
             });
+
+            resetUploadFile(false);
 
             onEdit();
             onOpenChange(false);
@@ -371,7 +364,7 @@ const EditOutputDialog = ({ open, onOpenChange, output, onEdit }: EditOutputDial
                     publicationUrl: "",
                     pubmedId: "",
                     authors: "",
-                    citationCount: 0,
+                    value: 0,
                     projectId: "",
                     publicationAuthors: "",
                     publicationNumber: "",
@@ -384,7 +377,8 @@ const EditOutputDialog = ({ open, onOpenChange, output, onEdit }: EditOutputDial
                     awardIssuingAuthority: "",
                     awardTime: "",
                     competitionLevel: "",
-                    fileId: ""
+                    fileId: "",
+                    journalPartition: "" // 添加期刊分区字段
                 });
                 setSelectedDataset(null);
                 resetUploadFile(true);
@@ -403,538 +397,30 @@ const EditOutputDialog = ({ open, onOpenChange, output, onEdit }: EditOutputDial
                 <div className="flex-1 overflow-hidden overflow-y-auto">
                     <ScrollArea className="h-full w-full pr-4">
                         <form onSubmit={handleEditOutput} className="space-y-4 px-1 py-2">
-                            {selectedDataset === null && (
-                                <DatasetSelector
-                                    selectedDataset={selectedDataset}
-                                    onDatasetSelect={handleDatasetSelect}
-                                    label="关联数据集"
-                                    required
-                                />
-                            )}
-
-                            {/* 显示选中的数据集信息 */}
-                            {selectedDataset && (
-                                <div className="border rounded-lg p-4 bg-muted/50">
-                                    <h3 className="font-semibold mb-2">关联数据集信息</h3>
-                                    <div className="space-y-1 text-sm">
-                                        <div className="flex">
-                                            <span className="font-medium w-24 flex-shrink-0">标题:</span>
-                                            <span className="truncate whitespace-normal break-words"
-                                                  title={selectedDataset.titleCn}>
-                          {selectedDataset.titleCn}
-                        </span>
-                                        </div>
-                                        <div className="flex">
-                                            <span className="font-medium w-24 flex-shrink-0">类型:</span>
-                                            <span className="truncate"
-                                                  title={DatasetTypes[selectedDataset.type as keyof typeof DatasetTypes] || selectedDataset.type}>
-                          {DatasetTypes[selectedDataset.type as keyof typeof DatasetTypes] || selectedDataset.type}
-                        </span>
-                                        </div>
-                                        <div className="flex">
-                                            <span className="font-medium w-24 flex-shrink-0">研究学科:</span>
-                                            <span className="truncate"
-                                                  title={selectedDataset.subjectArea?.name || '无'}>{selectedDataset.subjectArea?.name || '无'}</span>
-                                        </div>
-                                        <div className="flex">
-                                            <span className="font-medium w-24 flex-shrink-0">发布时间:</span>
-                                            <span
-                                                className="truncate">{formatDate(selectedDataset.firstPublishedDate)}</span>
-                                        </div>
-                                        <div className="flex">
-                                            <span className="font-medium w-24 flex-shrink-0">提供者:</span>
-                                            <span className="truncate"
-                                                  title={selectedDataset.datasetLeader}>{selectedDataset.datasetLeader}</span>
-                                        </div>
-                                        <div className="flex">
-                                            <span className="font-medium w-24 flex-shrink-0">采集单位:</span>
-                                            <span className="truncate"
-                                                  title={selectedDataset.dataCollectionUnit}>{selectedDataset.dataCollectionUnit}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="space-y-2">
-                                <Label htmlFor="outputType">成果类型 *</Label>
-                                <Select 
-                                    value={editedOutput.type} 
-                                    onValueChange={(value) => {
-                                        // 清空之前填写的字段
-                                        setEditedOutput(prev => ({
-                                            ...prev,
-                                            type: value,
-                                            // 清空所有特定类型的字段
-                                            projectId: "",
-                                            publicationAuthors: "",
-                                            publicationNumber: "",
-                                            patentNumber: "",
-                                            legalStatus: "",
-                                            patentCountry: "",
-                                            softwareName: "",
-                                            copyrightOwner: "",
-                                            registrationDate: "",
-                                            awardRecipient: "",
-                                            awardIssuingAuthority: "",
-                                            awardTime: "",
-                                            competitionLevel: "",
-                                            // 论文相关字段
-                                            pubmedId: "",
-                                            journal: "",
-                                            authors: "",
-                                            citationCount: 0,
-                                            // 通用字段也清空
-                                            title: "",
-                                            abstract: "",
-                                            publicationUrl: "",
-                                            fileId: ""
-                                        }));
-                                        resetUploadFile(true); // 清空已上传的文件
-                                    }}
-                                    disabled={!!output.type}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="请选择成果类型"/>
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem
-                                            value="project">{getOutputTypeDisplayName("project")}</SelectItem>
-                                        <SelectItem
-                                            value="paper">{getOutputTypeDisplayName("paper")}</SelectItem>
-                                        <SelectItem
-                                            value="publication">{getOutputTypeDisplayName("publication")}</SelectItem>
-                                        <SelectItem
-                                            value="invention_patent">{getOutputTypeDisplayName("invention_patent")}</SelectItem>
-                                        <SelectItem
-                                            value="utility_patent">{getOutputTypeDisplayName("utility_patent")}</SelectItem>
-                                        <SelectItem
-                                            value="software_copyright">{getOutputTypeDisplayName("software_copyright")}</SelectItem>
-                                        <SelectItem
-                                            value="other_award">{getOutputTypeDisplayName("other_award")}</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* 只有选择了成果类型才显示后续内容 */}
-                            {editedOutput.type && (
-                                <>
-                                    {/* 只有论文类型才显示PubMed ID输入框 */}
-                                    {editedOutput.type === "paper" && (
-                                        <div className="space-y-2">
-                                            <Label htmlFor="pubmedId">PubMed ID</Label>
-                                            <div className="flex gap-2">
-                                                <Input
-                                                    id="pubmedId"
-                                                    value={editedOutput.pubmedId}
-                                                    onChange={(e) => handlePubmedIdChange(e.target.value)}
-                                                    placeholder="输入7-9位PubMed ID"
-                                                    disabled={isLoadingPubmed}
-                                                />
-                                                <Button
-                                                    type="button"
-                                                    onClick={handleFetchPubMedData}
-                                                    disabled={isLoadingPubmed}
-                                                >
-                                                    {isLoadingPubmed ? (
-                                                        <Loader2 className="h-5 w-5 animate-spin"/>
-                                                    ) : (
-                                                        "搜索"
-                                                    )}
-                                                </Button>
-                                            </div>
-                                            {pubmedError && (
-                                                <p className="text-sm text-destructive">{pubmedError}</p>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {editedOutput.type !== "other_award" && (
-                                        <div className="space-y-2">
-                                            <Label htmlFor="outputTitle">成果标题 *</Label>
-                                            <Input
-                                                id="outputTitle"
-                                                value={editedOutput.title}
-                                                onChange={(e) => setEditedOutput(prev => ({
-                                                    ...prev,
-                                                    title: e.target.value
-                                                }))}
-                                                placeholder="请输入论文或专利标题"
-                                                disabled={isLoadingPubmed && editedOutput.type === "paper"}
-                                            />
-                                        </div>
-                                    )}
-
-                                    {editedOutput.type === "other_award" && (
-                                        <div className="space-y-2">
-                                            <Label htmlFor="outputTitle">奖项名称 *</Label>
-                                            <Input
-                                                id="outputTitle"
-                                                value={editedOutput.title}
-                                                onChange={(e) => setEditedOutput(prev => ({
-                                                    ...prev,
-                                                    title: e.target.value
-                                                }))}
-                                                placeholder="请输入奖项名称"
-                                            />
-                                        </div>
-                                    )}
-
-                                    {editedOutput.type === "paper" ? (
-                                        <>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="journal">发表期刊</Label>
-                                                <Input
-                                                    id="journal"
-                                                    value={editedOutput.journal}
-                                                    onChange={(e) => setEditedOutput(prev => ({
-                                                        ...prev,
-                                                        journal: e.target.value
-                                                    }))}
-                                                    placeholder="期刊名称"
-                                                    disabled={isLoadingPubmed}
-                                                />
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <Label htmlFor="authors">作者 *</Label>
-                                                <Input
-                                                    id="authors"
-                                                    value={editedOutput.authors}
-                                                    onChange={(e) => setEditedOutput(prev => ({
-                                                        ...prev,
-                                                        authors: e.target.value
-                                                    }))}
-                                                    placeholder="作者姓名，多个作者请用逗号分隔"
-                                                    disabled={isLoadingPubmed}
-                                                />
-                                            </div>
-
-                                            {editedOutput.citationCount > 0 && (
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="citationCount">被引用次数</Label>
-                                                    <Input
-                                                        id="citationCount"
-                                                        type="number"
-                                                        min="0"
-                                                        value={editedOutput.citationCount || ''}
-                                                        onChange={(e) => setEditedOutput(prev => ({
-                                                            ...prev,
-                                                            citationCount: parseInt(e.target.value) || 0
-                                                        }))}
-                                                        placeholder="请输入被引用次数"
-                                                        disabled={isLoadingPubmed}
-                                                    />
-                                                </div>
-                                            )}
-                                        </>
-                                    ) : editedOutput.type === "project" ? (
-                                        <>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="projectId">项目编号/课题编号 *</Label>
-                                                <Input
-                                                    id="projectId"
-                                                    value={editedOutput.projectId}
-                                                    onChange={(e) => setEditedOutput(prev => ({
-                                                        ...prev,
-                                                        projectId: e.target.value
-                                                    }))}
-                                                    placeholder="请输入项目编号或课题编号"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="authors">项目/课题成员 *</Label>
-                                                <Input
-                                                    id="authors"
-                                                    value={editedOutput.authors}
-                                                    onChange={(e) => setEditedOutput(prev => ({
-                                                        ...prev,
-                                                        authors: e.target.value
-                                                    }))}
-                                                    placeholder="项目/课题成员，多个成员请用逗号分隔"
-                                                />
-                                            </div>
-                                        </>
-                                    ) : editedOutput.type === "publication" ? (
-                                        <>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="authors">作者 *</Label>
-                                                <Input
-                                                    id="authors"
-                                                    value={editedOutput.authors}
-                                                    onChange={(e) => setEditedOutput(prev => ({
-                                                        ...prev,
-                                                        authors: e.target.value
-                                                    }))}
-                                                    placeholder="作者姓名，多个作者请用逗号分隔"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="publicationNumber">出版物编号 *</Label>
-                                                <Input
-                                                    id="publicationNumber"
-                                                    value={editedOutput.publicationNumber}
-                                                    onChange={(e) => setEditedOutput(prev => ({
-                                                        ...prev,
-                                                        publicationNumber: e.target.value
-                                                    }))}
-                                                    placeholder="请输入出版物编号"
-                                                />
-                                            </div>
-                                        </>
-                                    ) : (editedOutput.type === 'invention_patent' || editedOutput.type === 'utility_patent') ? (
-                                        <>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="patentNumber">专利识别号 *</Label>
-                                                <Input
-                                                    id="patentNumber"
-                                                    value={editedOutput.patentNumber}
-                                                    onChange={(e) => setEditedOutput(prev => ({
-                                                        ...prev,
-                                                        patentNumber: e.target.value
-                                                    }))}
-                                                    placeholder="请输入公开号或者授权号"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="authors">发明人 *</Label>
-                                                <Input
-                                                    id="authors"
-                                                    value={editedOutput.authors}
-                                                    onChange={(e) => setEditedOutput(prev => ({
-                                                        ...prev,
-                                                        authors: e.target.value
-                                                    }))}
-                                                    placeholder="发明人姓名，多个发明人请用逗号分隔"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="legalStatus">法律状态 *</Label>
-                                                <Input
-                                                    id="legalStatus"
-                                                    value={editedOutput.legalStatus}
-                                                    onChange={(e) => setEditedOutput(prev => ({
-                                                        ...prev,
-                                                        legalStatus: e.target.value
-                                                    }))}
-                                                    placeholder="例如：实质性审查生效、专利权维持、专利权终止等"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="citationCount">被引用次数</Label>
-                                                <Input
-                                                    id="citationCount"
-                                                    type="number"
-                                                    min="0"
-                                                    value={editedOutput.citationCount || ''}
-                                                    onChange={(e) => setEditedOutput(prev => ({
-                                                        ...prev,
-                                                        citationCount: parseInt(e.target.value) || 0
-                                                    }))}
-                                                    placeholder="请输入被引用次数"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="patentCountry">专利国别/地区</Label>
-                                                <Input
-                                                    id="patentCountry"
-                                                    value={editedOutput.patentCountry}
-                                                    onChange={(e) => setEditedOutput(prev => ({
-                                                        ...prev,
-                                                        patentCountry: e.target.value
-                                                    }))}
-                                                    placeholder="请输入专利国别或地区"
-                                                />
-                                            </div>
-                                        </>
-                                    ) : editedOutput.type === "software_copyright" ? (
-                                        <>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="patentNumber">登记号 *</Label>
-                                                <Input
-                                                    id="patentNumber"
-                                                    value={editedOutput.patentNumber}
-                                                    onChange={(e) => setEditedOutput(prev => ({
-                                                        ...prev,
-                                                        patentNumber: e.target.value
-                                                    }))}
-                                                    placeholder="请输入软件著作权登记号"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="softwareName">软件名称(全称) *</Label>
-                                                <Input
-                                                    id="softwareName"
-                                                    value={editedOutput.softwareName}
-                                                    onChange={(e) => setEditedOutput(prev => ({
-                                                        ...prev,
-                                                        softwareName: e.target.value
-                                                    }))}
-                                                    placeholder="请输入软件全称"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="authors">著作权人 *</Label>
-                                                <Input
-                                                    id="authors"
-                                                    value={editedOutput.authors}
-                                                    onChange={(e) => setEditedOutput(prev => ({
-                                                        ...prev,
-                                                        authors: e.target.value
-                                                    }))}
-                                                    placeholder="著作权人姓名，多个著作权人请用逗号分隔"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="registrationDate">登记日期</Label>
-                                                <Input
-                                                    id="registrationDate"
-                                                    type="date"
-                                                    value={editedOutput.registrationDate}
-                                                    onChange={(e) => setEditedOutput(prev => ({
-                                                        ...prev,
-                                                        registrationDate: e.target.value
-                                                    }))}
-                                                />
-                                            </div>
-                                        </>
-                                    ) : editedOutput.type === "other_award" ? (
-                                        <>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="awardRecipient">获奖人/单位 *</Label>
-                                                <Input
-                                                    id="awardRecipient"
-                                                    value={editedOutput.awardRecipient}
-                                                    onChange={(e) => setEditedOutput(prev => ({
-                                                        ...prev,
-                                                        awardRecipient: e.target.value
-                                                    }))}
-                                                    placeholder="请输入获奖人或单位名称"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="awardIssuingAuthority">颁发单位 *</Label>
-                                                <Input
-                                                    id="awardIssuingAuthority"
-                                                    value={editedOutput.awardIssuingAuthority}
-                                                    onChange={(e) => setEditedOutput(prev => ({
-                                                        ...prev,
-                                                        awardIssuingAuthority: e.target.value
-                                                    }))}
-                                                    placeholder="请输入颁发单位名称"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="awardTime">获奖时间 *</Label>
-                                                <Input
-                                                    id="awardTime"
-                                                    type="date"
-                                                    value={editedOutput.awardTime}
-                                                    onChange={(e) => setEditedOutput(prev => ({
-                                                        ...prev,
-                                                        awardTime: e.target.value
-                                                    }))}
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="competitionLevel">赛事层次</Label>
-                                                <Select value={editedOutput.competitionLevel}
-                                                        onValueChange={(value) =>
-                                                            setEditedOutput(prev => ({
-                                                                ...prev,
-                                                                competitionLevel: value
-                                                            }))
-                                                        }>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="请选择赛事层次"/>
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="unit">单位内部</SelectItem>
-                                                        <SelectItem value="district">县区级</SelectItem>
-                                                        <SelectItem value="city">市级</SelectItem>
-                                                        <SelectItem value="province">省级</SelectItem>
-                                                        <SelectItem value="national">国家级</SelectItem>
-                                                        <SelectItem value="international">国际级</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                        </>
-                                    ) : null}
-
-                                    {editedOutput.type !== "other_award" && (
-                                        <div className="space-y-2">
-                                            <Label htmlFor="abstract">摘要 *</Label>
-                                            <Textarea
-                                                id="abstract"
-                                                rows={4}
-                                                value={editedOutput.abstract}
-                                                onChange={(e) => setEditedOutput(prev => ({
-                                                    ...prev,
-                                                    abstract: e.target.value
-                                                }))}
-                                                placeholder="简要描述研究内容、方法和主要发现"
-                                                disabled={isLoadingPubmed && editedOutput.type === "paper"}
-                                            />
-                                        </div>
-                                    )}
-
-                                    {editedOutput.type === "other_award" && (
-                                        <div className="space-y-2">
-                                            <Label htmlFor="abstract">成果简介 *</Label>
-                                            <Textarea
-                                                id="abstract"
-                                                rows={4}
-                                                value={editedOutput.abstract}
-                                                onChange={(e) => setEditedOutput(prev => ({
-                                                    ...prev,
-                                                    abstract: e.target.value
-                                                }))}
-                                                placeholder="请输入成果简介"
-                                            />
-                                        </div>
-                                    )}
-
-                                    <div className="space-y-2">
-                                        <Label
-                                            htmlFor="url">{editedOutput.type === "paper" && ('DOI链接') || ('URL链接')}</Label>
-                                        <Input
-                                            id="url"
-                                            value={editedOutput.publicationUrl}
-                                            onChange={(e) => setEditedOutput(prev => ({
-                                                ...prev,
-                                                publicationUrl: e.target.value
-                                            }))}
-                                            placeholder={editedOutput.type === "paper" && ('示例: doi.org/10.1038/s41586-025-09732-2') || 'https://www.baidu.com'}
-                                            disabled={isLoadingPubmed && editedOutput.type === "paper"}
-                                        />
-                                    </div>
-
-                                    {/* 文件上传区域 */}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="supportingDocument">说明文件（选填）</Label>
-                                        
-                                        {/* 显示已上传文件信息 */}
-                                        {loadingFileInfo ? (
-                                            <div className="text-sm text-muted-foreground">正在加载文件信息...</div>
-                                        ) : uploadedFile && (
-                                            <div className="text-sm p-2 bg-muted rounded">
-                                                已上传文件: {uploadedFile.fileName} (大小: {formatFileSize(uploadedFile.fileSize)})
-                                            </div>
-                                        )}
-                                        
-                                        <FileUploader
-                                            ref={fileUploaderRef}
-                                            onResetComplete={() => {
-                                                setUploadedFile(null);
-                                            }}
-                                            onUploadComplete={(fileInfo) => {
-                                                setUploadedFile(fileInfo);
-                                                setEditedOutput(prev => ({ ...prev, fileId: fileInfo.id }));
-                                            }}
-                                            maxSize={500 * 1024 * 1024} // 50MB限制
-                                        />
-                                    </div>
-                                </>
-                            )}
+                            <ResearchOutputForm
+                                formData={editedOutput}
+                                onFormDataChange={setEditedOutput}
+                                selectedDataset={selectedDataset}
+                                onDatasetSelect={handleDatasetSelect}
+                                DatasetSelectorComponent={DatasetSelector}
+                                FileUploaderComponent={FileUploader}
+                                isLoadingPubmed={isLoadingPubmed}
+                                pubmedError={pubmedError}
+                                onFetchPubMed={handleFetchPubMedData}
+                                onPubmedIdChange={handlePubmedIdChange}
+                                disableTypeSelect={!!output.type}
+                                uploadedFile={uploadedFile}
+                                loadingFileInfo={loadingFileInfo}
+                                fileUploaderRef={fileUploaderRef}
+                                onFileUploadComplete={(fileInfo) => {
+                                    setUploadedFile(fileInfo);
+                                    setEditedOutput(prev => ({...prev, fileId: fileInfo.id}));
+                                }}
+                                onFileResetComplete={() => {
+                                    setUploadedFile(null);
+                                    setEditedOutput(prev => ({...prev, fileId: null}));
+                                }}
+                            />
 
                             <div className="flex justify-end space-x-2 pt-4">
                                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

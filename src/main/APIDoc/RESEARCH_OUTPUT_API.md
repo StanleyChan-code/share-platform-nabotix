@@ -4,6 +4,14 @@
 - 公共接口（部分需认证）：`/api/research-outputs`
 - 管理接口（需认证）：`/api/manage/research-outputs`
 
+## 更新日志
+
+- 在公共接口中新增 `/api/research-outputs/pubmed/{pubMedId}` 接口用于根据PubMed ID获取文章信息
+- 在公共接口中新增 `/api/research-outputs/my-submissions/{id}` 接口用于查询特定研究成果
+- 在公共接口中新增 `/api/research-outputs/my-submissions/{id}/files/{fileId}` 接口用于下载研究成果文件
+- 在公共接口的 `/api/research-outputs/public` 接口中新增 keyword 和 submitterId 参数
+- 在管理接口中新增 `/api/manage/research-outputs/{id}/files/{fileId}` 接口用于管理员下载研究成果文件
+
 ## 1. 公共研究成果接口
 
 ### 1.1 获取研究成果统计信息
@@ -47,6 +55,8 @@
 | sortBy  | string | 否  | createdAt | 排序字段           |
 | sortDir | string | 否  | desc      | 排序方向（asc/desc） |
 | type    | string | 否  | -         | 成果类型筛选         |
+| keyword    | string | 否  | -         | 标题或摘要关键词筛选     |
+| submitterId    | UUID | 否  | -         | 提交者ID筛选         |
 
 **说明**: 
 - 任何人都可以查看已审核通过的研究成果
@@ -168,7 +178,53 @@
 }
 ```
 
-### 1.4 用户查询自己提交的研究成果列表
+### 1.4 用户查询自己提交的特定研究成果
+
+**接口地址**: `GET /api/research-outputs/my-submissions/{id}`
+
+**权限要求**: 需要认证
+
+**请求参数**:
+
+| 参数名 | 类型   | 必填 | 描述       |
+|-----|------|----|----------|
+| id  | UUID | 是  | 研究成果ID   |
+
+**说明**: 
+- 已登录用户可以查看自己提交的特定研究成果
+
+### 1.5 用户下载自己提交的研究成果文件
+
+**接口地址**: `GET /api/research-outputs/my-submissions/{id}/files/{fileId}`
+
+**权限要求**: 需要认证
+
+**请求参数**:
+
+| 参数名   | 类型   | 必填 | 描述       |
+|-------|------|----|----------|
+| id    | UUID | 是  | 研究成果ID   |
+| fileId | UUID | 是  | 文件ID     |
+
+**说明**: 
+- 已登录用户可以下载自己提交的研究成果文件
+
+### 1.6 根据PubMed ID获取文章信息
+
+**接口地址**: `GET /api/research-outputs/pubmed/{pubMedId}`
+
+**权限要求**: 需要认证
+
+**请求参数**:
+
+| 参数名     | 类型   | 必填 | 描述       |
+|---------|------|----|----------|
+| pubMedId | string | 是  | PubMed ID |
+
+**说明**: 
+- 已登录用户可以查询PubMed文章信息
+
+### 1.7 用户查询自己提交的研究成果列表
 
 **接口地址**: `GET /api/research-outputs/my-submissions`
 
@@ -237,7 +293,7 @@
 }
 ```
 
-### 1.5 用户查询自己提交的特定研究成果
+### 1.8 用户查询自己提交的特定研究成果
 
 **接口地址**: `GET /api/research-outputs/my-submissions/{id}`
 
@@ -433,7 +489,7 @@
 }
 ```
 
-### 1.9 用户下载自己提交的研究成果文件
+### 1.13 用户下载自己提交的研究成果文件
 
 **接口地址**: `GET /api/research-outputs/my-submissions/{id}/files/{fileId}`
 
@@ -581,7 +637,7 @@
 }
 ```
 
-### 2.3 管理员下载研究成果文件
+### 2.5 管理员下载研究成果文件
 
 **接口地址**: `GET /api/manage/research-outputs/{id}/files/{fileId}`
 

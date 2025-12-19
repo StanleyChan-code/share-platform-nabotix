@@ -139,14 +139,14 @@ export function OverviewTab({
               <Users className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-sm text-muted-foreground">样本量</p>
-                <p className="font-semibold">{recordCount?.toLocaleString() || '未知'}</p>
+                <p className="font-semibold">{recordCount?.toLocaleString() || '-'}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Database className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-sm text-muted-foreground">变量数</p>
-                <p className="font-semibold">{variableCount || '未知'}</p>
+                <p className="font-semibold">{variableCount || '-'}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -163,7 +163,7 @@ export function OverviewTab({
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
               <div>
-                <p className="text-sm text-muted-foreground">查看次数</p>
+                <p className="text-sm text-muted-foreground">热度</p>
                 <p className="font-semibold">{dataset.searchCount}</p>
               </div>
             </div>

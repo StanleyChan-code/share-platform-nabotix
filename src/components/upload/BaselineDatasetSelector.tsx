@@ -3,7 +3,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { datasetApi } from '@/integrations/api/datasetApi';
-import {getCurrentUser} from "@/integrations/api/authApi.ts";
+import {getCurrentUser} from "@/lib/authUtils";
 
 interface BaselineDatasetSelectorProps {
   value: string;
@@ -18,12 +18,12 @@ export function BaselineDatasetSelector({ value, onChange }: BaselineDatasetSele
     const fetchBaselineDatasets = async () => {
       setLoading(true);
       try {
-        const userResponse = await getCurrentUser();
+        const user = getCurrentUser();
 
 
         const response = await datasetApi.advancedSearchDatasets( {
           isTopLevel: true,
-          providerId: userResponse.data.data.id,
+          providerId: user.id,
         });
         if (response.success) {
           // 过滤出没有父数据集的数据集（基线数据集）

@@ -20,12 +20,10 @@ const ID_TYPE_DISPLAY_NAMES: Record<string, string> = {
 interface ProfileInfoProps {
   userProfile: any;
   institution: Institution;
-  user: any;
-  educationLabels: Record<string, string>;
   onUpdateProfile: (formData: any) => void;
 }
 
-const ProfileInfo = ({ userProfile, institution, user, educationLabels, onUpdateProfile }: ProfileInfoProps) => {
+const ProfileInfo = ({ userProfile, institution, onUpdateProfile }: ProfileInfoProps) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -151,10 +149,10 @@ const ProfileInfo = ({ userProfile, institution, user, educationLabels, onUpdate
                   <div className="space-y-2">
                     <Label htmlFor="education">学历</Label>
                     <Select 
-                      value={editForm.education || undefined}
+                      value={editForm.education || ""}
                       onValueChange={(value) => setEditForm(prev => ({
                         ...prev,
-                        education: value || ""
+                        education: value
                       }))}
                     >
                       <SelectTrigger>
@@ -271,7 +269,7 @@ const ProfileInfo = ({ userProfile, institution, user, educationLabels, onUpdate
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <Label className="text-muted-foreground">邮箱地址</Label>
-                <div className="col-span-2">{userProfile?.email || user?.email || "未填写"}</div>
+                <div className="col-span-2">{userProfile?.email || "未填写"}</div>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <Label className="text-muted-foreground">注册日期</Label>

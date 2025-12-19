@@ -8,23 +8,6 @@ import {supabase} from "@/integrations/supabase/client.ts";
 const About = () => {
     useEffect(() => {
 
-        const test = async () => {
-            const {data: {user}, error: userError} = await supabase.auth.getUser();
-            const {data: userData, error} = await supabase
-                .from('users')
-                .select('*')
-                .eq('id', user.id)
-                .single();
-            
-            if (error) {
-                console.error("Error fetching user data:", error);
-            } else {
-                console.log("userData result:", userData);
-            }
-        }
-        
-        test();
-
     }, []);
 
 

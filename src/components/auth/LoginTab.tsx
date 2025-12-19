@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { api, ApiError } from "@/integrations/api/client";
-import { login, sendVerificationCode } from "@/integrations/api/authApi";
+import { login, sendVerificationCode, getCurrentUser, getCurrentUserRoles } from "@/integrations/api/authApi";
+import { institutionApi } from "@/integrations/api/institutionApi";
 import { Phone, Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -145,12 +146,61 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
         const token = response.data.data.token;
         api.setAuthToken(token);
         localStorage.setItem('authToken', token); // 保存令牌到localStorage
-        toast({
-          title: "登录成功",
-          description: "欢迎回来！",
-        });
-        onLoginSuccess();
-        navigate('/');
+        
+        // 登录成功后立即获取用户信息、角色和机构信息
+        try {
+          // 获取用户信息
+          const userResponse = await getCurrentUser();
+          if (!userResponse.data.success) {
+            throw new Error(userResponse.data.message || "获取用户信息失败");
+          }
+          
+          const userProfile = userResponse.data.data;
+          
+          // 获取用户角色
+          const rolesResponse = await getCurrentUserRoles();
+          if (!rolesResponse.data.success) {
+            throw new Error(rolesResponse.data.message || "获取用户角色失败");
+          }
+          
+          const userRoles = rolesResponse.data.data;
+          
+          // 如果用户有机构ID，获取机构信息
+          let institution = null;
+          if (userProfile.institutionId) {
+            try {
+              const institutionResponse = await institutionApi.getInstitutionById(userProfile.institutionId);
+              if (institutionResponse.success) {
+                institution = institutionResponse.data;
+              }
+            } catch (error) {
+              console.warn("获取机构信息失败:", error);
+            }
+          }
+          
+          // 将用户信息、角色和机构信息存储到sessionStorage
+          const userInfo = {
+            user: userProfile,
+            roles: userRoles,
+            institution: institution
+          };
+          
+          sessionStorage.setItem('userInfo', JSON.stringify(userInfo));
+          
+          toast({
+            title: "登录成功",
+            description: "欢迎回来！",
+          });
+          onLoginSuccess();
+          navigate('/');
+        } catch (error: any) {
+          console.error("获取用户信息失败:", error);
+          toast({
+            title: "错误",
+            description: error?.message || "获取用户信息失败，请稍后重试",
+            variant: "destructive",
+          });
+        }
       } else {
         toast({
           title: "登录失败",

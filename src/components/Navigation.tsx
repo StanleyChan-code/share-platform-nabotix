@@ -6,6 +6,8 @@ import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 import {Menu, Database, FileText, Upload, BarChart3, Info, User, Shield, LogOut} from "lucide-react";
 import {useToast} from "@/hooks/use-toast";
 import {logout, getCurrentUser, getCurrentUserRoles} from "@/integrations/api/authApi.ts";
+import {institutionApi} from "@/integrations/api/institutionApi.ts";
+import { getCurrentUserInfo } from "@/lib/authUtils.ts";
 
 const navigationItems = [
     {name: "首页", name_en: "Home", href: "/", icon: BarChart3},
@@ -28,13 +30,35 @@ export function Navigation() {
 
     useEffect(() => {
         // 检查现有会话
-        const token = localStorage.getItem('authToken');
-        if (token) {
-            // 获取用户信息和角色
-            fetchUserInfoAndRoles()
-                .catch(error => {
-                    console.error("Failed to fetch user info and roles:", error);
-                });
+        const userInfo = getCurrentUserInfo();
+        
+        if (userInfo) {
+            // 从sessionStorage中获取用户信息
+            try {
+                setUser({id: userInfo.user.id, email: userInfo.user.email});
+                setUserProfile(userInfo.user);
+                setUserRoles(userInfo.roles);
+                setSession({token: localStorage.getItem('authToken')});
+            } catch (error) {
+                console.error("Failed to parse user info from sessionStorage:", error);
+                // 如果解析失败，清除token并跳转到登录页
+                localStorage.removeItem('authToken');
+                sessionStorage.removeItem('userInfo');
+                navigate('/auth');
+            }
+        } else {
+            const token = localStorage.getItem('authToken');
+            if (token) {
+                // 有token但没有用户信息，从API获取
+                fetchUserInfoAndRoles()
+                    .catch(error => {
+                        console.error("Failed to fetch user info and roles:", error);
+                        // 如果获取失败，清除token并跳转到登录页
+                        localStorage.removeItem('authToken');
+                        sessionStorage.removeItem('userInfo');
+                        navigate('/auth');
+                    });
+            }
         }
     }, []);
 
@@ -54,13 +78,37 @@ export function Navigation() {
             if (rolesResponse.data.success) {
                 setUserRoles(rolesResponse.data.data);
             }
+            
+            // 如果用户有机构ID，获取机构信息
+            let institution = null;
+            if (userResponse.data.data.institutionId) {
+                try {
+                    const institutionResponse = await institutionApi.getInstitutionById(userResponse.data.data.institutionId);
+                    if (institutionResponse.success) {
+                        institution = institutionResponse.data;
+                    }
+                } catch (error) {
+                    console.warn("获取机构信息失败:", error);
+                }
+            }
+            
+            // 将用户信息、角色和机构信息存储到sessionStorage
+            const userInfo = {
+                user: userResponse.data.data,
+                roles: rolesResponse.data.data,
+                institution: institution
+            };
+            
+            sessionStorage.setItem('userInfo', JSON.stringify(userInfo));
         } catch (error) {
             console.error("Failed to fetch user info or roles:", error);
             // Token可能已过期，清除它
             localStorage.removeItem('authToken');
+            sessionStorage.removeItem('userInfo');
             setUser(null);
             setSession(null);
             setUserRoles([]);
+            throw error;
         }
     };
 
@@ -71,6 +119,8 @@ export function Navigation() {
             setSession(null);
             setUserProfile(null);
             setUserRoles([]);
+            // 清除sessionStorage中的用户信息
+            sessionStorage.removeItem('userInfo');
             toast({
                 title: "已登出",
                 description: "您已成功登出。",
@@ -167,9 +217,11 @@ export function Navigation() {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     ) : (
-                        <Button asChild variant="ghost" size="sm">
-                            <Link to="/auth">登录</Link>
-                        </Button>
+                        location.pathname !== '/auth' && (
+                            <Button asChild variant="ghost" size="sm">
+                                <Link to="/auth">登录</Link>
+                            </Button>
+                        )
                     )}
 
                     {/* Mobile Navigation */}
@@ -209,9 +261,11 @@ export function Navigation() {
                                         </Button>
                                     </div>
                                 ) : (
-                                    <Button asChild className="w-full">
-                                        <Link to="/auth" onClick={() => setIsOpen(false)}>登录</Link>
-                                    </Button>
+                                    location.pathname !== '/auth' && (
+                                        <Button asChild className="w-full">
+                                            <Link to="/auth" onClick={() => setIsOpen(false)}>登录</Link>
+                                        </Button>
+                                    )
                                 )}
                             </div>
                         </SheetContent>

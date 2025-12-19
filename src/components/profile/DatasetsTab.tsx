@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import PaginatedList from '@/components/ui/PaginatedList';
@@ -12,15 +12,31 @@ import {
   FileText,
   CheckCircle,
   Clock,
-  XCircle
+  XCircle,
+  Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DatasetDetailModal } from '@/components/dataset/DatasetDetailModal';
+import { useToast } from '@/components/ui/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const DatasetsTab = () => {
   const [selectedDataset, setSelectedDataset] = React.useState<any>(null);
   const [isDatasetModalOpen, setIsDatasetModalOpen] = React.useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [datasetToDelete, setDatasetToDelete] = React.useState<Dataset | null>(null);
+  const { toast } = useToast();
+  const paginatedListRef = useRef<any>(null);
 
   const fetchDatasets = useCallback(async (page: number, size: number) => {
     const response = await datasetApi.getManageableDatasets({
@@ -71,7 +87,7 @@ const DatasetsTab = () => {
     } else if (dataset.versions.length > 0) {
       return '审核中';
     } else {
-      return '草稿';
+      return '未提交数据集版本';
     }
   };
 
@@ -85,6 +101,35 @@ const DatasetsTab = () => {
     setIsDatasetModalOpen(true);
   };
 
+  const handleDeleteClick = (dataset: Dataset) => {
+    setDatasetToDelete(dataset);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!datasetToDelete) return;
+    
+    try {
+      await datasetApi.deleteDataset(datasetToDelete.id);
+      toast({
+        title: "删除成功",
+        description: "数据集已成功删除。",
+      });
+      setDeleteDialogOpen(false);
+      setDatasetToDelete(null);
+      // 触发重新加载数据
+      if (paginatedListRef.current) {
+        paginatedListRef.current.refresh();
+      }
+    } catch (error) {
+      toast({
+        title: "删除失败",
+        description: "无法删除数据集，请稍后重试。",
+        variant: "destructive",
+      });
+    }
+  };
+
   const renderDatasetItem = (dataset: Dataset) => (
     <Card key={dataset.id} className="hover:shadow-md transition-shadow border-l-4 border-l-primary">
       <CardHeader className="pb-3">
@@ -94,6 +139,11 @@ const DatasetsTab = () => {
               <span className="truncate" title={dataset.titleCn}>
                 {dataset.titleCn}
               </span>
+              {dataset.parentDatasetId && (
+                <Badge variant="secondary" className="text-xs">
+                  随访数据集
+                </Badge>
+              )}
             </CardTitle>
             <p className="text-sm text-muted-foreground line-clamp-2">
               {dataset.description}
@@ -127,6 +177,20 @@ const DatasetsTab = () => {
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>查看详情</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDeleteClick(dataset)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>删除数据集</p>
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -213,6 +277,7 @@ const DatasetsTab = () => {
           </CardHeader>
           <CardContent>
             <PaginatedList
+              ref={paginatedListRef}
               fetchData={fetchDatasets}
               renderItem={renderDatasetItem}
               renderEmptyState={renderEmptyState}
@@ -229,6 +294,23 @@ const DatasetsTab = () => {
             useAdvancedQuery={true}
           />
         )}
+        
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>确认删除数据集？</AlertDialogTitle>
+              <AlertDialogDescription>
+                此操作将永久删除数据集"{datasetToDelete?.titleCn}"及其所有版本。此操作不可撤销。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>取消</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+                删除
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </>
     </TooltipProvider>
   );

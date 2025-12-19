@@ -49,7 +49,7 @@ interface FileUploaderProps {
 }
 
 export interface FileUploaderHandles {
-    handleReset: () => void;
+    handleReset: (cleanTmpFile?: boolean) => void;
 }
 
 interface UploadState {
@@ -67,7 +67,8 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>
       onResetComplete,
       maxSize = 10 * 1024 * 1024 * 1024, // 10GB
       chunkSize = 5 * 1024 * 1024, // 5MB
-  }, ref) => {
+  }, ref) =>
+{
     const [file, setFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [isCancelled, setIsCancelled] = useState(false);
@@ -94,6 +95,16 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>
         lastFailedChunk: -1,
         retryCount: 0
     });
+
+    // 组件卸载时清理已上传的文件
+    useEffect(() => {
+        return () => {
+            // 组件卸载时，如果已经有上传成功的文件，则清理它
+            if (uploadStateRef.current.uploadedFileId) {
+                handleReset(true);
+            }
+        };
+    }, []);
 
     // 同步 pauseController 和 React 状态
     useEffect(() => {
@@ -566,7 +577,7 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>
                 {file && !isUploading && !isPaused && !errorMessage && (
                     <Button 
                         type="button"
-                        onClick={() => handleReset()} 
+                        onClick={() => handleReset(true)} 
                         variant="outline"
                         size="icon"
                     >

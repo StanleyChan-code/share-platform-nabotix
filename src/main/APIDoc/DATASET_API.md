@@ -4,6 +4,16 @@
 - 公共接口（部分需认证）：`/api/datasets`
 - 管理接口（需认证）：`/api/manage/datasets`
 
+## 更新日志
+
+- 新增 `/api/datasets/annual` 接口用于获取每年发布数据集数量统计
+- 新增 `/api/datasets/my-approved` 接口供用户查询自己申请通过的数据集
+- 新增 `/api/datasets/with-approved-applications-and-versions` 接口用于获取拥有已审核通过申请记录且有已审核通过版本的数据集列表
+- 新增 `/api/datasets/query` 接口中 `loadTimeline` 和 `onlyApproved` 参数
+- 新增 `/api/datasets/{datasetId}/approved-research-outputs` 接口用于获取与指定数据集关联的已审核研究成果列表
+- 管理接口新增高级搜索功能
+- 管理接口权限细化，增加DATASET_APPROVER角色支持
+
 ## 1. 公共数据集接口
 
 ### 1.1 通用数据集查询接口
@@ -19,9 +29,13 @@
 | subjectAreaId         | UUID    | 否  | -                   | 学科领域ID                           |
 | titleCnOrKey          | string  | 否  | -                   | 中文标题或关键词                         |
 | providerId            | UUID    | 否  | -                   | 提供者ID                            |
+| institutionId         | UUID    | 否  | -                   | 机构ID                              |
 | isTopLevel            | Boolean | 否  | true                | 是否只显示顶级数据集                       |
 | currentVersionDateFrom| Instant | 否  | -                   | 当前版本日期起始时间                       |
 | currentVersionDateTo  | Instant | 否  | -                   | 当前版本日期结束时间                       |
+| loadTimeline          | Boolean | 否  | false               | 是否加载随访数据集信息                     |
+| type                  | string  | 否  | -                   | 数据集类型 (可选值: PROJECT, COHORT, CASE_CONTROL, CROSS_SECTIONAL, OTHER) |
+| onlyApproved          | Boolean | 否  | true                | 是否只显示有已审核通过版本的数据集              |
 | page                  | int     | 否  | 0                   | 页码                               |
 | size                  | int     | 否  | 10                  | 每页大小                             |
 | sortBy                | string  | 否  | currentVersionDate  | 排序字段                             |
@@ -31,8 +45,10 @@
 - 支持多种查询条件组合
 - 匿名用户：只能看到已批准且已发布的数据集
 - 已登录用户：能看到已批准且已发布的数据集 + 已批准但未公开的用户所属机构能够申请的数据集
-
-
+- 当[institutionId](file:///D:/Code/web/share-platform/src/main/java/cn/com/nabotix/shareplatform/institution/entity/Institution.java#L26-L26)参数存在时，会筛选指定机构下的数据集
+- 当[isTopLevel](file:///D:/Code/web/share-platform/src/main/java/cn/com/nabotix/shareplatform/dataset/entity/Dataset.java#L35-L35)为true时，只显示顶级数据集（没有父数据集的数据集）
+- 当[loadTimeline](file:///D:/Code/web/share-platform/src/main/java/cn/com/nabotix/shareplatform/dataset/controller/DatasetController.java#L89-L89)为true时，会加载数据集的随访数据集信息
+- 当[onlyApproved](file:///D:/Code/web/share-platform/src/main/java/cn/com/nabotix/shareplatform/dataset/repository/DatasetSpecifications.java#L35-L35)为true时，只显示至少有一个审核通过版本的数据集
 
 **响应示例**:
 ```json
@@ -345,7 +361,63 @@
 }
 ```
 
-### 1.5 下载数据集版本的数据字典文件
+### 1.6 获取每年首次发布数据集数量统计
+
+**接口地址**: `GET /api/datasets/annual`
+
+**权限要求**: 无需认证，所有用户均可访问
+
+**说明**: 
+- 获取每年首次发布(firstPublishedDate)的数据集数量统计
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "获取每年发布数据集数量统计成功",
+  "data": [
+    {
+      "year": 2023,
+      "count": 15
+    }
+  ],
+  "timestamp": "2025-12-01T10:00:00Z"
+}
+```
+
+### 1.7 用户查询自己申请通过的数据集列表
+
+**接口地址**: `GET /api/datasets/my-approved`
+
+**权限要求**: 需要认证
+
+**请求参数**:
+
+| 参数名     | 类型     | 必填 | 默认值       | 描述             |
+|---------|--------|----|-----------|----------------|
+| page    | int    | 否  | 0         | 页码             |
+| size    | int    | 否  | 10        | 每页大小           |
+
+**说明**: 
+- 用户查询自己申请通过的数据集列表，按批准时间倒序排列
+
+### 1.8 获取拥有已审核通过申请记录且有已审核通过版本的数据集列表
+
+**接口地址**: `GET /api/datasets/with-approved-applications-and-versions`
+
+**权限要求**: 无需认证，所有用户均可访问
+
+**请求参数**:
+
+| 参数名     | 类型     | 必填 | 默认值       | 描述             |
+|---------|--------|----|-----------|----------------|
+| page    | int    | 否  | 0         | 页码             |
+| size    | int    | 否  | 10        | 每页大小           |
+
+**说明**: 
+- 获取拥有已审核通过申请记录且有已审核通过版本的数据集列表，按审核通过的申请记录数量从多到少排序
+
+### 1.9 下载数据集版本的数据字典文件
 
 **接口地址**: `GET /api/datasets/{datasetId}/versions/{versionId}/data-dictionary`
 
@@ -362,7 +434,7 @@
 - 需要用户登录才能下载
 - 返回的是文件下载流
 
-### 1.6 下载数据集版本的使用协议文件
+### 1.9 下载数据集版本的使用协议文件
 
 **接口地址**: `GET /api/datasets/{datasetId}/versions/{versionId}/terms-agreement`
 
@@ -379,7 +451,7 @@
 - 需要用户登录才能下载
 - 返回的是文件下载流
 
-### 1.7 下载数据集版本的数据分享文件
+### 1.10 下载数据集版本的数据分享文件
 
 **接口地址**: `GET /api/datasets/{datasetId}/versions/{versionId}/data-sharing`
 
@@ -394,10 +466,9 @@
 
 **说明**: 
 - 需要用户登录并且有相应的申请审批通过记录，或者自己是提供者
-- 需要经过申请数据集的下载权限
 - 返回的是文件下载流
 
-### 1.8 软删除数据集
+### 1.11 软删除数据集
 
 **接口地址**: `DELETE /api/datasets/{id}`
 
@@ -423,6 +494,71 @@
 }
 ```
 
+### 1.12 获取与指定数据集关联的已审核研究成果列表
+
+**接口地址**: `GET /api/datasets/{datasetId}/approved-research-outputs`
+
+**权限要求**: 无需认证，所有用户均可访问
+
+**请求参数**:
+
+| 参数名     | 类型     | 必填 | 默认值        | 描述             |
+|----------|--------|----|------------|----------------|
+| datasetId | UUID   | 是  | -          | 数据集ID          |
+| page     | int    | 否  | 0          | 页码             |
+| size     | int    | 否  | 10         | 每页大小           |
+| sortBy   | string | 否  | approvedAt | 排序字段           |
+| sortDir  | string | 否  | desc       | 排序方向（asc/desc） |
+
+**说明**: 
+- 获取与指定数据集ID关联且已审核通过的研究成果列表
+- 匿名用户和已登录用户均可访问
+- 按审核通过时间倒序排列
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "获取与数据集关联的已审核成果列表成功",
+  "data": {
+    "content": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "datasetId": "550e8400-e29b-41d4-a716-446655440001",
+        "submitter": {
+          "id": "550e8400-e29b-41d4-a716-446655440002",
+          "username": "researcher",
+          "realName": "研究员",
+          "email": "researcher@example.com"
+        },
+        "type": "PAPER",
+        "title": "基于某数据集的研究成果",
+        "abstractText": "这是研究成果的摘要内容",
+        "outputNumber": "DOI:123456",
+        "citationCount": 10,
+        "publicationUrl": "https://example.com/paper",
+        "approved": true,
+        "approvedBy": {
+          "id": "550e8400-e29b-41d4-a716-446655440003",
+          "username": "approver",
+          "realName": "审核员",
+          "email": "approver@example.com"
+        },
+        "approvedAt": "2023-01-02T00:00:00Z",
+        "createdAt": "2023-01-01T00:00:00Z"
+      }
+    ],
+    "page": {
+      "size": 10,
+      "number": 0,
+      "totalElements": 1,
+      "totalPages": 1
+    }
+  },
+  "timestamp": "2025-12-01T10:00:00Z"
+}
+```
+
 
 
 ## 2. 管理数据集接口
@@ -440,17 +576,19 @@
 | title   | string | 是  | -         | 搜索关键词          |
 | page    | int    | 否  | 0         | 页码             |
 | size    | int    | 否  | 10        | 每页大小           |
-| sortBy  | string | 否  | updatedAt | 排序字段           |
+| sortBy  | string | 否  | currentVersionDate | 排序字段           |
 | sortDir | string | 否  | desc      | 排序方向（asc/desc） |
 
 **说明**: 
-- 平台管理员和机构管理员可访问所有数据集，数据集上传员只能看到自己上传的数据集
+- 平台管理员可以根据标题搜索所有数据集
+- 机构管理员可以根据标题搜索本机构所有数据集
+- 数据集上传员只能根据标题搜索自己上传的数据集
 
 ### 2.2 获取所有管理的数据集列表
 
 **接口地址**: `GET /api/manage/datasets`
 
-**权限要求**: PLATFORM_ADMIN、INSTITUTION_SUPERVISOR、DATASET_UPLOADER
+**权限要求**: PLATFORM_ADMIN、INSTITUTION_SUPERVISOR、DATASET_APPROVER、DATASET_UPLOADER
 
 **请求参数**:
 
@@ -458,11 +596,12 @@
 |---------|--------|----|-----------|----------------|
 | page    | int    | 否  | 0         | 页码             |
 | size    | int    | 否  | 10        | 每页大小           |
-| sortBy  | string | 否  | updatedAt | 排序字段           |
+| sortBy  | string | 否  | currentVersionDate | 排序字段           |
 | sortDir | string | 否  | desc      | 排序方向（asc/desc） |
 
 **说明**: 
 - 平台管理员和机构管理员可访问所有数据集，数据集上传员只能看到自己上传的数据集
+- 数据集审核员也可以访问数据集
 
 **响应示例**:
 ```json
@@ -528,7 +667,7 @@
 
 **接口地址**: `GET /api/manage/datasets/{id}`
 
-**权限要求**: PLATFORM_ADMIN、INSTITUTION_SUPERVISOR、DATASET_UPLOADER
+**权限要求**: PLATFORM_ADMIN、INSTITUTION_SUPERVISOR、DATASET_APPROVER、DATASET_UPLOADER
 
 **请求参数**:
 
@@ -539,6 +678,7 @@
 **说明**: 
 - 平台管理员和机构管理员可访问所有数据集
 - 数据集上传员只能看到自己上传数据集
+- 数据集审核员也可以访问数据集
 
 **响应示例**:
 ```json
@@ -877,9 +1017,9 @@
 
 ### 2.8 高级查询数据集列表
 
-**接口地址**: `GET /api/manage/datasets/advanced-search`
+**接口地址**: `GET /api/manage/datasets/advanced`
 
-**权限要求**: PLATFORM_ADMIN、INSTITUTION_SUPERVISOR、DATASET_UPLOADER, DATASET_APPROVER
+**权限要求**: PLATFORM_ADMIN、INSTITUTION_SUPERVISOR、DATASET_UPLOADER、DATASET_APPROVER
 
 **请求参数**:
 
@@ -903,6 +1043,7 @@
 - 平台管理员可查询所有数据集
 - 机构管理员只能查询本机构数据集
 - 数据集上传员只能查询自己上传的数据集
+- 数据集审核员可以查询数据集
 - 支持多种查询条件组合
 
 **响应示例**:
@@ -964,3 +1105,32 @@
   "timestamp": "2025-12-01T10:00:00Z"
 }
 ```
+
+### 2.9 删除数据集
+
+**接口地址**: `DELETE /api/manage/datasets/{id}`
+
+**权限要求**: PLATFORM_ADMIN、INSTITUTION_SUPERVISOR、DATASET_UPLOADER
+
+**请求参数**:
+
+| 参数名 | 类型   | 必填 | 描述    |
+|-----|------|----|-------|
+| id  | UUID | 是  | 数据集ID |
+
+**说明**: 
+- 平台管理员可删除任意数据集
+- 机构管理员可删除本机构的数据集
+- 数据集上传员只能删除自己上传的数据集
+- 如果要删除的数据集是基线数据集（被其他随访数据集引用），则需要先删除所有随访数据集
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "数据集删除成功",
+  "data": null,
+  "timestamp": "2025-12-01T10:00:00Z"
+}
+```
+

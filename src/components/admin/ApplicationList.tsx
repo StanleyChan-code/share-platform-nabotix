@@ -1,8 +1,8 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import PaginatedList from '@/components/ui/PaginatedList';
-import { Application, getMyApplications, getProviderApplications, getPendingApplications } from '@/integrations/api/applicationApi';
+import { Application, getMyApplications, getProviderApplications, getPendingApplications, deleteApplication } from '@/integrations/api/applicationApi';
 import { formatDateTime } from '@/lib/utils';
 import {
     FileText,
@@ -17,7 +17,8 @@ import {
     XCircle,
     AlertCircle,
     MessageSquare,
-    Database
+    Database,
+    Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -25,6 +26,16 @@ import ApplyDialog from '@/components/application/ApplyDialog';
 import ApplicationDetailDialog from './ApplicationDetailDialog'; // 导入新的详情对话框组件
 import { useToast } from '@/components/ui/use-toast';
 import { DatasetDetailModal } from '@/components/dataset/DatasetDetailModal';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ApplicationListProps {
     variant?: 'my-applications' | 'provider-applications' | 'pending-applications';
@@ -40,7 +51,10 @@ const ApplicationList: React.FC<ApplicationListProps> = ({
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
     const [selectedDataset, setSelectedDataset] = useState<any>(null);
     const [isDatasetModalOpen, setIsDatasetModalOpen] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [applicationToDelete, setApplicationToDelete] = useState<Application | null>(null);
     const { toast } = useToast();
+    const paginatedListRef = useRef<any>(null);
 
     const fetchApplications = useCallback(async (page: number, size: number) => {
         switch (variant) {
@@ -135,6 +149,35 @@ const ApplicationList: React.FC<ApplicationListProps> = ({
         setIsDatasetModalOpen(true);
     };
 
+    const handleDeleteClick = (application: Application) => {
+        setApplicationToDelete(application);
+        setDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!applicationToDelete) return;
+        
+        try {
+            await deleteApplication(applicationToDelete.id);
+            toast({
+                title: "删除成功",
+                description: "申请记录已成功删除。",
+            });
+            setDeleteDialogOpen(false);
+            setApplicationToDelete(null);
+            // 触发重新加载数据
+            if (paginatedListRef.current) {
+                paginatedListRef.current.refresh();
+            }
+        } catch (error) {
+            toast({
+                title: "删除失败",
+                description: "无法删除申请记录，请稍后重试。",
+                variant: "destructive",
+            });
+        }
+    };
+
     const renderApplicationItem = (application: Application) => (
         <Card key={application.id} className="hover:shadow-md transition-shadow border-l-4 border-l-primary">
             <CardHeader className="pb-3">
@@ -158,15 +201,15 @@ const ApplicationList: React.FC<ApplicationListProps> = ({
                                 </Tooltip>
                             )}
                         </CardTitle>
-                        <p 
+                        <div 
                             className="text-sm text-muted-foreground flex items-center gap-1 cursor-pointer hover:text-primary hover:underline"
                             onClick={() => handleViewDataset(application)}
                         >
                             <Database className="h-3 w-3 flex-shrink-0" />
-                            <p className="truncate" title={application.datasetTitle}>
+                            <span className="truncate" title={application.datasetTitle}>
                                 数据集: {truncateText(application.datasetTitle, 40)}
-                            </p>
-                        </p>
+                            </span>
+                        </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                         <Badge
@@ -191,6 +234,22 @@ const ApplicationList: React.FC<ApplicationListProps> = ({
                                     <p>查看详情</p>
                                 </TooltipContent>
                             </Tooltip>
+                            {variant === 'my-applications' && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleDeleteClick(application)}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>删除申请</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -427,6 +486,7 @@ const ApplicationList: React.FC<ApplicationListProps> = ({
                     </CardHeader>
                     <CardContent>
                         <PaginatedList
+                            ref={paginatedListRef}
                             fetchData={fetchApplications}
                             renderItem={renderApplicationItem}
                             renderEmptyState={renderEmptyState}
@@ -448,6 +508,23 @@ const ApplicationList: React.FC<ApplicationListProps> = ({
                         onOpenChange={setIsDatasetModalOpen} 
                     />
                 )}
+                
+                <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>确认删除申请？</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                此操作将永久删除申请"{applicationToDelete?.projectTitle}"。此操作不可撤销。
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>取消</AlertDialogCancel>
+                            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+                                删除
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </>
         </TooltipProvider>
     );

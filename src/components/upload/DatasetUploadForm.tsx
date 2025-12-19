@@ -218,7 +218,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
     }
 
     if (!sharingFileInfo) {
-      toast.error('请上传数据共享协议');
+      toast.error('请上传数据分享文件');
       return;
     }
 
@@ -300,10 +300,10 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
         });
 
         // 重置文件上传组件
-        dataFileRef.current?.handleReset();
-        dictFileRef.current?.handleReset();
-        termsFileRef.current?.handleReset();
-        sharingFileRef.current?.handleReset();
+        dataFileRef.current?.handleReset(false);
+        dictFileRef.current?.handleReset(false);
+        termsFileRef.current?.handleReset(false);
+        sharingFileRef.current?.handleReset(false);
 
         // 重置文件信息
         setDataFileInfo(null);
@@ -697,7 +697,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="dataFile">数据文件 * (CSV, Excel, etc.)</Label>
+                    <Label htmlFor="dataFile">完整数据集文件 *</Label>
                     <FileUploader
                         ref={dataFileRef}
                         onUploadComplete={setDataFileInfo}
@@ -712,26 +712,26 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="termsFile">数据使用协议 * (PDF, Word, etc.)</Label>
+                    <Label htmlFor="sharingFile">数据分享文件（用户申请后可下载） *</Label>
                     <FileUploader
-                        ref={termsFileRef}
-                        onUploadComplete={setTermsFileInfo}
+                        ref={sharingFileRef}
+                        onUploadComplete={setSharingFileInfo}
                     />
-                    {termsFileInfo && (
+                    {sharingFileInfo && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <File className="h-4 w-4" />
-                          {termsFileInfo.fileName} ({(termsFileInfo.fileSize / 1024 / 1024).toFixed(2)} MB)
+                          {sharingFileInfo.fileName} ({(sharingFileInfo.fileSize / 1024 / 1024).toFixed(2)} MB)
                         </div>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      请上传数据集所属单位制定的数据使用协议（PDF或Word格式）
+                      请上传数据分享文件
                     </p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="dictFile">数据字典文件 * (PDF, Word, etc.)</Label>
+                    <Label htmlFor="dictFile">数据字典文件 *</Label>
                     <FileUploader
                         ref={dictFileRef}
                         onUploadComplete={setDictFileInfo}
@@ -745,19 +745,19 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="sharingFile">数据共享协议 * (PDF, Word, etc.)</Label>
+                    <Label htmlFor="termsFile">数据使用协议 *</Label>
                     <FileUploader
-                        ref={sharingFileRef}
-                        onUploadComplete={setSharingFileInfo}
+                        ref={termsFileRef}
+                        onUploadComplete={setTermsFileInfo}
                     />
-                    {sharingFileInfo && (
+                    {termsFileInfo && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <File className="h-4 w-4" />
-                          {sharingFileInfo.fileName} ({(sharingFileInfo.fileSize / 1024 / 1024).toFixed(2)} MB)
+                          {termsFileInfo.fileName} ({(termsFileInfo.fileSize / 1024 / 1024).toFixed(2)} MB)
                         </div>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      请上传数据共享协议
+                      请上传数据集所属单位制定的数据使用协议（PDF或Word格式）
                     </p>
                   </div>
                 </div>

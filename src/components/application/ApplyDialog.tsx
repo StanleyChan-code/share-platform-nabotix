@@ -49,14 +49,14 @@ const ApplyDialog = ({open, onOpenChange, datasetId}: ApplyDialogProps) => {
     useEffect(() => {
         const fetchUserInstitution = async () => {
             try {
-                const { data: { user } } = await supabase.auth.getUser();
+                const {data: {user}} = await supabase.auth.getUser();
                 if (user) {
-                    const { data, error } = await supabase
+                    const {data, error} = await supabase
                         .from('users')
                         .select('institution_id')
                         .eq('id', user.id)
                         .single();
-                    
+
                     if (error) {
                         console.error('获取用户机构信息失败:', error);
                     } else {
@@ -80,13 +80,13 @@ const ApplyDialog = ({open, onOpenChange, datasetId}: ApplyDialogProps) => {
 
     const isDatasetAvailableToUser = () => {
         if (!selectedDataset || !institutionCheckDone) return false;
-        
+
         // 如果数据集没有设置申请机构限制，则所有人都可以申请
         if (!selectedDataset.applicationInstitutionIds) return true;
-        
+
         // 如果用户不属于任何机构，则无法申请有限制的数据集
         if (!userInstitutionId) return false;
-        
+
         // 检查用户所属机构是否在数据集允许申请的机构列表中
         return selectedDataset.applicationInstitutionIds.includes(userInstitutionId);
     };
@@ -151,9 +151,7 @@ const ApplyDialog = ({open, onOpenChange, datasetId}: ApplyDialogProps) => {
             setSelectedDataset(null);
 
             // 重置文件上传组件
-            if (fileUploaderRef.current && fileUploaderRef.current.handleReset) {
-                fileUploaderRef.current.handleReset(true);
-            }
+            fileUploaderRef.current.handleReset(false);
 
             // 关闭对话框
             onOpenChange(false);
@@ -185,9 +183,8 @@ const ApplyDialog = ({open, onOpenChange, datasetId}: ApplyDialogProps) => {
                 setSelectedDataset(null);
 
                 // 重置文件上传组件
-                if (fileUploaderRef.current && fileUploaderRef.current.handleReset) {
-                    fileUploaderRef.current.handleReset(true);
-                }
+                if (!fileUploaderRef.current) return;
+                fileUploaderRef.current.handleReset(true);
             }
         }}>
             <DialogContent
@@ -252,11 +249,11 @@ const ApplyDialog = ({open, onOpenChange, datasetId}: ApplyDialogProps) => {
                                                       title={selectedDataset.dataCollectionUnit}>{selectedDataset.dataCollectionUnit}</span>
                                             </div>
                                         </div>
-                                        
+
                                         {/* 机构限制提示 */}
                                         {institutionCheckDone && !isDatasetAvailableToUser() && (
                                             <Alert variant="destructive" className="mt-3">
-                                                <AlertTriangle className="h-4 w-4" />
+                                                <AlertTriangle className="h-4 w-4"/>
                                                 <AlertDescription>
                                                     该数据集暂未对用户所属机构开放申请
                                                 </AlertDescription>
@@ -402,9 +399,6 @@ const ApplyDialog = ({open, onOpenChange, datasetId}: ApplyDialogProps) => {
                                                         }}
                                                         maxSize={10 * 1024 * 1024} // 10MB限制
                                                     />
-                                                    <p className="text-xs text-muted-foreground">
-                                                        请上传盖章签字的审批表扫描件（支持PDF、JPG、PNG格式，最大10MB）
-                                                    </p>
                                                 </div>
                                             </div>
 

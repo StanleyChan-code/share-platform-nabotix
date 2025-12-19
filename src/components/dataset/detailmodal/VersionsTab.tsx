@@ -155,9 +155,11 @@ export function VersionsTab({
           ) : (
               <div className="text-center py-8">
                 <p className="text-muted-foreground">暂无版本历史记录</p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  当前版本：{currentVersionNumber || '1.0'}
-                </p>
+                {currentVersionNumber && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      当前版本：{currentVersionNumber}
+                    </p>
+                )}
               </div>
           )}
         </CardContent>

@@ -15,7 +15,7 @@ export interface ResearchOutput {
   title: string;
   abstractText: string;
   outputNumber: string;
-  citationCount: number;
+  value: number;
   publicationUrl: string | null;
   fileId: string | null;
   createdAt: string;
@@ -92,7 +92,7 @@ export const outputApi = {
     title: string;
     abstractText: string;
     outputNumber: string;
-    citationCount: number;
+    value: number;
     publicationUrl: string;
     fileId: string;
     otherInfo: Record<string, any>;
@@ -128,7 +128,7 @@ export const outputApi = {
     title: string;
     abstractText: string;
     outputNumber: string;
-    citationCount: number;
+    value: number;
     publicationUrl: string;
     fileId: string;
     otherInfo: Record<string, any>;

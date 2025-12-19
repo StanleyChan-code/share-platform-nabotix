@@ -10,11 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { getOutputTypeDisplayName, getOutputTypeIconComponent } from "@/lib/outputUtils";
 import { formatDate, formatDateTime, formatFileSize } from "@/lib/utils";
 import { ResearchOutput, outputApi } from "@/integrations/api/outputApi";
-import { getCurrentUser, getCurrentUserRoles } from "@/integrations/api/authApi";
+import { getCurrentUser, getCurrentUserRoles } from "@/lib/authUtils";
 import React, { useEffect, useState } from "react";
 import { fileApi, FileInfo } from "@/integrations/api/fileApi";
 import {Download} from "lucide-react";
-import {toast} from "@/hooks/use-toast.ts"; // 添加导入
+import {toast} from "@/hooks/use-toast.ts";
 
 interface OutputDetailDialogProps {
     open: boolean;
@@ -30,8 +30,8 @@ const OutputDetailDialog = ({ open, onOpenChange, output }: OutputDetailDialogPr
     useEffect(() => {
         const fetchCurrentUser = async () => {
             try {
-                const currentUser = await getCurrentUser();
-                setCurrentUserId(currentUser.data.data.id);
+                const currentUser = getCurrentUser();
+                setCurrentUserId(currentUser.id);
 
                 // 获取用户角色以确定是否为管理员
                 // const rolesResponse = await getCurrentUserRoles();
@@ -169,7 +169,7 @@ const OutputDetailDialog = ({ open, onOpenChange, output }: OutputDetailDialogPr
                             {output.abstractText && (
                                 <div className="space-y-2">
                                     <h3 className="text-lg font-semibold">
-                                        {output.type === 'other_award' ? '成果简介' : '摘要'}
+                                        {output.type === 'other_award' ? '简介' : '摘要'}
                                     </h3>
                                     <p className="whitespace-pre-wrap">{output.abstractText}</p>
                                 </div>
@@ -196,10 +196,10 @@ const OutputDetailDialog = ({ open, onOpenChange, output }: OutputDetailDialogPr
                                     {output.otherInfo?.authors && (
                                         <div>
                                             <p className="font-medium text-muted-foreground">
-                                                {output.type === 'paper' ? '作者' :
-                                                    output.type === 'publication' ? '作者' :
-                                                        (output.type === 'invention_patent' || output.type === 'utility_patent' || output.type === 'project') ? '成员' :
-                                                            output.type === 'software_copyright' ? '著作权人' : '相关人员'}
+                                                {output.type === 'PAPER' ? '作者' :
+                                                    output.type === 'PUBLICATION' ? '作者' :
+                                                        (output.type === 'INVENTION_PATENT' || output.type === 'UTILITY_PATENT' || output.type === 'PROJECT') ? '成员' :
+                                                            output.type === 'SOFTWARE_COPYRIGHT' ? '著作权人' : '相关人员'}
                                             </p>
                                             <p>{output.otherInfo.authors}</p>
                                         </div>
@@ -212,35 +212,53 @@ const OutputDetailDialog = ({ open, onOpenChange, output }: OutputDetailDialogPr
                                         </div>
                                     )}
 
-                                    {(output.type === 'invention_patent' || output.type === 'utility_patent') && output.otherInfo?.legalStatus && (
+                                    {output.otherInfo?.journalPartition && output.type === 'PAPER' && (
+                                        <div>
+                                            <p className="font-medium text-muted-foreground">期刊分区</p>
+                                            <p>{
+                                                output.otherInfo.journalPartition === 'cas_1' ? '中科院 一区' :
+                                                output.otherInfo.journalPartition === 'cas_2' ? '中科院 二区' :
+                                                output.otherInfo.journalPartition === 'cas_3' ? '中科院 三区' :
+                                                output.otherInfo.journalPartition === 'cas_4' ? '中科院 四区' :
+                                                output.otherInfo.journalPartition === 'jcr_q1' ? 'JCR Q1' :
+                                                output.otherInfo.journalPartition === 'jcr_q2' ? 'JCR Q2' :
+                                                output.otherInfo.journalPartition === 'jcr_q3' ? 'JCR Q3' :
+                                                output.otherInfo.journalPartition === 'jcr_q4' ? 'JCR Q4' :
+                                                output.otherInfo.journalPartition === 'other' ? '其他' :
+                                                '-'
+                                            }</p>
+                                        </div>
+                                    )}
+
+                                    {(output.type === 'INVENTION_PATENT' || output.type === 'UTILITY_PATENT') && output.otherInfo?.legalStatus && (
                                         <div>
                                             <p className="font-medium text-muted-foreground">法律状态</p>
                                             <p>{output.otherInfo.legalStatus}</p>
                                         </div>
                                     )}
 
-                                    {(output.type === 'invention_patent' || output.type === 'utility_patent') && output.otherInfo?.patentCountry && (
+                                    {(output.type === 'INVENTION_PATENT' || output.type === 'UTILITY_PATENT') && output.otherInfo?.patentCountry && (
                                         <div>
                                             <p className="font-medium text-muted-foreground">专利国别</p>
                                             <p>{output.otherInfo.patentCountry}</p>
                                         </div>
                                     )}
 
-                                    {output.type === 'software_copyright' && output.otherInfo?.softwareName && (
+                                    {output.type === 'SOFTWARE_COPYRIGHT' && output.otherInfo?.softwareName && (
                                         <div>
                                             <p className="font-medium text-muted-foreground">软件名称</p>
                                             <p>{output.otherInfo.softwareName}</p>
                                         </div>
                                     )}
 
-                                    {output.type === 'software_copyright' && output.otherInfo?.copyrightOwner && (
+                                    {output.type === 'SOFTWARE_COPYRIGHT' && output.otherInfo?.copyrightOwner && (
                                         <div>
                                             <p className="font-medium text-muted-foreground">著作权人</p>
                                             <p>{output.otherInfo.copyrightOwner}</p>
                                         </div>
                                     )}
 
-                                    {output.type === 'software_copyright' && output.otherInfo?.registrationDate && (
+                                    {output.type === 'SOFTWARE_COPYRIGHT' && output.otherInfo?.registrationDate && (
                                         <div>
                                             <p className="font-medium text-muted-foreground">登记日期</p>
                                             <p>{formatDate(output.otherInfo.registrationDate)}</p>
@@ -282,17 +300,12 @@ const OutputDetailDialog = ({ open, onOpenChange, output }: OutputDetailDialogPr
                                         </div>
                                     )}
 
-                                    {output.citationCount > 0 && (
-                                        <div>
-                                            <p className="font-medium text-muted-foreground">被引用次数</p>
-                                            <p>{output.citationCount}</p>
-                                        </div>
-                                    )}
+
 
                                     {output.publicationUrl && (
                                         <div>
                                             <p className="font-medium text-muted-foreground">
-                                                {output.type === 'paper' ? 'DOI链接' : 'URL链接'}
+                                                {output.type === 'PAPER' ? 'DOI链接' : 'URL链接'}
                                             </p>
                                             <a
                                                 href={output.publicationUrl.startsWith('http') ? output.publicationUrl : `https://${output.publicationUrl}`}
@@ -310,7 +323,8 @@ const OutputDetailDialog = ({ open, onOpenChange, output }: OutputDetailDialogPr
                                         const processedFields = [
                                             'authors', 'journal', 'legalStatus', 'patentCountry',
                                             'softwareName', 'copyrightOwner', 'registrationDate',
-                                            'awardRecipient', 'awardIssuingAuthority', 'awardTime', 'competitionLevel'
+                                            'awardRecipient', 'awardIssuingAuthority', 'awardTime', 'competitionLevel',
+                                            'journalPartition'
                                         ];
 
                                         if (processedFields.includes(key)) {
