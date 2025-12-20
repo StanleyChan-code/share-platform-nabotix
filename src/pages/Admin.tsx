@@ -3,12 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { Shield, Users, Database, FileText, Building2, Loader2 } from "lucide-react";
-import UserManagementTab from "@/components/admin/UserManagementTab";
+import UserManagementTab from "@/components/admin/user/UserManagementTab.tsx";
 import DatasetApprovalTab from "@/components/admin/DatasetApprovalTab";
 import ApplicationReviewTab from "@/components/admin/ApplicationReviewTab";
-import InstitutionManagementTab from "@/components/admin/InstitutionManagementTab";
+import InstitutionManagementTab from "@/components/admin/institution/InstitutionManagementTab.tsx";
+import { getCurrentUserRoles } from "@/integrations/api/authApi";
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState("users");
@@ -21,10 +21,10 @@ const Admin = () => {
   useEffect(() => {
     const checkAuthorization = async () => {
       try {
-        // Check if user is authenticated
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        // Check if user is authenticated by getting user roles
+        const rolesResponse = await getCurrentUserRoles();
         
-        if (userError || !user) {
+        if (!rolesResponse.data.success) {
           toast({
             title: "未授权",
             description: "请先登录以访问管理面板。",
@@ -34,20 +34,10 @@ const Admin = () => {
           return;
         }
 
-        // Check if user is admin using the secure RPC function
-        const { data: isAdmin, error: roleError } = await supabase.rpc('is_admin');
+        // Check if user has PLATFORM_ADMIN role
+        const roles = rolesResponse.data.data;
+        const isAdmin = roles.includes('PLATFORM_ADMIN');
         
-        if (roleError) {
-          console.error('Role check error:', roleError);
-          toast({
-            title: "授权检查失败",
-            description: "无法验证管理员权限。",
-            variant: "destructive",
-          });
-          navigate('/');
-          return;
-        }
-
         if (!isAdmin) {
           toast({
             title: "访问被拒绝",

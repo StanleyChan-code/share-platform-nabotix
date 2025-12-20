@@ -2,14 +2,17 @@ import {Navigation} from "@/components/Navigation";
 import {StatsCard} from "@/components/dashboard/StatsCard";
 import {ResearchDirectionChart} from "@/components/dashboard/ResearchDirectionChart";
 import {DatasetTypeChart} from "@/components/dashboard/DatasetTypeChart";
-import {Database, Users, FileText, TrendingUp, Calendar, Building} from "lucide-react";
+import {Database, Users, FileText, TrendingUp} from "lucide-react";
 import {useEffect, useState} from "react";
 import {getPlatformStatistics} from "@/integrations/api/statisticsApi";
 import {api} from "@/integrations/api/client";
-import {DatasetTypes, OutputTypes} from "@/lib/enums";
-import {formatDate} from "@/lib/utils.ts";
 import {Dataset, datasetApi} from "@/integrations/api/datasetApi.ts";
 import {getCurrentUser} from "@/lib/authUtils";
+import { RecommendedDatasetsSection } from "@/components/home/RecommendedDatasetsSection";
+import { RecentDatasetsSection } from "@/components/home/RecentDatasetsSection";
+import { RecentOutputsSection } from "@/components/home/RecentOutputsSection";
+import { OutputCard } from "@/components/home/OutputCard";
+import { outputApi } from "@/integrations/api/outputApi.ts";
 
 // 定义平台统计数据结构
 interface PlatformStatistics {
@@ -32,9 +35,11 @@ const Index = () => {
     const [recentDatasets, setRecentDatasets] = useState<Dataset[]>([]);
     const [recommendedDatasets, setRecommendedDatasets] = useState<Dataset[]>([]);
     const [recentOutputs, setRecentOutputs] = useState<any[]>([]);
+    const [highValueOutputs, setHighValueOutputs] = useState<any[]>([]);
     const [datasetsLoading, setDatasetsLoading] = useState(true);
     const [recommendedLoading, setRecommendedLoading] = useState(true);
     const [outputsLoading, setOutputsLoading] = useState(true);
+    const [highValueOutputsLoading, setHighValueOutputsLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
 
     useEffect(() => {
@@ -45,6 +50,7 @@ const Index = () => {
                     fetchStats(),
                     fetchRecentDatasets(),
                     fetchRecentOutputs(),
+                    fetchHighValueOutputs(),
                     fetchCurrentUser()
                 ]);
             } catch (error) {
@@ -109,6 +115,19 @@ const Index = () => {
         }
     };
 
+    const fetchHighValueOutputs = async () => {
+        try {
+            setHighValueOutputsLoading(true);
+            const response = await outputApi.getHighValueOutputs({ minValue: 2, size: 6 });
+            setHighValueOutputs(response.content || []);
+        } catch (error) {
+            console.error('Error fetching high value outputs:', error);
+            setHighValueOutputs([]);
+        } finally {
+            setHighValueOutputsLoading(false);
+        }
+    };
+
     const fetchCurrentUser = async () => {
         setCurrentUser(getCurrentUser);
     };
@@ -145,70 +164,6 @@ const Index = () => {
             setRecommendedLoading(false);
         }
     };
-
-    // 渲染数据集卡片组件
-    const renderDatasetCard = (dataset: Dataset, showRecommendationBadge = false) => (
-        <div
-            key={dataset.id}
-            className="flex flex-col p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer bg-card"
-        >
-            {/* 标题和标签行 */}
-            <div className="flex items-start justify-between gap-2 mb-2">
-                <h3
-                    className="font-medium text-lg leading-tight line-clamp-2 flex-1"
-                    title={dataset.titleCn}
-                >
-                    {dataset.titleCn}
-                </h3>
-                <div className="flex flex-col items-end gap-1 ml-2">
-                    {showRecommendationBadge && (
-                        <span
-                            className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs whitespace-nowrap">
-              推荐
-            </span>
-                    )}
-                    <span className="bg-secondary px-2 py-1 rounded text-xs whitespace-nowrap">
-            {DatasetTypes[dataset.type as keyof typeof DatasetTypes] || dataset.type}
-          </span>
-                </div>
-            </div>
-
-            {/* 描述 */}
-            {dataset.description && (
-                <p className="text-sm text-muted-foreground line-clamp-3 mb-3 flex-1" title={dataset.description}>
-                    {dataset.description}
-                </p>
-            )}
-
-            {/* 元信息 */}
-            <div className="space-y-2 mt-auto">
-                {/* 提供者和时间 */}
-                <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-1 text-muted-foreground truncate">
-                        <Users className="h-3 w-3"/>
-                        <span title={dataset.provider?.realName || '未知'}>
-              {dataset.provider?.realName || '未知'}
-            </span>
-                    </div>
-                    <div className="flex items-center gap-1 text-muted-foreground whitespace-nowrap ml-2">
-                        <Calendar className="h-3 w-3"/>
-                        <span>{formatDate(dataset.currentVersionDate || dataset.createdAt)}</span>
-                    </div>
-                </div>
-
-                {/* 采集单位 */}
-                {dataset.dataCollectionUnit && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground truncate">
-                        <Building className="h-3 w-3"/>
-                        <span title={`采集单位: ${dataset.dataCollectionUnit}`}>
-              {dataset.dataCollectionUnit}
-            </span>
-                    </div>
-                )}
-
-            </div>
-        </div>
-    );
 
     return (
         <div className="min-h-screen bg-background">
@@ -259,116 +214,40 @@ const Index = () => {
                     <DatasetTypeChart data={stats?.datasetCountByType}/>
                 </div>
 
+                {/* 高质量成果展示 */}
+                <div className="space-y-4">
+                    <h2 className="text-2xl font-semibold">高质量研究成果</h2>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {highValueOutputsLoading ? (
+                            <div className="col-span-3 text-center py-8 text-muted-foreground">
+                                加载中...
+                            </div>
+                        ) : highValueOutputs.length > 0 ? (
+                            highValueOutputs.map((output: any) => <OutputCard key={output.id} output={output} />)
+                        ) : (
+                            <div className="col-span-3 text-center py-8 text-muted-foreground">
+                                暂无高质量研究成果
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 {/* 推荐数据集（如果已登录且有推荐） */}
                 {recommendedDatasets.length > 0 && (
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-2xl font-semibold">推荐数据集</h2>
-                            <span className="text-sm text-muted-foreground">
-                {currentUser?.institutionId ? '基于您的机构推荐' : '热门数据集'}
-              </span>
-                        </div>
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                            {recommendedLoading ? (
-                                <div className="col-span-3 text-center py-8 text-muted-foreground">
-                                    加载推荐数据集中...
-                                </div>
-                            ) : (
-                                recommendedDatasets.map(dataset =>
-                                    renderDatasetCard(dataset, true)
-                                )
-                            )}
-                        </div>
-                    </div>
+                    <RecommendedDatasetsSection 
+                        datasets={recommendedDatasets}
+                        loading={recommendedLoading}
+                        recommendationReason={currentUser?.institutionId ? '基于您的机构推荐' : '热门数据集'}
+                    />
                 )}
 
                 {/* Recent Activities */}
                 <div className="grid gap-6 md:grid-cols-2">
                     {/* 最新数据集 */}
-                    <div className="space-y-4">
-                        <h2 className="text-2xl font-semibold">最新数据集</h2>
-                        <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-1">
-                            {datasetsLoading ? (
-                                <div className="col-span-2 text-center py-8 text-muted-foreground">
-                                    加载中...
-                                </div>
-                            ) : recentDatasets.length > 0 ? (
-                                recentDatasets.map(dataset => renderDatasetCard(dataset))
-                            ) : (
-                                <div className="col-span-2 text-center py-8 text-muted-foreground">
-                                    暂无数据集
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
+                    <RecentDatasetsSection datasets={recentDatasets} loading={datasetsLoading} />
+                    
                     {/* 最新研究成果 */}
-                    <div className="space-y-4">
-                        <h2 className="text-2xl font-semibold">最新研究成果</h2>
-                        <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-1">
-                            {outputsLoading ? (
-                                <div className="col-span-2 text-center py-8 text-muted-foreground">
-                                    加载中...
-                                </div>
-                            ) : recentOutputs.length > 0 ? (
-                                recentOutputs.map((output: any) => (
-                                    <div
-                                        key={output.id}
-                                        className="flex flex-col p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer bg-card"
-                                    >
-                                        <div className="flex items-start justify-between gap-2 mb-2">
-                                            <h3
-                                                className="font-medium text-lg leading-tight line-clamp-2 flex-1"
-                                                title={output.title}
-                                            >
-                                                {output.title}
-                                            </h3>
-                                            <span
-                                                className="bg-secondary px-2 py-1 rounded text-xs whitespace-nowrap ml-2">
-                        {OutputTypes[output.type as keyof typeof OutputTypes] || output.type}
-                      </span>
-                                        </div>
-
-                                        {output.abstractText && (
-                                            <p className="text-sm text-muted-foreground line-clamp-3 mb-3 flex-1"
-                                               title={output.abstractText}>
-                                                {output.abstractText}
-                                            </p>
-                                        )}
-
-                                        <div className="space-y-2 mt-auto">
-                                            <div className="flex items-center justify-between text-sm">
-                                                <div className="flex items-center gap-1 text-muted-foreground truncate">
-                                                    <Users className="h-3 w-3"/>
-                                                    <span title={output.submitter?.realName || '未知'}>
-                            提交者: {output.submitter?.realName || '未知'}
-                          </span>
-                                                </div>
-                                                <div
-                                                    className="flex items-center gap-1 text-muted-foreground whitespace-nowrap ml-2">
-                                                    <Calendar className="h-3 w-3"/>
-                                                    <span>{formatDate(output.createdAt)}</span>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center justify-between">
-                                                {output.dataset?.titleCn && (
-                                                    <div className="text-xs text-muted-foreground truncate max-w-[60%]"
-                                                         title={`基于数据集: ${output.dataset.titleCn}`}>
-                                                        基于: {output.dataset.titleCn}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="col-span-2 text-center py-8 text-muted-foreground">
-                                    暂无研究成果
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                    <RecentOutputsSection outputs={recentOutputs} loading={outputsLoading} />
                 </div>
             </main>
         </div>

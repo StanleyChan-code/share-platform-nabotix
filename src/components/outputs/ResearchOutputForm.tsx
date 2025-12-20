@@ -16,7 +16,7 @@ import {Loader2, X} from "lucide-react";
 import { Dataset } from "@/integrations/api/datasetApi";
 import { DatasetTypes } from "@/lib/enums";
 import {formatDate, formatFileSize} from "@/lib/utils";
-import { getOutputTypeDisplayName } from "@/lib/outputUtils";
+import {getAllJournalPartitionName, getAllJournalPartitionTypes, getOutputTypeDisplayName} from "@/lib/outputUtils";
 import * as React from "react";
 
 interface ResearchOutputFormProps {
@@ -285,7 +285,6 @@ const ResearchOutputForm = ({
 
   const renderTypeSpecificFields = () => {
     if (!formData.type) return null;
-    console.log(formData)
     switch (formData.type.toUpperCase()) {
       case "PAPER":
         return (
@@ -314,24 +313,14 @@ const ResearchOutputForm = ({
                   <SelectValue placeholder="-- 请选择 --" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>中科院分区</SelectLabel>
-                    <SelectItem value="cas_1">中科院 一区</SelectItem>
-                    <SelectItem value="cas_2">中科院 二区</SelectItem>
-                    <SelectItem value="cas_3">中科院 三区</SelectItem>
-                    <SelectItem value="cas_4">中科院 四区</SelectItem>
-                  </SelectGroup>
-                  <SelectGroup>
-                    <SelectLabel>JCR分区</SelectLabel>
-                    <SelectItem value="jcr_q1">JCR Q1</SelectItem>
-                    <SelectItem value="jcr_q2">JCR Q2</SelectItem>
-                    <SelectItem value="jcr_q3">JCR Q3</SelectItem>
-                    <SelectItem value="jcr_q4">JCR Q4</SelectItem>
-                  </SelectGroup>
-                  <SelectGroup>
-                    <SelectLabel>其他</SelectLabel>
-                    <SelectItem value="other">其他</SelectItem>
-                  </SelectGroup>
+                  {getAllJournalPartitionTypes().map((jpType) => (
+                      <SelectGroup>
+                        <SelectLabel>{jpType.name}</SelectLabel>
+                        {getAllJournalPartitionName(jpType.value).map((item) => (
+                            <SelectItem value={item.value}>{item.name}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

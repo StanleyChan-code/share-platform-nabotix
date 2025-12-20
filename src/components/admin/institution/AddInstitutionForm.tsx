@@ -1,15 +1,12 @@
 import {useState} from "react";
-import {Button} from "@/components/ui/button";
-import {Input} from "@/components/ui/input";
-import {Label} from "@/components/ui/label";
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
-import {Dialog, DialogContent, DialogHeader, DialogTitle} from "@/components/ui/dialog";
-import {useToast} from "@/hooks/use-toast";
-import {supabase} from "@/integrations/supabase/client";
-import type {Database} from "@/integrations/supabase/types";
-
-type InstitutionType = Database["public"]["Enums"]["institution_type"];
-type IdType = Database["public"]["Enums"]["id_type"];
+import {Button} from "@/components/ui/button.tsx";
+import {Input} from "@/components/ui/input.tsx";
+import {Label} from "@/components/ui/label.tsx";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
+import {Dialog, DialogContent, DialogHeader, DialogTitle} from "@/components/ui/dialog.tsx";
+import {useToast} from "@/hooks/use-toast.ts";
+import {institutionApi} from "@/integrations/api/institutionApi.ts";
+import {ID_TYPES, InstitutionTypes} from "@/lib/enums.ts";
 
 interface AddInstitutionFormProps {
     open: boolean;
@@ -24,9 +21,9 @@ const AddInstitutionForm = ({open, onOpenChange, onInstitutionAdded}: AddInstitu
     const [formData, setFormData] = useState({
         full_name: "",
         short_name: "",
-        type: "" as InstitutionType,
+        type: "",
         contact_person: "",
-        contact_id_type: "" as IdType,
+        contact_id_type: "",
         contact_id_number: "",
         contact_phone: "",
         contact_email: "",
@@ -38,20 +35,10 @@ const AddInstitutionForm = ({open, onOpenChange, onInstitutionAdded}: AddInstitu
     };
 
     const handleSelectChange = (name: string, value: string) => {
-        setFormData(prev => {
-            const newData = {...prev};
-            switch (name) {
-                case "type":
-                    newData.type = value as InstitutionType;
-                    break;
-                case "contact_id_type":
-                    newData.contact_id_type = value as IdType;
-                    break;
-                default:
-                    newData[name as keyof typeof formData] = value as any;
-            }
-            return newData;
-        });
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
     };
 
     const validateForm = () => {
@@ -93,87 +80,33 @@ const AddInstitutionForm = ({open, onOpenChange, onInstitutionAdded}: AddInstitu
         setLoading(true);
 
         try {
-            // 创建机构时自动使用邮箱作为用户名
-            const institutionUsername = formData.contact_email;
+            // 构造机构数据对象
+            const institutionData = {
+                fullName: formData.full_name,
+                shortName: formData.short_name,
+                type: formData.type,
+                contactPerson: formData.contact_person,
+                contactIdType: formData.contact_id_type,
+                contactIdNumber: formData.contact_id_number,
+                contactPhone: formData.contact_phone,
+                contactEmail: formData.contact_email
+            };
 
-            // 在auth.users中创建用户账户，但不自动验证
-            const {data: authUser, error: authError} = await supabase.auth.signUp({
-                email: formData.contact_email,
-                password: "123456",
-                options: {
-                    emailRedirectTo: `${window.location.origin}/profile`,
-                    data: {
-                        real_name: formData.contact_person,
-                    }
-                }
-            });
-            console.log("authUser:", authUser)
-
-            if (authError) throw authError;
-
-            // 在public.institutions中创建机构记录，verified设为false
-            const { data: institutionData, error: institutionError } = await supabase
-                .from('institutions')
-                .insert([{
-                    user_id: authUser.user.id,
-                    username: institutionUsername,
-                    full_name: formData.full_name,
-                    short_name: formData.short_name,
-                    type: formData.type,
-                    contact_person: formData.contact_person,
-                    contact_id_type: formData.contact_id_type,
-                    contact_id_number: formData.contact_id_number,
-                    contact_phone: formData.contact_phone,
-                    contact_email: formData.contact_email,
-                    verified: false
-                }])
-                .select()
-                .single();
-
-            if (institutionError) throw institutionError;
-
-            // 更新账号的机构 ID
-            console.log("institutionData:", institutionData)
-            let institutionId = institutionData.id;
-            if (!institutionId) {
-                const {data: institutionIdData, error: institutionError} = await supabase
-                    .from('institutions')
-                    .select('id')
-                    .eq('user_id', authUser.user.id)
-                    .single();
-                institutionId = institutionIdData.id;
-            }
-            console.log("institutionId:", institutionId)
-
-            // 如果auth用户创建成功，则在public.users中创建用户记录
-            // 使用RPC函数绕过RLS限制
-            if (authUser.user) {
-                const {error: userError} = await supabase.rpc('create_institution_user_profile', {
-                    user_id: authUser.user.id,
-                    user_username: institutionUsername,
-                    user_real_name: formData.contact_person,
-                    user_email: formData.contact_email,
-                    user_phone: formData.contact_phone,
-                    user_id_type: formData.contact_id_type,
-                    user_id_number: formData.contact_id_number,
-                    user_institution_id: institutionId
-                });
-
-                if (userError) throw userError;
-            }
+            // 调用API创建机构
+            await institutionApi.createInstitution(institutionData);
 
             toast({
                 title: "机构添加成功",
-                description: "新机构已成功添加，等待邮箱验证。",
+                description: "新机构已成功添加。",
             });
 
             // 重置表单
             setFormData({
                 full_name: "",
                 short_name: "",
-                type: "" as InstitutionType,
+                type: "",
                 contact_person: "",
-                contact_id_type: "" as IdType,
+                contact_id_type: "",
                 contact_id_number: "",
                 contact_phone: "",
                 contact_email: "",
@@ -182,9 +115,9 @@ const AddInstitutionForm = ({open, onOpenChange, onInstitutionAdded}: AddInstitu
             // 通知父组件刷新机构列表并关闭对话框
             onInstitutionAdded();
             onOpenChange(false);
-        } catch (error) {
+        } catch (error: any) {
             console.error('添加机构失败:', error);
-            const errorMessage = error instanceof Error ? error.message : String(error);
+            const errorMessage = error?.response?.data?.message || error?.message || '未知错误';
             toast({
                 title: "添加失败",
                 description: `添加新机构时发生错误：${errorMessage || '请重试'}`,
@@ -221,13 +154,9 @@ const AddInstitutionForm = ({open, onOpenChange, onInstitutionAdded}: AddInstitu
                                     <SelectValue placeholder="选择机构类型"/>
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="hospital">医院</SelectItem>
-                                    <SelectItem value="university">大学</SelectItem>
-                                    <SelectItem value="research_center">研究中心</SelectItem>
-                                    <SelectItem value="lab">实验室</SelectItem>
-                                    <SelectItem value="government">政府部门</SelectItem>
-                                    <SelectItem value="enterprise">企业</SelectItem>
-                                    <SelectItem value="other">其他</SelectItem>
+                                    {Object.entries(InstitutionTypes).map(([key, value]) => (
+                                        <SelectItem key={key} value={key}>{value}</SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -284,9 +213,9 @@ const AddInstitutionForm = ({open, onOpenChange, onInstitutionAdded}: AddInstitu
                                     <SelectValue placeholder="选择证件类型"/>
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="national_id">身份证</SelectItem>
-                                    <SelectItem value="passport">护照</SelectItem>
-                                    <SelectItem value="other">其他</SelectItem>
+                                    {Object.entries(ID_TYPES).map(([key, value]) => (
+                                        <SelectItem key={key} value={key}>{value}</SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>

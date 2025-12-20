@@ -1,34 +1,21 @@
-import { useState, useRef, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Upload, File, X, Plus, Loader2, Search } from 'lucide-react';
-import { toast } from 'sonner';
-import { BaselineDatasetSelector } from './BaselineDatasetSelector';
-import { datasetApi } from '@/integrations/api/datasetApi';
-import { fileApi, FileInfo } from '@/integrations/api/fileApi';
-import { institutionApi } from '@/integrations/api/institutionApi';
-import FileUploader, { FileUploaderHandles } from './FileUploader';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Check, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
+import { Label } from "@/components/ui/label.tsx";
+import { Input } from "@/components/ui/input.tsx";
+import { Textarea } from "@/components/ui/textarea.tsx";
+import { Button } from "@/components/ui/button.tsx";
+import { Checkbox } from "@/components/ui/checkbox.tsx";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
+import { Badge } from "@/components/ui/badge.tsx";
+import { Upload, Loader2, Plus, X, File, CheckCircle, XCircle, Clock as ClockIcon, Link2, ArrowRight, Info, TrendingUp, Shield, Clock, BarChart3, FileText } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import {toast} from "sonner";
+import FileUploader, { FileInfo, FileUploaderHandles } from "@/components/upload/FileUploader.tsx";
+import { BaselineDatasetSelector } from "@/components/upload/BaselineDatasetSelector.tsx";
+import { InstitutionSelector } from "@/components/dataset/InstitutionSelector"; // 引入新组件
+import { datasetApi } from "@/integrations/api/datasetApi.ts";
+import { institutionApi } from "@/integrations/api/institutionApi.ts";
+import { getCurrentUserRoles } from "@/lib/authUtils";
+import { PermissionRoles } from "@/lib/permissionUtils";
 
 interface DatasetUploadFormProps {
   onSuccess?: () => void;
@@ -70,6 +57,18 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
   });
   const [researchSubjects, setResearchSubjects] = useState<Array<{id: string, name: string}>>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(false);
+  const [userRoles, setUserRoles] = useState<string[]>([]);
+
+  // Check user permissions
+  useEffect(() => {
+    const roles = getCurrentUserRoles();
+    setUserRoles(roles);
+  }, []);
+
+  // Check if user is platform admin
+  const isPlatformAdmin = useCallback(() => {
+    return userRoles.includes(PermissionRoles.PLATFORM_ADMIN);
+  }, [userRoles]);
 
   // 机构搜索相关状态
   const [openInstitutionSelector, setOpenInstitutionSelector] = useState(false);
@@ -270,7 +269,11 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
       const response = await datasetApi.createDataset(datasetData)
 
       if (response.success) {
-        toast.success('数据集创建成功');
+        toast({
+          title: "数据集创建成功",
+          description: "您的数据集已成功提交，正在等待审核。",
+          variant: "success"
+        });
 
         // 重置表单
         setFormData({
@@ -566,96 +569,30 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
             {/* 开放申请机构设置 */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">开放申请机构</h3>
-
-              <div className="flex items-center space-x-2 pt-2">
-                <Checkbox
-                    id="noInstitutionRestriction"
-                    checked={formData.noInstitutionRestriction}
-                    onCheckedChange={(checked) => {
-                      setFormData(prev => ({
-                        ...prev,
-                        noInstitutionRestriction: checked as boolean,
-                        applicationInstitutionIds: checked ? [] : prev.applicationInstitutionIds
-                      }));
-                    }}
-                />
-                <Label htmlFor="noInstitutionRestriction" className="text-sm font-medium">
-                  不限制申请机构（任何机构均可申请）
-                </Label>
-              </div>
-
-              {!formData.noInstitutionRestriction && (
-                  <div className="space-y-2">
-                    <Label>可申请此数据集的机构</Label>
-                    <Popover open={openInstitutionSelector} onOpenChange={setOpenInstitutionSelector}>
-                      <PopoverTrigger asChild>
-                        <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={openInstitutionSelector}
-                            className="w-full justify-between"
-                        >
-                          {formData.applicationInstitutionIds.length > 0
-                              ? `${formData.applicationInstitutionIds.length} 个机构已选择`
-                              : "选择机构（可多选）"}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                        <Command shouldFilter={false}>
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <CommandInput
-                                placeholder="搜索机构..."
-                                value={institutionSearchTerm}
-                                onValueChange={setInstitutionSearchTerm}
-                                className="pl-10"
-                            />
-                          </div>
-                          <CommandList>
-                            <CommandEmpty>
-                              {institutionSearchLoading ? "搜索中..." : "未找到相关机构"}
-                            </CommandEmpty>
-                            <CommandGroup>
-                              {institutionSearchResults.map((institution) => (
-                                  <CommandItem
-                                      key={institution.id}
-                                      value={institution.id}
-                                      onSelect={() => toggleInstitutionSelection(institution.id)}
-                                  >
-                                    <Check
-                                        className={cn(
-                                            "mr-2 h-4 w-4",
-                                            isInstitutionSelected(institution.id) ? "opacity-100" : "opacity-0"
-                                        )}
-                                    />
-                                    {institution.fullName}
-                                  </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-
-                    {formData.applicationInstitutionIds.length > 0 && (
-                        <div className="flex flex-wrap gap-2 pt-2">
-                          {formData.applicationInstitutionIds.map((institutionId) => {
-                            const institution = institutionSearchResults.find(i => i.id === institutionId) ||
-                                { fullName: "未知机构" };
-                            return (
-                                <Badge key={institutionId} variant="secondary" className="gap-1 text-sm">
-                                  {institution.fullName}
-                                  <X
-                                      className="h-3 w-3 cursor-pointer"
-                                      onClick={() => toggleInstitutionSelection(institutionId)}
-                                  />
-                                </Badge>
-                            );
-                          })}
-                        </div>
-                    )}
-                  </div>
+              <InstitutionSelector 
+                value={formData.noInstitutionRestriction ? null : formData.applicationInstitutionIds}
+                onChange={(value) => {
+                  if (value === null) {
+                    setFormData(prev => ({
+                      ...prev,
+                      noInstitutionRestriction: true,
+                      applicationInstitutionIds: []
+                    }));
+                  } else {
+                    setFormData(prev => ({
+                      ...prev,
+                      noInstitutionRestriction: false,
+                      applicationInstitutionIds: value
+                    }));
+                  }
+                }}
+              />
+              
+              {/* 显示提示信息，仅对平台管理员可见 */}
+              {isPlatformAdmin() && (
+                <p className="text-sm text-muted-foreground">
+                  作为平台管理员，您可以指定哪些机构可以申请此数据集。如果不限制，则任何机构均可申请。
+                </p>
               )}
             </div>
 
@@ -723,9 +660,6 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                           {sharingFileInfo.fileName} ({(sharingFileInfo.fileSize / 1024 / 1024).toFixed(2)} MB)
                         </div>
                     )}
-                    <p className="text-xs text-muted-foreground">
-                      请上传数据分享文件
-                    </p>
                   </div>
                 </div>
 
@@ -756,9 +690,6 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                           {termsFileInfo.fileName} ({(termsFileInfo.fileSize / 1024 / 1024).toFixed(2)} MB)
                         </div>
                     )}
-                    <p className="text-xs text-muted-foreground">
-                      请上传数据集所属单位制定的数据使用协议（PDF或Word格式）
-                    </p>
                   </div>
                 </div>
               </div>

@@ -1,278 +1,452 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table.tsx";
-import { Users, Database, Calendar, TrendingUp, Building, Link } from "lucide-react";
+import { Users, Database, Calendar, TrendingUp, Building, Link, Pen, User, Mail, MapPin } from "lucide-react";
 import { formatDate } from "@/lib/utils.ts";
 import { Button } from "@/components/ui/button.tsx";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DatasetDetailModal } from "@/components/dataset/DatasetDetailModal.tsx";
+import { institutionApi } from "@/integrations/api/institutionApi.ts";
+import { datasetApi } from "@/integrations/api/datasetApi.ts";
+import { toast } from "sonner";
+import { InstitutionSelector } from "@/components/dataset/InstitutionSelector";
+import { Skeleton } from "@/components/ui/skeleton.tsx";
 
 interface OverviewTabProps {
   dataset: any;
   recordCount?: number;
   variableCount?: number;
-  demographicFields: any[];
-  outcomeFields: any[];
   institution?: any;
   parentDataset?: any;
   onViewParentDataset?: () => void;
+  useAdvancedQuery?: boolean;
+  onEditDataset?: (updatedDataset: any) => void;
+  onDatasetUpdated?: () => void;
 }
 
-export function OverviewTab({ 
-  dataset, 
-  recordCount, 
-  variableCount, 
-  demographicFields, 
-  outcomeFields,
-  institution,
-  parentDataset,
-  onViewParentDataset
-}: OverviewTabProps) {
+export function OverviewTab({
+                              dataset,
+                              recordCount,
+                              variableCount,
+                              institution,
+                              parentDataset,
+                              onViewParentDataset,
+                              useAdvancedQuery = false,
+                              onEditDataset,
+                              onDatasetUpdated
+                            }: OverviewTabProps) {
   const [isParentDatasetModalOpen, setIsParentDatasetModalOpen] = useState(false);
+  const [applicationInstitutions, setApplicationInstitutions] = useState<any[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [loadingInstitutions, setLoadingInstitutions] = useState(false);
+  const [editableFields, setEditableFields] = useState({
+    description: dataset.description || "",
+    contactPerson: dataset.contactPerson || "",
+    contactInfo: dataset.contactInfo || "",
+    applicationInstitutionIds: dataset.applicationInstitutionIds || null
+  });
+
+  // 获取允许申请的机构信息
+  useEffect(() => {
+    const fetchApplicationInstitutions = async () => {
+      if (useAdvancedQuery && dataset.applicationInstitutionIds && dataset.applicationInstitutionIds.length > 0) {
+        setLoadingInstitutions(true);
+        try {
+          const institutions = await Promise.all(
+              dataset.applicationInstitutionIds.map((id: string) => institutionApi.getInstitutionById(id))
+          );
+          setApplicationInstitutions(institutions.map(response => response.data));
+        } catch (error) {
+          console.error("获取申请机构信息失败:", error);
+          toast.error("获取申请机构信息失败");
+        } finally {
+          setLoadingInstitutions(false);
+        }
+      } else {
+        setApplicationInstitutions([]);
+      }
+    };
+
+    fetchApplicationInstitutions();
+  }, [dataset.applicationInstitutionIds, useAdvancedQuery]);
+
+  const handleEditClick = () => {
+    setIsEditing(true);
+    setEditableFields({
+      description: dataset.description || "",
+      contactPerson: dataset.contactPerson || "",
+      contactInfo: dataset.contactInfo || "",
+      applicationInstitutionIds: dataset.applicationInstitutionIds || null
+    });
+  };
+
+  const handleSaveChanges = async () => {
+    if (!useAdvancedQuery || !onEditDataset) return;
+
+    try {
+      const updateData = {
+        description: editableFields.description,
+        contactPerson: editableFields.contactPerson,
+        contactInfo: editableFields.contactInfo,
+        applicationInstitutionIds: editableFields.applicationInstitutionIds,
+        keywords: dataset.keywords || [],
+        published: dataset.published,
+        shareAllData: dataset.shareAllData,
+        samplingMethod: dataset.samplingMethod || ""
+      };
+
+      const response = await datasetApi.updateDatasetBasicInfo(dataset.id, updateData);
+
+      if (response.success) {
+        toast.success("数据集信息更新成功");
+        onEditDataset(response.data);
+        setIsEditing(false);
+        onDatasetUpdated?.();
+      } else {
+        throw new Error(response.message || "更新失败");
+      }
+    } catch (error) {
+      console.error("更新数据集信息失败:", error);
+      toast.error("更新数据集信息失败: " + (error as Error).message);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+  };
+
+  // 统计信息卡片 - 保持与图片一致的布局
+  const StatCard = ({ icon: Icon, label, value, className = "" }) => (
+      <div className={`flex flex-col items-center text-center p-2 bg-white rounded-lg border shadow-sm ${className}`}>
+        <div className="p-1.5 bg-gray-100 rounded-full mb-3 mt-1">
+          <Icon className="h-4 w-4 text-gray-600" />
+        </div>
+        <p className="text-sm text-gray-600 mb-1">{label}</p>
+        <div className="text-sm font-semibold text-gray-900">
+          {typeof value === 'string' || typeof value === 'number' ? value : value}
+        </div>
+      </div>
+  );
+
+  // 信息项组件
+  const InfoItem = ({ icon: Icon, label, value, className = "" }) => (
+      <div className={`flex items-start gap-2 ${className}`}>
+        <Icon className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-muted-foreground mb-1">{label}</p>
+          <p className="text-sm font-medium break-words">{value || '未设置'}</p>
+        </div>
+      </div>
+  );
 
   return (
-    <>
-      {/* Basic Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            基本信息
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
-            <div className="col-span-2">
-              <p className="text-sm text-muted-foreground">标题</p>
-              <p className="font-semibold">{dataset.titleCn}</p>
-            </div>
-            {dataset.subjectArea && (
-              <div>
-                <p className="text-sm text-muted-foreground">学科分类</p>
-                <p className="font-semibold">{dataset.subjectArea.name}</p>
-              </div>
-            )}
-          </div>
+      <div className="space-y-6 p-2">
+        {/* 统计信息卡片组 - 按照图片样式 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+              icon={Users}
+              label="样本量"
+              value={recordCount?.toLocaleString() || '0'}
+          />
+          <StatCard
+              icon={Database}
+              label="变量数"
+              value={variableCount?.toLocaleString() || '0'}
+          />
+          <StatCard
+              icon={Calendar}
+              label="采集时间"
+              value={dataset.startDate && dataset.endDate
+                  ? `${formatDate(dataset.startDate)} 至 ${formatDate(dataset.endDate)}`
+                  : '未设置'
+              }
+          />
+          <StatCard
+              icon={TrendingUp}
+              label="访问热度"
+              value={dataset.searchCount?.toLocaleString() || '0'}
+          />
+        </div>
 
-          {dataset.keywords && dataset.keywords.length > 0 && (
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">关键词</p>
-              <div className="flex flex-wrap gap-2">
-                {dataset.keywords.map((keyword: string, index: number) => (
-                  <Badge key={index} variant="secondary">{keyword}</Badge>
-                ))}
-              </div>
+        {/* 基本信息卡片 */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Database className="h-5 w-5 text-primary" />
+                基本信息
+              </CardTitle>
+              {onEditDataset && !isEditing && (
+                  <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleEditClick}
+                      className="flex items-center gap-2"
+                  >
+                    <Pen className="h-4 w-4" />
+                    编辑
+                  </Button>
+              )}
+              {isEditing && (
+                  <div className="flex space-x-2">
+                    <Button variant="outline" onClick={handleCancelEdit} size="sm">
+                      取消
+                    </Button>
+                    <Button onClick={handleSaveChanges} size="sm">
+                      保存更改
+                    </Button>
+                  </div>
+              )}
             </div>
-          )}
-
-          <div>
-            <p className="text-sm text-muted-foreground">描述</p>
-            <p className="text-sm mt-1">{dataset.description}</p>
-          </div>
-
-          {dataset.samplingMethod && (
-            <div>
-              <p className="text-sm text-muted-foreground">抽样方法</p>
-              <p className="font-semibold">{dataset.samplingMethod}</p>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-4 border-t">
-            {dataset.datasetLeader && (
-              <div>
-                <p className="text-sm text-muted-foreground">数据集负责人</p>
-                <p className="font-semibold">{dataset.datasetLeader}</p>
-              </div>
-            )}
-            {dataset.dataCollectionUnit && (
-              <div>
-                <p className="text-sm text-muted-foreground">数据采集单位</p>
-                <p className="font-semibold">{dataset.dataCollectionUnit}</p>
-              </div>
-            )}
-            {dataset.contactPerson && (
-              <div>
-                <p className="text-sm text-muted-foreground">联系人</p>
-                <p className="font-semibold">{dataset.contactPerson}</p>
-              </div>
-            )}
-            {dataset.contactInfo && (
-              <div>
-                <p className="text-sm text-muted-foreground">联系方式</p>
-                <p className="font-semibold">{dataset.contactInfo}</p>
-              </div>
-            )}
-            {dataset.principalInvestigator && (
-              <div>
-                <p className="text-sm text-muted-foreground">首席研究员（PI）</p>
-                <p className="font-semibold">{dataset.principalInvestigator}</p>
-              </div>
-            )}
-            {institution && (
-              <div>
-                <p className="text-sm text-muted-foreground">归属机构</p>
-                <p className="font-semibold flex items-center gap-1">
-                  <Building className="h-4 w-4" />
-                  {institution.fullName}
-                </p>
-              </div>
-            )}
-            
-            {/* 显示父数据集链接 */}
-            {parentDataset && (
-              <div>
-                <p className="text-sm text-muted-foreground">基线数据集</p>
-                <Button 
-                  variant="link" 
-                  className="p-0 h-auto font-semibold justify-start"
-                  onClick={() => setIsParentDatasetModalOpen(true)}
-                >
-                  <Link className="h-4 w-4 mr-1" />
-                  {parentDataset.titleCn}
-                </Button>
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm text-muted-foreground">样本量</p>
-                <p className="font-semibold">{recordCount?.toLocaleString() || '-'}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Database className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm text-muted-foreground">变量数</p>
-                <p className="font-semibold">{variableCount || '-'}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm text-muted-foreground">采集时间</p>
-                <p className="font-semibold text-sm">
-                  {dataset.startDate && dataset.endDate 
-                    ? `${formatDate(dataset.startDate)} 至 ${formatDate(dataset.endDate)}`
-                    : '未设置'}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm text-muted-foreground">热度</p>
-                <p className="font-semibold">{dataset.searchCount}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4 pt-4 border-t">
-            {dataset.versionNumber && (
-              <div>
-                <p className="text-sm text-muted-foreground">版本号</p>
-                <p className="font-semibold">{dataset.versionNumber}</p>
-              </div>
-            )}
-            {dataset.firstPublishedDate && (
-              <div>
-                <p className="text-sm text-muted-foreground">首次发布日期</p>
-                <p className="font-semibold">
-                  {formatDate(dataset.firstPublishedDate)}
-                </p>
-              </div>
-            )}
-            {dataset.currentVersionDate && (
-              <div>
-                <p className="text-sm text-muted-foreground">当前版本发布日期</p>
-                <p className="font-semibold">
-                  {formatDate(dataset.currentVersionDate)}
-                </p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Demographic Fields */}
-      {demographicFields.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              人口统计学字段
-            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>字段名</TableHead>
-                  <TableHead>标签</TableHead>
-                  <TableHead>类型</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {demographicFields.map((field: any, index: number) => (
-                  <TableRow key={index}>
-                    <TableCell className="font-mono text-sm">{field.name}</TableCell>
-                    <TableCell>{field.label}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{field.type}</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+
+          <CardContent className="space-y-6">
+            {/* 标题和学科分类 */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 bg-muted/20 rounded-lg">
+              <div className="lg:col-span-2">
+                <h3 className="font-semibold text-lg mb-2">{dataset.titleCn}</h3>
+                {isEditing ? (
+                    <textarea
+                        value={editableFields.description}
+                        onChange={(e) => setEditableFields(prev => ({...prev, description: e.target.value}))}
+                        className="w-full min-h-[100px] p-3 border rounded-md text-sm bg-white"
+                        placeholder="请输入数据集描述..."
+                    />
+                ) : (
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {dataset.description || "暂无描述"}
+                    </p>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                {dataset.subjectArea && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">学科分类</p>
+                      <Badge variant="secondary" className="text-sm">
+                        {dataset.subjectArea.name}
+                      </Badge>
+                    </div>
+                )}
+
+                {dataset.samplingMethod && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">抽样方法</p>
+                      <p className="text-sm font-medium">{dataset.samplingMethod}</p>
+                    </div>
+                )}
+              </div>
+            </div>
+
+            {/* 关键词 */}
+            {dataset.keywords && dataset.keywords.length > 0 && (
+                <div className="p-4 border rounded-lg">
+                  <p className="text-sm font-medium mb-3">关键词</p>
+                  <div className="flex flex-wrap gap-2">
+                    {dataset.keywords.map((keyword: string, index: number) => (
+                        <Badge key={index} variant="outline" className="px-3 py-1">
+                          {keyword}
+                        </Badge>
+                    ))}
+                  </div>
+                </div>
+            )}
+
+            {/* 负责人和联系信息 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="space-y-4">
+                <h4 className="font-medium text-sm text-muted-foreground">负责人信息</h4>
+                <div className="space-y-3">
+                  {dataset.datasetLeader && (
+                      <InfoItem
+                          icon={User}
+                          label="数据集负责人"
+                          value={dataset.datasetLeader}
+                      />
+                  )}
+                  {dataset.principalInvestigator && (
+                      <InfoItem
+                          icon={User}
+                          label="首席研究员（PI）"
+                          value={dataset.principalInvestigator}
+                      />
+                  )}
+                  {dataset.dataCollectionUnit && (
+                      <InfoItem
+                          icon={MapPin}
+                          label="数据采集单位"
+                          value={dataset.dataCollectionUnit}
+                      />
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="font-medium text-sm text-muted-foreground">联系信息</h4>
+                <div className="space-y-3">
+                  {isEditing ? (
+                      <>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">联系人</p>
+                          <input
+                              type="text"
+                              value={editableFields.contactPerson}
+                              onChange={(e) => setEditableFields(prev => ({...prev, contactPerson: e.target.value}))}
+                              className="w-full p-2 border rounded text-sm"
+                              placeholder="请输入联系人"
+                          />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">联系方式</p>
+                          <input
+                              type="text"
+                              value={editableFields.contactInfo}
+                              onChange={(e) => setEditableFields(prev => ({...prev, contactInfo: e.target.value}))}
+                              className="w-full p-2 border rounded text-sm"
+                              placeholder="请输入联系方式"
+                          />
+                        </div>
+                      </>
+                  ) : (
+                      <>
+                        {dataset.contactPerson && (
+                            <InfoItem
+                                icon={User}
+                                label="联系人"
+                                value={dataset.contactPerson}
+                            />
+                        )}
+                        {dataset.contactInfo && (
+                            <InfoItem
+                                icon={Mail}
+                                label="联系方式"
+                                value={dataset.contactInfo}
+                            />
+                        )}
+                      </>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="font-medium text-sm text-muted-foreground">机构信息</h4>
+                <div className="space-y-3">
+                  {institution && (
+                      <InfoItem
+                          icon={Building}
+                          label="归属机构"
+                          value={institution.fullName}
+                      />
+                  )}
+
+                  {parentDataset && (
+                      <div className="flex items-start gap-2">
+                        <Link className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">基线数据集</p>
+                          <Button
+                              variant="link"
+                              className="p-0 h-auto font-medium justify-start text-left"
+                              onClick={() => setIsParentDatasetModalOpen(true)}
+                          >
+                            {parentDataset.titleCn}
+                          </Button>
+                        </div>
+                      </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* 允许申请的机构 */}
+            {useAdvancedQuery && (
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-medium text-sm">申请权限设置</h4>
+                  </div>
+
+                  {isEditing ? (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-2">允许申请的机构</p>
+                        <InstitutionSelector
+                            value={editableFields.applicationInstitutionIds}
+                            onChange={(value) => setEditableFields(prev => ({...prev, applicationInstitutionIds: value}))}
+                        />
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {editableFields.applicationInstitutionIds === null || editableFields.applicationInstitutionIds?.length === 0
+                              ? "任何机构均可申请此数据集"
+                              : `仅限 ${editableFields.applicationInstitutionIds.length} 个机构申请`}
+                        </p>
+                      </div>
+                  ) : (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-2">允许申请的机构</p>
+                        {dataset.applicationInstitutionIds === null || dataset.applicationInstitutionIds?.length === 0 ? (
+                            <p className="text-sm font-medium text-green-600">无限制（任何机构均可申请）</p>
+                        ) : (
+                            <div>
+                              {loadingInstitutions ? (
+                                  <div className="flex flex-wrap gap-2">
+                                    {[1, 2, 3].map(i => (
+                                        <Skeleton key={i} className="h-6 w-20 rounded-full" />
+                                    ))}
+                                  </div>
+                              ) : (
+                                  <div className="flex flex-wrap gap-2">
+                                    {applicationInstitutions.map((inst, index) => (
+                                        <Badge key={index} variant="secondary" className="px-3 py-1">
+                                          {inst.abbreviation || inst.fullName}
+                                        </Badge>
+                                    ))}
+                                  </div>
+                              )}
+                              <p className="text-xs text-muted-foreground mt-2">
+                                仅限以上 {applicationInstitutions.length} 个机构可申请
+                              </p>
+                            </div>
+                        )}
+                      </div>
+                  )}
+                </div>
+            )}
+
+            {/* 版本信息 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/20 rounded-lg">
+              {dataset.versionNumber && (
+                  <InfoItem
+                      icon={Database}
+                      label="版本号"
+                      value={dataset.versionNumber}
+                  />
+              )}
+              {dataset.firstPublishedDate && (
+                  <InfoItem
+                      icon={Calendar}
+                      label="首次发布日期"
+                      value={formatDate(dataset.firstPublishedDate)}
+                  />
+              )}
+              {dataset.currentVersionDate && (
+                  <InfoItem
+                      icon={Calendar}
+                      label="当前版本日期"
+                      value={formatDate(dataset.currentVersionDate)}
+                  />
+              )}
+            </div>
           </CardContent>
         </Card>
-      )}
 
-      {/* Outcome Fields */}
-      {outcomeFields.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              结局指标字段
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>字段名</TableHead>
-                  <TableHead>标签</TableHead>
-                  <TableHead>类型</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {outcomeFields.map((field: any, index: number) => (
-                  <TableRow key={index}>
-                    <TableCell className="font-mono text-sm">{field.name}</TableCell>
-                    <TableCell>{field.label}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{field.type}</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-      
-      {/* 父数据集详情模态框 */}
-      {parentDataset && (
-        <DatasetDetailModal
-          dataset={parentDataset}
-          open={isParentDatasetModalOpen}
-          useAdvancedQuery={true}
-          onOpenChange={setIsParentDatasetModalOpen}
-        />
-      )}
-    </>
+        {/* 父数据集详情模态框 */}
+        {parentDataset && (
+            <DatasetDetailModal
+                dataset={parentDataset}
+                open={isParentDatasetModalOpen}
+                useAdvancedQuery={true}
+                onOpenChange={setIsParentDatasetModalOpen}
+                onDatasetUpdated={onDatasetUpdated}
+            />
+        )}
+      </div>
   );
 }

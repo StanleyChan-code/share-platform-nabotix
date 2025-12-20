@@ -8,10 +8,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { ApiError } from "@/integrations/api/client";
 import { register, sendVerificationCode } from "@/integrations/api/authApi";
-import {Institution, institutionApi} from "@/integrations/api/institutionApi";
-import { Page } from "@/integrations/api/client";
-import { Phone, Lock, User as UserIcon, Mail, Send, Building, CreditCard, Check, ChevronsUpDown } from "lucide-react";
+import { Institution, institutionApi } from "@/integrations/api/institutionApi";
+import { Phone, Lock, User as UserIcon, Mail, Send, Building, CreditCard, Check, ChevronsUpDown, Shield, BadgeCheck, KeyRound } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface SignupTabProps {
   phone: string;
@@ -31,14 +32,14 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
   const [idType, setIdType] = useState("");
   const [idNumber, setIdNumber] = useState("");
   const [institutionId, setInstitutionId] = useState("");
-  const [countdown, setCountdown] = useState(0); // 注册验证码倒计时状态
+  const [countdown, setCountdown] = useState(0);
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [searchResults, setSearchResults] = useState<Institution[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const { toast } = useToast();
 
-  // 处理倒计时
+  // 倒计时处理
   useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => {
@@ -48,7 +49,7 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
     }
   }, [countdown]);
 
-  // 当搜索值改变时进行搜索
+  // 机构搜索
   useEffect(() => {
     const searchTimeout = setTimeout(async () => {
       if (searchValue.trim() === "") {
@@ -83,7 +84,6 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
       return;
     }
 
-    // 检查倒计时
     if (countdown > 0) {
       toast({
         title: "提示",
@@ -123,6 +123,8 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 表单验证
     if (!phone || !verificationCode || !username || !realName || !password || !idType || !idNumber || !institutionId) {
       toast({
         title: "错误",
@@ -189,7 +191,7 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
     }
   };
 
-  // 获取选中机构的名称用于显示
+  // 获取选中机构的名称
   const selectedInstitution = useMemo(() => {
     if (!institutionId) return "";
     const institution = searchResults.find(inst => inst.id === institutionId);
@@ -197,228 +199,271 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
   }, [institutionId, searchResults]);
 
   return (
-    <form onSubmit={handleSignup} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="signup-phone">手机号 *</Label>
-        <div className="flex space-x-2">
-          <div className="relative flex-1">
-            <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="signup-phone"
-              type="tel"
-              placeholder="请输入手机号"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="pl-10"
-              required
-            />
-          </div>
-          <Button 
-            type="button" 
-            onClick={handleSendVerificationCode}
-            disabled={sendCodeLoading || !phone || countdown > 0}
-          >
-            <Send className="h-4 w-4 mr-2" />
-            {sendCodeLoading ? "发送中..." : countdown > 0 ? `${countdown}秒后重发` : "发送"}
-          </Button>
-        </div>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="signup-verification-code">验证码 *</Label>
-        <div className="relative">
-          <Input
-            id="signup-verification-code"
-            type="text"
-            placeholder="请输入验证码"
-            value={verificationCode}
-            onChange={(e) => setVerificationCode(e.target.value)}
-            required
-          />
-        </div>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="signup-username">用户名 *</Label>
-        <div className="relative">
-          <UserIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            id="signup-username"
-            type="text"
-            placeholder="请输入用户名"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="pl-10"
-            required
-          />
-        </div>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="signup-realname">真实姓名 *</Label>
-        <div className="relative">
-          <UserIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            id="signup-realname"
-            type="text"
-            placeholder="请输入真实姓名"
-            value={realName}
-            onChange={(e) => setRealName(e.target.value)}
-            className="pl-10"
-            required
-          />
-        </div>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="signup-institution">所属机构 *</Label>
-        <div className="relative">
-          <Building className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={open}
-                className="w-full justify-between pl-10"
-              >
-                {selectedInstitution || "请选择所属机构"}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-              <Command shouldFilter={false}>
-                <CommandInput 
-                  placeholder="搜索机构..." 
-                  value={searchValue}
-                  onValueChange={setSearchValue}
+          <form onSubmit={handleSignup} className="space-y-4">
+            {/* 手机号与验证码行 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="md:col-span-2 space-y-2">
+                <Label htmlFor="signup-phone" className="text-sm font-medium">手机号 *</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                      id="signup-phone"
+                      type="tel"
+                      placeholder="请输入手机号"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="pl-10 h-11"
+                      required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium opacity-0">发送</Label>
+                <Button
+                    type="button"
+                    onClick={handleSendVerificationCode}
+                    disabled={sendCodeLoading || !phone || countdown > 0}
+                    className="w-full h-11 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white transition-all duration-200"
+                    variant="default"
+                >
+                  <Send className="h-4 w-4 mr-1" />
+                  {sendCodeLoading ? "发送中" : countdown > 0 ? `${countdown}s` : "发送"}
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="signup-verification-code" className="text-sm font-medium">验证码 *</Label>
+              <div className="relative">
+                <Shield className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                    id="signup-verification-code"
+                    type="text"
+                    placeholder="请输入验证码"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value)}
+                    className="pl-10 h-11"
+                    required
                 />
-                <CommandList>
-                  <CommandEmpty>
-                    {isSearching ? "搜索中..." : "未找到相关机构"}
-                  </CommandEmpty>
-                  <CommandGroup>
-                    {(searchValue ? searchResults : []).map((institution) => (
-                      <CommandItem
-                        key={institution.id}
-                        value={institution.id}
-                        onSelect={(currentValue) => {
-                          setInstitutionId(currentValue === institutionId ? "" : currentValue);
-                          setOpen(false);
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            institutionId === institution.id ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {institution.fullName}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-          <Input 
-            type="hidden" 
-            value={institutionId} 
-            onChange={(e) => setInstitutionId(e.target.value)} 
-            required 
-          />
-        </div>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="signup-id-type">证件类型 *</Label>
-        <div className="relative">
-          <CreditCard className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Select value={idType} onValueChange={setIdType} required>
-            <SelectTrigger className="pl-10">
-              <SelectValue placeholder="请选择证件类型" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="NATIONAL_ID">身份证</SelectItem>
-              <SelectItem value="PASSPORT">护照</SelectItem>
-              <SelectItem value="OTHER">其他</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="signup-id-number">证件号码 *</Label>
-        <div className="relative">
-          <CreditCard className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            id="signup-id-number"
-            type="text"
-            placeholder="请输入证件号码"
-            value={idNumber}
-            onChange={(e) => setIdNumber(e.target.value)}
-            className="pl-10"
-            required
-          />
-        </div>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="signup-email">联系邮箱</Label>
-        <div className="relative">
-          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            id="signup-email"
-            type="email"
-            placeholder="请输入邮箱"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="signup-password">密码 *</Label>
-        <div className="relative">
-          <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            id="signup-password"
-            type="password"
-            placeholder="请输入密码（至少6位）"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="pl-10"
-            required
-          />
-        </div>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="confirm-password">确认密码 *</Label>
-        <div className="relative">
-          <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            id="confirm-password"
-            type="password"
-            placeholder="请再次输入密码"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="pl-10"
-            required
-          />
-        </div>
-      </div>
-      
-      <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
-        <p className="font-medium">重要提示：</p>
-        <p>所属机构、证件类型和证件号码注册后无法随意修改，请务必仔细核对。</p>
-      </div>
-      
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "注册中..." : "注册"}
-      </Button>
-    </form>
+              </div>
+            </div>
+
+            {/* 用户名和真实姓名行 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="signup-username" className="text-sm font-medium">用户名 *</Label>
+                <div className="relative">
+                  <UserIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                      id="signup-username"
+                      type="text"
+                      placeholder="请输入用户名"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="pl-10 h-11"
+                      required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="signup-realname" className="text-sm font-medium">真实姓名 *</Label>
+                <div className="relative">
+                  <BadgeCheck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                      id="signup-realname"
+                      type="text"
+                      placeholder="请输入真实姓名"
+                      value={realName}
+                      onChange={(e) => setRealName(e.target.value)}
+                      className="pl-10 h-11"
+                      required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 机构选择 */}
+            <div className="space-y-2">
+              <Label htmlFor="signup-institution" className="text-sm font-medium">所属机构 *</Label>
+              <div className="relative">
+                <Building className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10" />
+                <Popover open={open} onOpenChange={setOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={open}
+                        className="w-full justify-between pl-10 h-11 border-gray-300 hover:border-blue-500 transition-colors"
+                    >
+                    <span className={cn("truncate", !selectedInstitution && "text-muted-foreground")}>
+                      {selectedInstitution || "请选择所属机构"}
+                    </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput
+                          placeholder="搜索机构..."
+                          value={searchValue}
+                          onValueChange={setSearchValue}
+                      />
+                      <CommandList>
+                        <CommandEmpty>
+                          {isSearching ? "搜索中..." : "未找到相关机构"}
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {(searchValue ? searchResults : []).map((institution) => (
+                              <CommandItem
+                                  key={institution.id}
+                                  value={institution.id}
+                                  onSelect={(currentValue) => {
+                                    setInstitutionId(currentValue === institutionId ? "" : currentValue);
+                                    setOpen(false);
+                                  }}
+                                  className="flex items-center space-x-2"
+                              >
+                                <Check
+                                    className={cn(
+                                        "h-4 w-4",
+                                        institutionId === institution.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                />
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{institution.fullName}</span>
+                                  {institution.shortName && (
+                                      <span className="text-xs text-muted-foreground">{institution.shortName}</span>
+                                  )}
+                                </div>
+                              </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <Input
+                    type="hidden"
+                    value={institutionId}
+                    onChange={(e) => setInstitutionId(e.target.value)}
+                    required
+                />
+              </div>
+            </div>
+
+            {/* 证件类型和证件号码行 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="signup-id-type" className="text-sm font-medium">证件类型 *</Label>
+                <div className="relative">
+                  <CreditCard className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10" />
+                  <Select value={idType} onValueChange={setIdType} required>
+                    <SelectTrigger className="pl-10 h-11 border-gray-300">
+                      <SelectValue placeholder="请选择证件类型" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NATIONAL_ID">身份证</SelectItem>
+                      <SelectItem value="PASSPORT">护照</SelectItem>
+                      <SelectItem value="OTHER">其他</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="signup-id-number" className="text-sm font-medium">证件号码 *</Label>
+                <div className="relative">
+                  <CreditCard className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                      id="signup-id-number"
+                      type="text"
+                      placeholder="请输入证件号码"
+                      value={idNumber}
+                      onChange={(e) => setIdNumber(e.target.value)}
+                      className="pl-10 h-11"
+                      required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 邮箱 */}
+            <div className="space-y-2">
+              <Label htmlFor="signup-email" className="text-sm font-medium">联系邮箱</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                    id="signup-email"
+                    type="email"
+                    placeholder="请输入邮箱"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10 h-11"
+                />
+              </div>
+            </div>
+
+            {/* 密码和确认密码行 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="signup-password" className="text-sm font-medium">密码 *</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                      id="signup-password"
+                      type="password"
+                      placeholder="至少6位"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10 h-11"
+                      required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password" className="text-sm font-medium">确认密码 *</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                      id="confirm-password"
+                      type="password"
+                      placeholder="再次输入密码"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="pl-10 h-11"
+                      required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 重要提示 */}
+            <Alert className="bg-amber-50 border-amber-200">
+              <Shield className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-800">
+                <span className="font-semibold">重要提示：</span> 所属机构、证件类型和证件号码注册后无法修改，请仔细核对。
+              </AlertDescription>
+            </Alert>
+
+            {/* 注册按钮 */}
+            <Button
+                type="submit"
+                className="w-full h-11 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium transition-all duration-200 shadow-md hover:shadow-lg"
+                disabled={loading}
+            >
+              {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                    注册中...
+                  </>
+              ) : (
+                  "立即注册"
+              )}
+            </Button>
+          </form>
   );
 };
 

@@ -33,5 +33,6 @@ export function getPermissionRoleDisplayName(role: string): string {
  * @returns 中文显示名称数组
  */
 export function getUserPermissionRoleDisplayNames(roles: string[]): string[] {
+  if (!roles) return [];
   return roles.map(role => getPermissionRoleDisplayName(role));
 }

@@ -7,6 +7,7 @@ import {OverviewTab} from "./detailmodal/OverviewTab.tsx";
 import {StatisticsTab} from "./detailmodal/StatisticsTab.tsx";
 import {VersionsTab} from "./detailmodal/VersionsTab.tsx";
 import {TermsAndFilesTab} from "./detailmodal/TermsAndFilesTab.tsx";
+import {ResearchOutputsTab} from "./detailmodal/ResearchOutputsTab.tsx";
 import {useEffect, useState} from "react";
 import {api} from "@/integrations/api/client";
 import {getDatasetStatisticsByVersionId} from "@/integrations/api/statisticsApi.ts";
@@ -30,9 +31,10 @@ interface DatasetDetailModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     useAdvancedQuery?: boolean; // 新增属性，控制是否使用高级查询
+    onDatasetUpdated?: () => void; // 新增属性，数据集更新后的回调函数
 }
 
-export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuery = false}: DatasetDetailModalProps) {
+export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuery = false, onDatasetUpdated}: DatasetDetailModalProps) {
     const [detailDataset, setDetailDataset] = useState<any>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -304,7 +306,7 @@ export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuer
                     <div className="flex-1 overflow-hidden overflow-y-auto">
                         <ScrollArea className="h-full w-full pr-4">
                             <Tabs defaultValue="overview" className="w-full">
-                                <TabsList className="grid w-full grid-cols-4">
+                                <TabsList className="grid w-full grid-cols-5">
                                     <TabsTrigger value="overview" className="gap-2">
                                         <Info className="h-4 w-4"/>
                                         概述
@@ -317,6 +319,10 @@ export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuer
                                     {/*    <BarChart3 className="h-4 w-4"/>*/}
                                     {/*    分析*/}
                                     {/*</TabsTrigger>*/}
+                                    <TabsTrigger value="researchOutputs" className="gap-2">
+                                        <FileText className="h-4 w-4"/>
+                                        研究成果
+                                    </TabsTrigger>
                                     <TabsTrigger value="termsandfiles" className="gap-2">
                                         <Shield className="h-4 w-4"/>
                                         条款与文件
@@ -336,7 +342,14 @@ export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuer
                                         demographicFields={demographicFields}
                                         outcomeFields={outcomeFields}
                                         institution={institution}
-                                        parentDataset={useAdvancedQuery ? parentDataset : null} // 仅在高级查询模式下传递父数据集
+                                        parentDataset={useAdvancedQuery ? parentDataset : null}
+                                        useAdvancedQuery={useAdvancedQuery}
+                                        onEditDataset={(updatedDataset) => {
+                                            // 更新当前数据集状态
+                                            setDetailDataset(updatedDataset);
+                                            // 调用回调通知数据集已更新
+                                            onDatasetUpdated?.();
+                                        }}
                                     />
                                 </TabsContent>
 
@@ -409,6 +422,11 @@ export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuer
                                     />
                                 </TabsContent>
 
+                                {/* Research Outputs Tab */}
+                                <TabsContent value="researchOutputs" className="space-y-4 mt-4">
+                                    <ResearchOutputsTab datasetId={currentDataset.id} />
+                                </TabsContent>
+
                                 {/* Terms and Files Tab */}
                                 <TabsContent value="termsandfiles" className="space-y-4 mt-4">
                                     <TermsAndFilesTab dataset={currentDataset} useAdvancedQuery={useAdvancedQuery} />
@@ -431,6 +449,9 @@ export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuer
                                             }).catch(err => {
                                                 console.error('Error reloading versions:', err);
                                             });
+                                            
+                                            // 调用回调通知数据集已更新
+                                            onDatasetUpdated?.();
                                         }}
                                     />
                                 </TabsContent>
@@ -452,6 +473,7 @@ export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuer
                         }
                     }}
                     useAdvancedQuery={useAdvancedQuery} // 传递给子组件
+                    onDatasetUpdated={onDatasetUpdated} // 传递给子组件
                 />
             ))}
         </>

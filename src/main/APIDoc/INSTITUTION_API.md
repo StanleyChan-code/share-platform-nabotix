@@ -12,6 +12,10 @@
 
 **权限要求**: 无需认证，所有用户均可访问
 
+**请求参数**:
+- `page`: 页码，默认为0
+- `size`: 每页大小，默认为10
+
 **说明**: 此接口只返回已验证通过的机构
 
 **响应示例**:
@@ -113,6 +117,10 @@
 **接口地址**: `GET /api/manage/institutions`
 
 **权限要求**: 仅平台管理员可访问
+
+**请求参数**:
+- `page`: 页码，默认为0
+- `size`: 每页大小，默认为10
 
 **响应示例**:
 ```json
@@ -410,7 +418,53 @@
 }
 ```
 
-### 2.10 获取机构用户列表
+### 2.10 根据名称模糊搜索机构（管理接口）
+
+**接口地址**: `GET /api/manage/institutions/search`
+
+**权限要求**: 仅平台管理员可访问
+
+**请求参数**:
+- `name`: 搜索关键词（必填）
+- `page`: 页码，默认为0
+- `size`: 每页大小，默认为10
+
+**说明**: 此接口根据机构全称进行模糊搜索，返回所有匹配的机构（无论是否已验证）
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "搜索机构成功",
+  "data": {
+    "content": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "fullName": "某某医院",
+        "shortName": "某医",
+        "type": "hospital",
+        "contactPerson": "张三",
+        "contactIdType": "NATIONAL_ID",
+        "contactIdNumber": "11010119900307XXXX",
+        "contactPhone": "13800138000",
+        "contactEmail": "contact@example.com",
+        "verified": true,
+        "createdAt": "2025-01-01T00:00:00Z",
+        "updatedAt": "2025-01-01T00:00:00Z"
+      }
+    ],
+    "page": {
+      "size": 10,
+      "number": 0,
+      "totalElements": 1,
+      "totalPages": 1
+    }
+  },
+  "timestamp": "2025-12-01T10:00:00Z"
+}
+```
+
+### 2.11 获取机构用户列表
 
 **接口地址**: `GET /api/manage/institutions/users`
 

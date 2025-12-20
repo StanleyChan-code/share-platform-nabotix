@@ -60,6 +60,15 @@ export function DatasetTypeChart({ data }: DatasetTypeChartProps) {
     return null;
   };
 
+  // 自定义图例文本渲染函数
+  const renderLegendText = (value: string) => {
+    return (
+      <span style={{ color: 'hsl(var(--foreground))', fontSize: '12px' }}>
+        {value}
+      </span>
+    );
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -85,7 +94,7 @@ export function DatasetTypeChart({ data }: DatasetTypeChartProps) {
             <Tooltip content={<CustomTooltip />} />
             <Legend 
               wrapperStyle={{ fontSize: "12px" }}
-              formatter={(value) => value}
+              formatter={(value) => renderLegendText(value)}
             />
           </PieChart>
         </ResponsiveContainer>

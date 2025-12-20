@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import PaginatedList from '@/components/ui/PaginatedList';
@@ -13,7 +13,8 @@ import {
   CheckCircle,
   Clock,
   XCircle,
-  Trash2
+  Trash2,
+  Upload
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -29,14 +30,33 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { DatasetUpload } from '@/components/upload/DatasetUpload';
+import { getCurrentUserRoles } from '@/lib/authUtils';
+import { PermissionRoles } from '@/lib/permissionUtils';
+import {DatasetTypes} from "@/lib/enums.ts";
 
 const DatasetsTab = () => {
   const [selectedDataset, setSelectedDataset] = React.useState<any>(null);
   const [isDatasetModalOpen, setIsDatasetModalOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [datasetToDelete, setDatasetToDelete] = React.useState<Dataset | null>(null);
+  const [showUpload, setShowUpload] = React.useState(false);
+  const [userRoles, setUserRoles] = useState<string[]>([]);
   const { toast } = useToast();
   const paginatedListRef = useRef<any>(null);
+
+  // Check user permissions
+  useEffect(() => {
+    const roles = getCurrentUserRoles();
+    setUserRoles(roles);
+  }, []);
+
+  // Check if user has permission to upload datasets
+  const canUploadDataset = useCallback(() => {
+    return userRoles.includes(PermissionRoles.PLATFORM_ADMIN) || 
+           userRoles.includes(PermissionRoles.INSTITUTION_SUPERVISOR) || 
+           userRoles.includes(PermissionRoles.DATASET_UPLOADER);
+  }, [userRoles]);
 
   const fetchDatasets = useCallback(async (page: number, size: number) => {
     const response = await datasetApi.getManageableDatasets({
@@ -202,7 +222,7 @@ const DatasetsTab = () => {
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <span className="font-medium">负责人:</span>
+              <span className="font-medium">数据集负责人:</span>
               <span className="truncate" title={dataset.datasetLeader}>
                 {dataset.datasetLeader}
               </span>
@@ -245,7 +265,7 @@ const DatasetsTab = () => {
             </div>
             <div>
               <span className="font-medium">数据类型:</span>
-              <span className="ml-2">{dataset.type}</span>
+              <span className="ml-2">{DatasetTypes[dataset.type as keyof typeof DatasetTypes] || dataset.type}</span>
             </div>
             <div>
               <span className="font-medium">更新时间:</span>
@@ -259,11 +279,31 @@ const DatasetsTab = () => {
 
   const renderEmptyState = () => (
     <div className="text-center py-12 text-muted-foreground">
-      <Database className="h-12 w-12 mx-auto mb-4 opacity-50" />
+      <Database className="h-16 w-16 mx-auto mb-4 opacity-50" />
       <p className="text-lg font-medium">暂无数据集</p>
       <p className="text-sm mt-2 mb-4">您还没有提交任何数据集</p>
+      {canUploadDataset() && (
+        <Button onClick={() => setShowUpload(true)} className="gap-2">
+          <Upload className="h-4 w-4" />
+          上传数据集
+        </Button>
+      )}
     </div>
   );
+
+  // 如果用户没有上传权限，则不显示整个组件
+  if (!canUploadDataset()) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>访问被拒绝</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>您没有权限访问此页面。</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <TooltipProvider>
@@ -272,10 +312,31 @@ const DatasetsTab = () => {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Database className="h-5 w-5" />
-              我的数据集
+              {userRoles.includes(PermissionRoles.DATASET_UPLOADER) ? (
+                  <span>我的数据集</span>
+              ) : (
+                  <span>数据集管理</span>
+              )}
             </CardTitle>
+            {canUploadDataset() && (
+              <Button onClick={() => setShowUpload(!showUpload)} className="gap-2">
+                <Upload className="h-4 w-4" />
+                {showUpload ? '隐藏上传' : '上传数据集'}
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
+            {showUpload && (
+              <div className="mb-6">
+                <DatasetUpload onSuccess={() => {
+                  setShowUpload(false);
+                  // Refresh the dataset list
+                  if (paginatedListRef.current) {
+                    paginatedListRef.current.refresh();
+                  }
+                }} />
+              </div>
+            )}
             <PaginatedList
               ref={paginatedListRef}
               fetchData={fetchDatasets}
@@ -292,6 +353,12 @@ const DatasetsTab = () => {
             open={isDatasetModalOpen} 
             onOpenChange={setIsDatasetModalOpen}
             useAdvancedQuery={true}
+            onDatasetUpdated={() => {
+              // 关闭模态框后刷新列表
+              if (paginatedListRef.current) {
+                paginatedListRef.current.refresh();
+              }
+            }}
           />
         )}
         

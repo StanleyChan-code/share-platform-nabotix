@@ -57,6 +57,21 @@ export const outputApi = {
     return response.data;
   },
 
+  // 获取高价值研究成果列表
+  async getHighValueOutputs(params: {
+    page?: number;
+    size?: number;
+    minValue?: number;
+  } = {}) {
+    const queryParams = new URLSearchParams();
+    queryParams.append('page', params.page?.toString() || '0');
+    queryParams.append('size', params.size?.toString() || '10');
+    if (params.minValue !== undefined) queryParams.append('minValue', params.minValue.toString());
+
+    const response = await api.get<PaginatedOutputs>(`/research-outputs/high-value-public?${queryParams.toString()}`);
+    return response.data.data;
+  },
+
   // 分页获取已审核通过的研究成果列表
   async getPublicOutputs(params: {
     page?: number;

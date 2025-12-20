@@ -1,20 +1,22 @@
 import {Navigation} from "@/components/Navigation";
-import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
+import {Card, CardContent} from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
 import {DatasetUpload} from "@/components/upload/DatasetUpload";
-import {Upload, List, Grid} from "lucide-react";
+import {Upload, List, Grid, Database} from "lucide-react";
 import {useState, useEffect, useCallback} from "react";
 import {DatasetDetailModal} from "@/components/dataset/DatasetDetailModal";
 import {DatasetTreeView} from "@/components/dataset/DatasetTreeView";
 import {DatasetGrid} from "@/components/dataset/DatasetGrid";
 import {DatasetFilters} from "@/components/dataset/DatasetFilters";
 import {DatasetTypes} from "@/lib/enums";
-import {api} from "@/integrations/api/client";
 import {DatasetAnnualChart} from "@/components/dataset/DatasetAnnualChart";
 import {getAnnualDatasetStatistics} from "@/integrations/api/statisticsApi";
 import {datasetApi} from "@/integrations/api/datasetApi";
 import {ScrollArea} from "@radix-ui/react-scroll-area";
 import PaginatedList from "@/components/ui/PaginatedList";
+import { getCurrentUserRoles } from "@/lib/authUtils";
+import { PermissionRoles } from "@/lib/permissionUtils";
+import { useNavigate } from "react-router-dom";
 
 // Type mappings for database enum values
 const typeLabels = DatasetTypes;
@@ -33,6 +35,26 @@ const Datasets = () => {
     const [annualData, setAnnualData] = useState<{ year: number, count: number }[]>([]);
     const [annualLoading, setAnnualLoading] = useState(true);
     const [filtersChanged, setFiltersChanged] = useState(false);
+    const [userRoles, setUserRoles] = useState<string[]>([]);
+    const navigate = useNavigate();
+
+    // Check user permissions
+    useEffect(() => {
+        const roles = getCurrentUserRoles();
+        setUserRoles(roles);
+    }, []);
+
+    // Check if user has permission to upload datasets
+    const canUploadDataset = useCallback(() => {
+        return userRoles.includes(PermissionRoles.PLATFORM_ADMIN) || 
+               userRoles.includes(PermissionRoles.INSTITUTION_SUPERVISOR) || 
+               userRoles.includes(PermissionRoles.DATASET_UPLOADER);
+    }, [userRoles]);
+
+    // Check if user is platform admin
+    const isPlatformAdmin = useCallback(() => {
+        return userRoles.includes(PermissionRoles.PLATFORM_ADMIN);
+    }, [userRoles]);
 
     // Listen for custom event to open dataset detail
     useEffect(() => {
@@ -134,7 +156,7 @@ const Datasets = () => {
 
     // Render tree item for paginated list
     const renderTreeItem = (dataset: any) => (
-        <DatasetTreeView 
+        <DatasetTreeView
             datasets={[dataset]} 
             onDatasetClick={handleDatasetClick} 
         />
@@ -160,15 +182,17 @@ const Datasets = () => {
                             浏览已发布的临床研究数据集，支持按研究类型、学科领域筛选查找
                         </p>
                     </div>
-                    <Button onClick={() => setShowUpload(!showUpload)} className="gap-2">
-                        <Upload className="h-4 w-4"/>
-                        {showUpload ? '隐藏上传' : '上传数据集'}
-                    </Button>
+                    {canUploadDataset() && (
+                        <Button onClick={() => navigate('/profile?tab=datasets')} className="gap-2">
+                            <Database className="h-4 w-4"/>
+                            我的数据集
+                        </Button>
+                    )}
                 </div>
 
                 {/* Upload Component */}
                 {showUpload && (
-                    <DatasetUpload onSuccess={() => setShowUpload(false)}/>
+                    <DatasetUpload onSuccess={() => setShowUpload(false)} />
                 )}
 
                 {/* Annual Chart */}
@@ -224,7 +248,32 @@ const Datasets = () => {
                                 层级视图
                             </Button>
                         </div>
+                        <div>
+                            {viewMode === 'grid' ? (
+                                <></>
+                            ) : (
+                                <div >
+                                    {/* 图例说明 */}
+                                    <div className="flex flex-wrap justify-center gap-4 p-2 bg-gray-50 rounded-lg">
+                                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                                            <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                                            <span>基线数据集</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                                            <div className="w-3 h-3 bg-green-500 rounded"></div>
+                                            <span>随访数据集</span>
+                                        </div>
+                                        {/*<div className="flex items-center gap-2 text-sm text-gray-600">*/}
+                                        {/*    <div className="w-3 h-3 bg-purple-500 rounded"></div>*/}
+                                        {/*    <span>多级随访</span>*/}
+                                        {/*</div>*/}
+                                    </div>
+
+                                </div>
+                            )}
+                        </div>
                     </div>
+
 
                     {/* Dataset Grid / Tree View - Scrollable Content */}
                     <div className="flex-1 overflow-hidden">
@@ -249,6 +298,7 @@ const Datasets = () => {
                     dataset={selectedDataset}
                     open={showDetail}
                     onOpenChange={setShowDetail}
+                    useAdvancedQuery={isPlatformAdmin()} // Pass advanced query flag based on user role
                 />
             </main>
         </div>

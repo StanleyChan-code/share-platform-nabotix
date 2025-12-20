@@ -8,11 +8,21 @@ import {useToast} from "@/hooks/use-toast";
 import {logout, getCurrentUser, getCurrentUserRoles} from "@/integrations/api/authApi.ts";
 import {institutionApi} from "@/integrations/api/institutionApi.ts";
 import { getCurrentUserInfo } from "@/lib/authUtils.ts";
+import { PermissionRoles } from "@/lib/permissionUtils.ts";
+
+// 只有这些角色的用户才能看到管理入口
+const ADMIN_ROLES = [
+  PermissionRoles.PLATFORM_ADMIN,
+  PermissionRoles.INSTITUTION_SUPERVISOR,
+  PermissionRoles.INSTITUTION_USER_MANAGER,
+  PermissionRoles.DATASET_APPROVER,
+  PermissionRoles.RESEARCH_OUTPUT_APPROVER
+];
 
 const navigationItems = [
     {name: "首页", name_en: "Home", href: "/", icon: BarChart3},
     {name: "数据集", name_en: "Datasets", href: "/datasets", icon: Database},
-    {name: "成果", name_en: "Outputs", href: "/outputs", icon: Upload},
+    {name: "成果", name_en: "Outputs", href: "/outputs", icon: FileText},
     {name: "关于", name_en: "About", href: "/about", icon: Info},
     {name: "个人中心", name_en: "My Center", href: "/profile", icon: User},
     {name: "管理", name_en: "Admin", href: "/admin", icon: Shield, adminOnly: true},
@@ -136,16 +146,27 @@ export function Navigation() {
     };
 
     const getAdminHref = () => {
-        if (userRoles.includes('institution_supervisor')) {
+        if (userRoles.includes(PermissionRoles.INSTITUTION_SUPERVISOR)) {
             return "/institution-dashboard";
         }
         return "/admin";
     };
 
+    // 检查用户是否具有管理权限
+    const hasAdminPermission = () => {
+        return userRoles.some(role => ADMIN_ROLES.includes(role));
+    };
+
     const NavItems = ({mobile = false}) => (
         <>
             {navigationItems
-                .filter((item) => !item.adminOnly || user) // Show admin link only if user is logged in
+                .filter((item) => {
+                    // 如果是管理项，则只对具有管理权限的用户显示
+                    if (item.adminOnly) {
+                        return user && hasAdminPermission();
+                    }
+                    return true;
+                })
                 .map((item) => {
                     const Icon = item.icon;
                     let href = item.href;
@@ -155,7 +176,6 @@ export function Navigation() {
                     }
                     const isActive = location.pathname === item.href ||
                         (item.href === "/admin" && location.pathname === "/institution-dashboard");
-
                     return (
                         <Link
                             key={item.href}
@@ -169,8 +189,8 @@ export function Navigation() {
                         >
                             <Icon className="h-4 w-4"/>
                             <span className={mobile ? "block" : "hidden md:block"}>
-              {item.name}
-            </span>
+                              {item.name}
+                            </span>
                         </Link>
                     );
                 })}

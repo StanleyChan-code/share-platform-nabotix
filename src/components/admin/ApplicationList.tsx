@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import PaginatedList from '@/components/ui/PaginatedList';
@@ -23,7 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import ApplyDialog from '@/components/application/ApplyDialog';
-import ApplicationDetailDialog from './ApplicationDetailDialog'; // 导入新的详情对话框组件
+import ApplicationDetailDialog from './ApplicationDetailDialog';
 import { useToast } from '@/components/ui/use-toast';
 import { DatasetDetailModal } from '@/components/dataset/DatasetDetailModal';
 import {
@@ -223,6 +223,7 @@ const ApplicationList: React.FC<ApplicationListProps> = ({
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Button
+                                        className="h-8 w-8 p-0"
                                         variant="outline"
                                         size="sm"
                                         onClick={() => handleViewDetails(application)}
@@ -240,6 +241,7 @@ const ApplicationList: React.FC<ApplicationListProps> = ({
                                         <Button
                                             variant="outline"
                                             size="sm"
+                                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                                             onClick={() => handleDeleteClick(application)}
                                         >
                                             <Trash2 className="h-4 w-4" />
@@ -441,7 +443,7 @@ const ApplicationList: React.FC<ApplicationListProps> = ({
 
         return (
             <div className="text-center py-12 text-muted-foreground">
-                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
                 <p className="text-lg font-medium">暂无申请记录</p>
                 <p className="text-sm mt-2 mb-4">{emptyMessage}</p>
                 {variant === 'my-applications' && (

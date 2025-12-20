@@ -6,11 +6,13 @@
 
 ## 更新日志
 
+- 在公共接口中新增 `/api/research-outputs/high-value-public` 接口用于获取高价值研究成果，支持动态筛选价值阈值
 - 在公共接口中新增 `/api/research-outputs/pubmed/{pubMedId}` 接口用于根据PubMed ID获取文章信息
 - 在公共接口中新增 `/api/research-outputs/my-submissions/{id}` 接口用于查询特定研究成果
 - 在公共接口中新增 `/api/research-outputs/my-submissions/{id}/files/{fileId}` 接口用于下载研究成果文件
 - 在公共接口的 `/api/research-outputs/public` 接口中新增 keyword 和 submitterId 参数
 - 在管理接口中新增 `/api/manage/research-outputs/{id}/files/{fileId}` 接口用于管理员下载研究成果文件
+- 将研究成果的引用次数(citationCount)字段替换为成果价值(value)字段
 
 ## 1. 公共研究成果接口
 
@@ -23,7 +25,7 @@
 **请求参数**: 无
 
 **说明**: 
-- 获取已审批通过的研究成果总数、学术论文数、专利成果数和总引用次数
+- 获取已审批通过的研究成果总数、学术论文数、专利成果数和总价值
 
 **响应示例**:
 ```json
@@ -35,6 +37,73 @@
     "academicPapers": 80,
     "patentOutputs": 35,
     "totalCitations": 1250
+  },
+  "timestamp": "2025-12-01T10:00:00Z"
+}
+```
+
+### 1.2 分页获取高价值研究成果列表
+
+**接口地址**: `GET /api/research-outputs/high-value-public`
+
+**权限要求**: 无需认证，所有用户均可访问
+
+**请求参数**:
+
+| 参数名   | 类型  | 必填 | 默认值 | 描述    |
+|-------|-----|----|-----|-------|
+| page  | int | 否  | 0   | 页码    |
+| size  | int | 否  | 10  | 每页大小  |
+| minValue| int | 否  | -   | 最小价值值 |
+
+**说明**: 
+- 获取审核通过的研究成果，按照审核时间倒序排列
+- 可通过minValue参数筛选价值大于指定值的研究成果
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "获取高价值研究成果列表成功",
+  "data": {
+    "content": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "dataset": {
+          "id": "550e8400-e29b-41d4-a716-446655440001",
+          "titleCn": "某研究数据集"
+        },
+        "submitter": {
+          "id": "550e8400-e29b-41d4-a716-446655440002",
+          "username": "researcher",
+          "realName": "研究员"
+        },
+        "type": "PAPER",
+        "otherType": null,
+        "title": "研究成果标题",
+        "abstractText": "研究成果摘要",
+        "outputNumber": "RP-2025-001",
+        "value": 10,
+        "publicationUrl": "https://example.com/paper",
+        "fileId": "550e8400-e29b-41d4-a716-446655440003",
+        "createdAt": "2025-12-01T10:00:00Z",
+        "approved": true,
+        "approver": {
+          "id": "550e8400-e29b-41d4-a716-446655440004",
+          "username": "admin",
+          "realName": "管理员"
+        },
+        "approvedAt": "2025-12-01T11:00:00Z",
+        "rejectionReason": null,
+        "otherInfo": {}
+      }
+    ],
+    "page": {
+      "size": 10,
+      "number": 0,
+      "totalElements": 3,
+      "totalPages": 1
+    }
   },
   "timestamp": "2025-12-01T10:00:00Z"
 }
@@ -92,7 +161,7 @@
         "title": "研究成果标题",
         "abstractText": "研究成果摘要",
         "outputNumber": "RP-2025-001",
-        "citationCount": 10,
+        "value": 10,
         "publicationUrl": "https://example.com/paper",
         "fileId": "550e8400-e29b-41d4-a716-446655440003",
         "createdAt": "2025-12-01T10:00:00Z",
@@ -133,7 +202,7 @@
   "title": "研究成果标题",
   "abstractText": "研究成果摘要",
   "outputNumber": "RP-2025-001",
-  "citationCount": 10,
+  "value": 10,
   "publicationUrl": "https://example.com/paper",
   "fileId": "550e8400-e29b-41d4-a716-446655440003",
   "otherInfo": {}
@@ -164,7 +233,7 @@
     "title": "研究成果标题",
     "abstractText": "研究成果摘要",
     "outputNumber": "RP-2025-001",
-    "citationCount": 10,
+    "value": 10,
     "publicationUrl": "https://example.com/paper",
     "fileId": "550e8400-e29b-41d4-a716-446655440003",
     "createdAt": "2025-12-01T10:00:00Z",
@@ -271,7 +340,7 @@
         "title": "研究成果标题",
         "abstractText": "研究成果摘要",
         "outputNumber": "RP-2025-001",
-        "citationCount": 10,
+        "value": 10,
         "publicationUrl": "https://example.com/paper",
         "fileId": "550e8400-e29b-41d4-a716-446655440003",
         "createdAt": "2025-12-01T10:00:00Z",
@@ -329,7 +398,7 @@
     "title": "研究成果标题",
     "abstractText": "研究成果摘要",
     "outputNumber": "RP-2025-001",
-    "citationCount": 10,
+    "value": 10,
     "publicationUrl": "https://example.com/paper",
     "fileId": "550e8400-e29b-41d4-a716-446655440003",
     "createdAt": "2025-12-01T10:00:00Z",
@@ -376,7 +445,7 @@
     "title": "从PubMed获取的文章标题",
     "abstractText": "从PubMed获取的文章摘要",
     "outputNumber": "PMID:12345678",
-    "citationCount": 25,
+    "value": 25,
     "publicationUrl": "https://pubmed.ncbi.nlm.nih.gov/12345678/",
     "fileId": null,
     "createdAt": "2025-12-01T10:00:00Z",
@@ -442,7 +511,7 @@
   "title": "更新后的研究成果标题",
   "abstractText": "更新后的研究成果摘要",
   "outputNumber": "RP-2025-001",
-  "citationCount": 15,
+  "value": 15,
   "publicationUrl": "https://example.com/paper",
   "fileId": "550e8400-e29b-41d4-a716-446655440005",
   "otherInfo": {}
@@ -475,7 +544,7 @@
     "title": "更新后的研究成果标题",
     "abstractText": "更新后的研究成果摘要",
     "outputNumber": "RP-2025-001",
-    "citationCount": 15,
+    "value": 15,
     "publicationUrl": "https://example.com/paper",
     "fileId": "550e8400-e29b-41d4-a716-446655440005",
     "createdAt": "2025-12-01T10:00:00Z",
@@ -559,7 +628,7 @@
         "title": "研究成果标题",
         "abstractText": "研究成果摘要",
         "outputNumber": "RP-2025-001",
-        "citationCount": 10,
+        "value": 10,
         "publicationUrl": "https://example.com/paper",
         "fileId": "550e8400-e29b-41d4-a716-446655440003",
         "createdAt": "2025-12-01T10:00:00Z",
@@ -619,7 +688,7 @@
     "title": "研究成果标题",
     "abstractText": "研究成果摘要",
     "outputNumber": "RP-2025-001",
-    "citationCount": 10,
+    "value": 10,
     "publicationUrl": "https://example.com/paper",
     "fileId": "550e8400-e29b-41d4-a716-446655440003",
     "createdAt": "2025-12-01T10:00:00Z",
@@ -723,7 +792,7 @@
     "title": "研究成果标题",
     "abstractText": "研究成果摘要",
     "outputNumber": "RP-2025-001",
-    "citationCount": 10,
+    "value": 10,
     "publicationUrl": "https://example.com/paper",
     "fileId": "550e8400-e29b-41d4-a716-446655440003",
     "createdAt": "2025-12-01T10:00:00Z",

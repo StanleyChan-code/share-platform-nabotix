@@ -62,6 +62,14 @@ export const institutionApi = {
     return response.data;
   },
 
+  // 搜索机构（管理接口，平台管理员专用）
+  async searchInstitutionsForAdmin(name: string, page: number = 0, size: number = 10) {
+    const response = await api.get<Page<Institution>>('/manage/institutions/search', {
+      params: { name, page, size }
+    });
+    return response.data;
+  },
+
   // 创建新机构（平台管理员专用）
   async createInstitution(data: Omit<Institution, 'id' | 'createdAt' | 'updatedAt' | 'verified'>) {
     const response = await api.post<Institution>('/manage/institutions', data);

@@ -3,12 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { Users, Database, FileText, Building2, Loader2 } from "lucide-react";
-import UserManagementTab from "@/components/admin/UserManagementTab";
+import { Loader2, Building2, Users, Database, FileText } from "lucide-react";
+import UserManagementTab from "@/components/admin/user/UserManagementTab.tsx";
 import DatasetApprovalTab from "@/components/admin/DatasetApprovalTab";
 import ApplicationReviewTab from "@/components/admin/ApplicationReviewTab";
-import InstitutionManagementTab from "@/components/admin/InstitutionManagementTab";
+import InstitutionProfileTab from "@/components/admin/institution/InstitutionProfileTab.tsx";
+import { getCurrentUser, getCurrentUserRoles } from "@/integrations/api/authApi";
+import { institutionApi } from "@/integrations/api/institutionApi";
 
 const InstitutionDashboard = () => {
   const [activeTab, setActiveTab] = useState("users");
@@ -21,36 +22,23 @@ const InstitutionDashboard = () => {
   useEffect(() => {
     const checkAuthorization = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        // 获取当前用户信息
+        const userResponse = await getCurrentUser();
+        const user = userResponse.data.data;
         
         if (!user) {
           navigate("/auth");
           return;
         }
 
-        // 获取用户的角色和机构信息
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('institution_id')
-          .eq('id', user.id)
-          .maybeSingle();
+        // 获取用户角色
+        const rolesResponse = await getCurrentUserRoles();
+        const userRoles = rolesResponse.data.data;
 
-        if (userError) {
-          throw userError;
-        }
-
-        // 检查用户是否是机构管理员
-        const { data: roleData, error: roleError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'institution_supervisor');
-
-        if (roleError) {
-          throw roleError;
-        }
-
-        if (!roleData || roleData.length === 0) {
+        // 检查用户是否是机构管理员 (使用大写权限字符串)
+        const isAuthorizedUser = userRoles.includes('INSTITUTION_SUPERVISOR');
+        
+        if (!isAuthorizedUser) {
           toast({
             title: "访问被拒绝",
             description: "您没有权限访问此页面",
@@ -60,27 +48,16 @@ const InstitutionDashboard = () => {
           return;
         }
 
-        // 设置用户机构信息
-        if (userData?.institution_id) {
-          const { data: institutionData, error: institutionError } = await supabase
-            .from('institutions')
-            .select('id, full_name')
-            .eq('id', userData.institution_id)
-            .maybeSingle();
-
-          if (institutionError) {
-            throw institutionError;
-          }
-
-          setUserInstitution(institutionData);
-        }
+        // 获取用户所属机构信息
+        const institutionResponse = await institutionApi.getCurrentUserInstitution();
+        setUserInstitution(institutionResponse.data);
 
         setIsAuthorized(true);
-      } catch (error) {
+      } catch (error: any) {
         console.error("检查授权时出错:", error);
         toast({
           title: "错误",
-          description: "检查用户权限时发生错误",
+          description: error.message || "检查用户权限时发生错误",
           variant: "destructive",
         });
         navigate("/");
@@ -105,21 +82,25 @@ const InstitutionDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Navigation />
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto py-6 space-y-6">
         <div className="flex items-center gap-3 mb-6">
-          <Building2 className="h-8 w-8 text-blue-600" />
+          <Building2 className="h-8 w-8 text-primary" />
           <div>
             <h1 className="text-3xl font-bold">机构管理面板</h1>
-            <p className="text-gray-600">
-              {userInstitution ? userInstitution.full_name : "管理您的机构"}
+            <p className="text-muted-foreground">
+              {userInstitution ? userInstitution.fullName : "管理您的机构"}
             </p>
           </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="profile" className="flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              机构信息
+            </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               用户管理
@@ -134,15 +115,23 @@ const InstitutionDashboard = () => {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="users">
+          <TabsContent value="profile" className="space-y-4">
             {userInstitution ? (
-              <UserManagementTab institutionId={userInstitution.id} />
+              <InstitutionProfileTab institutionId={userInstitution.id} />
+            ) : (
+              <div>加载中...</div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="users" className="space-y-4">
+            {userInstitution ? (
+              <UserManagementTab />
             ) : (
               <div>加载中...</div>
             )}
           </TabsContent>
           
-          <TabsContent value="datasets">
+          <TabsContent value="datasets" className="space-y-4">
             {userInstitution ? (
               <DatasetApprovalTab institutionId={userInstitution.id} />
             ) : (
@@ -150,7 +139,7 @@ const InstitutionDashboard = () => {
             )}
           </TabsContent>
           
-          <TabsContent value="applications">
+          <TabsContent value="applications" className="space-y-4">
             {userInstitution ? (
               <ApplicationReviewTab institutionId={userInstitution.id} />
             ) : (

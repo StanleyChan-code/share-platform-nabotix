@@ -146,7 +146,7 @@ const Apply = () => {
       setActiveTab("status");
     } catch (error) {
       console.error('Error submitting application:', error);
-      toast.error('提交失败: ' + (error instanceof Error ? error.message : '未知错误'));
+      toast.error('提交失败: ' + (error?.response?.data?.message ||'未知错误'));
     } finally {
       setSubmitting(false);
     }

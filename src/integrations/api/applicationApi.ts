@@ -154,3 +154,9 @@ export async function downloadApplicationFile(applicationId: string, fileId: str
   });
   return response.data;
 }
+
+// 新增：获取指定数据集的已批准研究成果（用于ResearchOutputsTab）
+export async function getApprovedResearchOutputs(datasetId: string, page: number = 0, size: number = 10) {
+  const response = await api.get<Page<Application>>(`/datasets/${datasetId}/approved-research-outputs?page=${page}&size=${size}`);
+  return response.data;
+}

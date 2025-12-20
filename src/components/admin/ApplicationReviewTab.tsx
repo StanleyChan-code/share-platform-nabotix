@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle, XCircle } from "lucide-react";
+import {formatDate} from "@/lib/utils.ts";
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -122,7 +123,7 @@ const ApplicationReviewTab = ({ institutionId }: { institutionId?: string }) => 
                   <TableCell>{application.users?.real_name}</TableCell>
                   <TableCell>{application.datasets?.title_cn}</TableCell>
                   <TableCell>{getStatusBadge(application.status)}</TableCell>
-                  <TableCell>{new Date(application.submitted_at).toLocaleDateString()}</TableCell>
+                  <TableCell>{formatDate(application.submitted_at)}</TableCell>
                   <TableCell className="space-x-2">
                     {application.status === 'submitted' && (
                       <>

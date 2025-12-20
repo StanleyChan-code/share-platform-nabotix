@@ -71,11 +71,11 @@
 }
 ```
 
-## 4. 平台管理员创建用户
+## 4. 管理员创建用户
 
 **接口地址**: `POST /api/manage/users`
 
-**权限要求**: PLATFORM_ADMIN
+**权限要求**: PLATFORM_ADMIN 或 INSTITUTION_SUPERVISOR 或 INSTITUTION_USER_MANAGER
 
 **请求体**:
 ```json
@@ -85,12 +85,18 @@
   "phone": "13900139000",
   "email": "newuser@example.com",
   "password": "password123",
-  "institutionId": "550e8400-e29b-41d4-a716-446655440001"
+  "institutionId": "550e8400-e29b-41d4-a716-446655440001",
+  "idType": "NATIONAL_ID",
+  "idNumber": "110101199003072918",
+  "education": "PHD",
+  "title": "研究员",
+  "field": "生物医学"
 }
 ```
 
 **说明**: 
-- 创建用户时会自动为用户添加机构管理员(INSTITUTION_SUPERVISOR)权限
+- 平台管理员可以指定任意机构ID，机构管理员和机构用户管理员只能创建本机构用户
+- 非平台管理员不能添加平台管理员权限
 
 **响应示例**:
 ```json
@@ -103,7 +109,16 @@
     "realName": "新用户",
     "phone": "13900139000",
     "email": "newuser@example.com",
-    "institutionId": "550e8400-e29b-41d4-a716-446655440001"
+    "institutionId": "550e8400-e29b-41d4-a716-446655440001",
+    "education": "PHD",
+    "title": "研究员",
+    "field": "生物医学",
+    "idType": "NATIONAL_ID",
+    "idNumber": "110101199003072918",
+    "supervisorId": "550e8400-e29b-41d4-a716-446655440003",
+    "createdAt": "2025-12-01T10:00:00Z",
+    "updatedAt": "2025-12-01T10:00:00Z",
+    "authorities": []
   },
   "timestamp": "2025-12-01T10:00:00Z"
 }
@@ -133,7 +148,18 @@
     "realName": "测试用户",
     "phone": "13800138000",
     "email": "test@example.com",
-    "institutionId": "550e8400-e29b-41d4-a716-446655440001"
+    "institutionId": "550e8400-e29b-41d4-a716-446655440001",
+    "education": "PHD",
+    "title": "研究员",
+    "field": "生物医学",
+    "idType": "NATIONAL_ID",
+    "idNumber": "110101199003072918",
+    "supervisorId": "550e8400-e29b-41d4-a716-446655440003",
+    "createdAt": "2025-12-01T10:00:00Z",
+    "updatedAt": "2025-12-01T10:00:00Z",
+    "authorities": [
+      "DATASET_UPLOADER"
+    ]
   },
   "timestamp": "2025-12-01T10:00:00Z"
 }
@@ -163,7 +189,18 @@
     "realName": "测试用户",
     "phone": "13800138000",
     "email": "test@example.com",
-    "institutionId": "550e8400-e29b-41d4-a716-446655440001"
+    "institutionId": "550e8400-e29b-41d4-a716-446655440001",
+    "education": "PHD",
+    "title": "研究员",
+    "field": "生物医学",
+    "idType": "NATIONAL_ID",
+    "idNumber": "110101199003072918",
+    "supervisorId": "550e8400-e29b-41d4-a716-446655440003",
+    "createdAt": "2025-12-01T10:00:00Z",
+    "updatedAt": "2025-12-01T10:00:00Z",
+    "authorities": [
+      "DATASET_UPLOADER"
+    ]
   },
   "timestamp": "2025-12-01T10:00:00Z"
 }
@@ -200,7 +237,18 @@
     "realName": "测试用户",
     "phone": "13900139001",
     "email": "test@example.com",
-    "institutionId": "550e8400-e29b-41d4-a716-446655440001"
+    "institutionId": "550e8400-e29b-41d4-a716-446655440001",
+    "education": "PHD",
+    "title": "研究员",
+    "field": "生物医学",
+    "idType": "NATIONAL_ID",
+    "idNumber": "110101199003072918",
+    "supervisorId": "550e8400-e29b-41d4-a716-446655440003",
+    "createdAt": "2025-12-01T10:00:00Z",
+    "updatedAt": "2025-12-01T10:00:00Z",
+    "authorities": [
+      "DATASET_UPLOADER"
+    ]
   },
   "timestamp": "2025-12-01T10:00:00Z"
 }
@@ -241,7 +289,15 @@
     "institutionId": "550e8400-e29b-41d4-a716-446655440001",
     "education": "博士",
     "field": "计算机科学",
-    "title": "高级工程师"
+    "title": "高级工程师",
+    "idType": "NATIONAL_ID",
+    "idNumber": "110101199003072918",
+    "supervisorId": "550e8400-e29b-41d4-a716-446655440003",
+    "createdAt": "2025-12-01T10:00:00Z",
+    "updatedAt": "2025-12-01T10:00:00Z",
+    "authorities": [
+      "DATASET_UPLOADER"
+    ]
   },
   "timestamp": "2025-12-01T10:00:00Z"
 }
@@ -284,18 +340,19 @@
 **说明**: 
 - 平台管理员可以更新任意用户的所有信息
 - 机构管理员只能更新本机构用户的所有信息
+- 此接口接收完整的用户信息进行更新
 
 **请求体**:
 ```json
 {
   "username": "updatedUsername",
-  "email": "updated@example.com",
-  "education": "博士",
-  "field": "计算机科学",
-  "title": "高级工程师",
   "realName": "更新的真实姓名",
   "idType": "NATIONAL_ID",
-  "idNumber": "110101199003072918"
+  "idNumber": "110101199003072918",
+  "education": "PHD",
+  "title": "高级工程师",
+  "field": "计算机科学",
+  "email": "updated@example.com"
 }
 ```
 
@@ -311,11 +368,17 @@
     "phone": "13900139001",
     "email": "updated@example.com",
     "institutionId": "550e8400-e29b-41d4-a716-446655440001",
-    "education": "博士",
+    "education": "PHD",
     "field": "计算机科学",
     "title": "高级工程师",
     "idType": "NATIONAL_ID",
-    "idNumber": "110101199003072918"
+    "idNumber": "110101199003072918",
+    "supervisorId": "550e8400-e29b-41d4-a716-446655440003",
+    "createdAt": "2025-12-01T10:00:00Z",
+    "updatedAt": "2025-12-01T10:00:00Z",
+    "authorities": [
+      "DATASET_UPLOADER"
+    ]
   },
   "timestamp": "2025-12-01T10:00:00Z"
 }
@@ -377,6 +440,87 @@
 ## 13. 获取指定用户权限列表
 
 **接口地址**: `GET /api/manage/authorities/{userId}`
+
+**权限要求**: PLATFORM_ADMIN 或 INSTITUTION_SUPERVISOR 或 INSTITUTION_USER_MANAGER
+
+**路径参数**:
+- `userId`: 用户ID (UUID)
+
+**说明**: 
+- 平台管理员可以获取任意用户权限列表
+- 机构管理员只能获取本机构用户权限列表
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "获取用户权限列表成功",
+  "data": [
+    "institution_supervisor"
+  ],
+  "timestamp": "2025-12-01T10:00:00Z"
+}
+```
+
+## 14. 分页获取机构用户列表
+
+**接口地址**: `GET /api/manage/users`
+
+**权限要求**: PLATFORM_ADMIN 或 INSTITUTION_SUPERVISOR 或 INSTITUTION_USER_MANAGER
+
+**请求参数**:
+- `institutionId`: 机构ID (UUID)，平台管理员必填
+- `page`: 页码，默认为0
+- `size`: 每页大小，默认为10
+
+**说明**: 
+- 平台管理员可查看所有机构的用户，但必须提供机构ID参数
+- 机构管理员和机构用户管理员可查看本机构用户，不需要提供机构ID参数
+- 如果机构管理员提供了非本机构的机构ID，则返回权限错误
+
+**请求示例**:
+```
+GET /api/manage/users?institutionId=550e8400-e29b-41d4-a716-446655440001&page=0&size=10
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "获取用户列表成功",
+  "data": {
+    "content": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440002",
+        "username": "testuser1",
+        "realName": "测试用户1",
+        "phone": "13800138001",
+        "email": "test1@example.com",
+        "institutionId": "550e8400-e29b-41d4-a716-446655440001",
+        "education": "PHD",
+        "title": "研究员",
+        "field": "生物医学",
+        "idType": "NATIONAL_ID",
+        "idNumber": "110101199003072918",
+        "supervisorId": "550e8400-e29b-41d4-a716-446655440003",
+        "createdAt": "2025-12-01T10:00:00Z",
+        "updatedAt": "2025-12-01T10:00:00Z",
+        "authorities": [
+          "DATASET_UPLOADER"
+        ]
+      }
+    ],
+    "page": {
+      "size": 10,
+      "number": 0,
+      "totalElements": 1,
+      "totalPages": 1
+    }
+  },
+  "timestamp": "2025-12-01T10:00:00Z"
+}
+```
+
 
 **权限要求**: 平台管理员或机构管理员
 

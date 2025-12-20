@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Database, Calendar, Search, Download } from "lucide-react";
+import { Users, Database, Calendar, Building, User, Target, BarChart3, Eye, Star, Clock } from "lucide-react";
 import { DatasetTypes } from "@/lib/enums";
 import { formatDate } from "@/lib/utils";
 
@@ -11,11 +11,11 @@ const typeLabels = DatasetTypes;
 // Helper function to get the latest approved version
 const getLatestApprovedVersion = (versions: any[]) => {
   if (!versions || versions.length === 0) return null;
-  
+
   const approvedVersions = versions
-    .filter(version => version.approved === true)
-    .sort((a, b) => new Date(b.approvedAt).getTime() - new Date(a.approvedAt).getTime());
-    
+      .filter(version => version.approved === true)
+      .sort((a, b) => new Date(b.approvedAt).getTime() - new Date(a.approvedAt).getTime());
+
   return approvedVersions.length > 0 ? approvedVersions[0] : null;
 };
 
@@ -26,85 +26,134 @@ interface DatasetGridProps {
 
 export const DatasetGrid = ({ datasets, onDatasetClick }: DatasetGridProps) => {
   return (
-    <>
-      {datasets.map((dataset: any) => {
-        const latestApprovedVersion = getLatestApprovedVersion(dataset.versions);
-        const recordCount = latestApprovedVersion?.recordCount;
-        const variableCount = latestApprovedVersion?.variableCount;
-        
-        return (
-          <Card 
-            key={dataset.id} 
-            className="hover:shadow-md transition-shadow cursor-pointer h-full w-full max-w-lg"
-            onClick={() => onDatasetClick(dataset)}
-          >
-            <CardHeader>
-              <div className="flex items-start justify-between gap-2">
-                <CardTitle className="text-lg leading-tight truncate max-w-[400px]">
-                  {dataset.titleCn?.length > 30 ? `${dataset.titleCn.substring(0, 30)}...` : dataset.titleCn}
-                </CardTitle>
-                <div className="flex flex-col gap-1 shrink-0">
-                  <Badge variant="secondary">
-                    {typeLabels[dataset.type as keyof typeof typeLabels] || dataset.type}
-                  </Badge>
-                  {dataset.parentDatasetId && (
-                    <Badge variant="outline" className="text-xs">
-                      随访数据
-                    </Badge>
-                  )}
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-1 mt-2">
-                {(dataset.keywords || []).map((keyword: string, index: number) => (
-                  <Badge key={index} variant="outline" className="text-xs">
-                    {keyword}
-                  </Badge>
-                ))}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground line-clamp-3">
-                {dataset.description}
-              </p>
-              
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="flex items-center gap-1">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <span>{recordCount?.toLocaleString() || '-'} 条记录</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Database className="h-4 w-4 text-muted-foreground" />
-                  <span>{variableCount || '-'} 个变量</span>
-                </div>
-                <div className="flex items-center gap-1 col-span-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>采集时间 {formatDate(dataset.startDate)} 至 {formatDate(dataset.endDate)}</span>
-                </div>
-              </div>
+      <>
+        {datasets.map((dataset: any) => {
+          const latestApprovedVersion = getLatestApprovedVersion(dataset.versions);
+          const recordCount = latestApprovedVersion?.recordCount;
+          const variableCount = latestApprovedVersion?.variableCount;
 
-              <div className="flex items-center justify-between pt-2">
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">
-                    提供者: {dataset.provider?.realName || '未知'}
-                  </p>
-                  {dataset.dataCollectionUnit && (
-                    <p className="text-xs text-muted-foreground">
-                      采集单位: {dataset.dataCollectionUnit}
-                    </p>
+          return (
+              <Card
+                  key={dataset.id}
+                  className="hover:shadow-md transition-shadow h-full w-full max-w-lg"
+              >
+                <CardHeader>
+                  {/* 标题和类型标签 */}
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <CardTitle
+                        className="text-lg leading-tight line-clamp-2 flex-1 group-hover:text-blue-600 transition-colors"
+                        title={dataset.titleCn}
+                    >
+                      {dataset.titleCn}
+                    </CardTitle>
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                      <Badge className="bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200">
+                        {typeLabels[dataset.type as keyof typeof typeLabels] || dataset.type}
+                      </Badge>
+                      {dataset.parentDatasetId && (
+                          <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                            随访数据
+                          </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 研究领域 */}
+                  {dataset.subjectArea?.name && (
+                      <div className="mt-5 flex items-center gap-2">
+                        <Target className="h-3.5 w-3.5 text-green-600" />
+                        <span className="text-sm font-medium text-gray-700">{dataset.subjectArea.name}</span>
+                      </div>
                   )}
-                  <p className="text-xs text-muted-foreground">
-                    发布于 {formatDate(dataset.currentVersionDate || dataset.createdAt)}
-                  </p>
-                </div>
-                <Button size="sm" variant="outline" className="gap-2">
-                  <Database className="h-4 w-4" />
-                  查看详情
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </>
+
+                  {/* 关键词标签 */}
+                  <div className="flex flex-wrap gap-2">
+                    {(dataset.keywords?.slice(0, 3) || []).map((keyword: string, index: number) => (
+                        <Badge key={index} variant="outline" className="text-xs bg-gray-50">
+                          {keyword.length > 12 ? `${keyword.substring(0, 12)}...` : keyword}
+                        </Badge>
+                    ))}
+                    {dataset.keywords && dataset.keywords.length > 3 && (
+                        <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600">
+                          +{dataset.keywords.length - 3}
+                        </Badge>
+                    )}
+                  </div>
+                </CardHeader>
+
+                <CardContent className="space-y-4">
+                  {/* 描述 */}
+                  <div className="space-y-2 h-[65px]">
+                    <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
+                      {dataset.description || "暂无描述信息"}
+                    </p>
+                  </div>
+
+                  {/* 核心数据指标 */}
+                  <div className="grid grid-cols-2 gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1 mb-1">
+                        <Users className="h-4 w-4 text-blue-600" />
+                        <span className="font-semibold text-gray-800">{recordCount?.toLocaleString() || '-'}</span>
+                      </div>
+                      <span className="text-xs text-gray-600">样本记录</span>
+                    </div>
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1 mb-1">
+                        <Database className="h-4 w-4 text-green-600" />
+                        <span className="font-semibold text-gray-800">{variableCount || '-'}</span>
+                      </div>
+                      <span className="text-xs text-gray-600">研究变量</span>
+                    </div>
+                  </div>
+
+                  {/* 详细信息 */}
+                  <div className="space-y-2 text-sm">
+                    {/* 采集时间 */}
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Calendar className="h-3.5 w-3.5 text-blue-500" />
+                      <span>采集时间: {formatDate(dataset.startDate)} 至 {formatDate(dataset.endDate)}</span>
+                    </div>
+
+                    {/* 采集单位 */}
+                    {dataset.dataCollectionUnit && (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Building className="h-3.5 w-3.5 text-purple-500" />
+                          <span>采集单位: {dataset.dataCollectionUnit}</span>
+                        </div>
+                    )}
+
+                    {/* 数据集负责人信息 */}
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <User className="h-3.5 w-3.5 text-green-500" />
+                      <span>数据集负责人: {dataset.datasetLeader || '未指定'}</span>
+                    </div>
+                  </div>
+
+                  {/* 底部信息栏 */}
+                  <div className="flex items-center justify-between pt-3 border-t">
+                    <div className="space-y-1 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <span>提供者: {dataset.provider?.realName || '未知'}</span>
+                        <span>•</span>
+                        <span>近期访问: {dataset.searchCount || 0}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        <span>更新: {formatDate(dataset.currentVersionDate || dataset.updatedAt)}</span>
+                      </div>
+                    </div>
+
+                    <Button size="sm" variant="outline" className="gap-2"
+                            onClick={() => onDatasetClick(dataset)}>
+                      <BarChart3 className="h-4 w-4" />
+                      查看详情
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+          );
+        })}
+      </>
   );
 };

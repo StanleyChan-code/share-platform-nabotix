@@ -84,13 +84,13 @@ export function ResearchDirectionChart() {
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis 
                 dataKey="name" 
-                fontSize={12}
+                fontSize={14}
                 tickLine={false}
                 axisLine={false}
                 className="text-muted-foreground"
               />
               <YAxis 
-                fontSize={12}
+                fontSize={14}
                 tickLine={false}
                 axisLine={false}
                 className="text-muted-foreground"

@@ -50,3 +50,21 @@ export const OutputTypes = {
   SOFTWARE_COPYRIGHT: "软件著作权",
   OTHER_AWARD: "其他奖项"
 } as const;
+
+// 证件类型枚举
+export const ID_TYPES = {
+  NATIONAL_ID: "身份证",
+  PASSPORT: "护照",
+  OTHER: "其他证件"
+} as const;
+
+// 教育程度枚举
+export const EDUCATION_LEVELS = {
+  BACHELOR: "本科",
+  MASTER: "硕士",
+  PHD: "博士",
+  POSTDOC: "博士后",
+  PROFESSOR: "教授",
+  OTHER: "其他"
+} as const;
+

@@ -396,5 +396,11 @@ export const datasetApi = {
     async deleteDataset(id: string) {
         const response = await api.delete<void>(`/datasets/${id}`);
         return response.data;
+    },
+    
+    // 获取数据集关联的已批准研究成果
+    async getApprovedResearchOutputs(datasetId: string, page: number = 0, size: number = 10) {
+        const response = await api.get<Page<any>>(`/datasets/${datasetId}/approved-research-outputs?page=${page}&size=${size}`);
+        return response.data;
     }
 };

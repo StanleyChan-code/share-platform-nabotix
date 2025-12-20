@@ -178,7 +178,7 @@ export function DatasetSelector({
                         )}
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 mt-1">
-                        <span className="truncate">发布时间: {new Date(dataset.firstPublishedDate).toLocaleDateString()}</span>
+                        <span className="truncate">发布时间: {(dataset.firstPublishedDate)}</span>
                         <span className="truncate">提供者: {dataset.datasetLeader}</span>
                         <span className="truncate">采集单位: {dataset.dataCollectionUnit}</span>
                       </div>
