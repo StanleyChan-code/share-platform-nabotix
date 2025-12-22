@@ -84,7 +84,7 @@ export const DatasetGrid = ({ datasets, onDatasetClick }: DatasetGridProps) => {
                 <CardContent className="space-y-4">
                   {/* 描述 */}
                   <div className="space-y-2 h-[65px]">
-                    <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
+                    <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed whitespace-pre-line">
                       {dataset.description || "暂无描述信息"}
                     </p>
                   </div>

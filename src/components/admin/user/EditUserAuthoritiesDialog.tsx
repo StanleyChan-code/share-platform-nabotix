@@ -30,10 +30,10 @@ const EditUserAuthoritiesDialog = ({ open, onOpenChange, user, onAuthoritiesUpda
     const [saving, setSaving] = useState(false);
 
     // 定义管理员角色
-    const adminRoles = [PermissionRoles.PLATFORM_ADMIN, PermissionRoles.INSTITUTION_SUPERVISOR];
+    const adminRoles: string[] = [PermissionRoles.PLATFORM_ADMIN, PermissionRoles.INSTITUTION_SUPERVISOR];
 
     // 定义普通角色
-    const normalRoles = [
+    const normalRoles: string[] = [
         PermissionRoles.INSTITUTION_USER_MANAGER,
         PermissionRoles.DATASET_UPLOADER,
         PermissionRoles.DATASET_APPROVER,
@@ -42,12 +42,12 @@ const EditUserAuthoritiesDialog = ({ open, onOpenChange, user, onAuthoritiesUpda
 
     // 检查是否是管理员角色
     const isAdminRole = (roleId: string) => {
-        return adminRoles.includes(roleId as PermissionRoles);
+        return adminRoles.includes(roleId);
     };
 
     // 检查是否是普通角色
     const isNormalRole = (roleId: string) => {
-        return normalRoles.includes(roleId as PermissionRoles);
+        return normalRoles.includes(roleId);
     };
 
     // 检查当前是否选择了管理员角色
@@ -256,6 +256,9 @@ const EditUserAuthoritiesDialog = ({ open, onOpenChange, user, onAuthoritiesUpda
                     </div>
                 )}
 
+                <div className="text-sm text-muted-foreground">
+                    <p>注意：修改权限后需要重新登录</p>
+                </div>
                 <div className="flex justify-end space-x-2 mt-4">
                     <Button
                         type="button"

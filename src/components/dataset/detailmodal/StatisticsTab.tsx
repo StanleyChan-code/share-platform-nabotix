@@ -1,13 +1,14 @@
-import React, { useMemo, useState } from 'react';
-import { Download, ChevronDown, ChevronRight, Layers, Eye, EyeOff, Filter } from 'lucide-react';
+import React, {useEffect, useMemo, useState} from 'react';
+import {CheckCircle, ChevronDown, ChevronRight, ClockIcon, Download, Filter, Layers, XCircle} from 'lucide-react';
 import Papa from 'papaparse';
 import {toast} from "@/hooks/use-toast.ts";
+import {DatasetVersion} from '@/integrations/api/datasetApi.ts';
+import {getDatasetStatisticsByVersionId} from '@/integrations/api/statisticsApi.ts';
+import pako from 'pako';
 
 interface StatisticsTabProps {
-    stats: ColumnStats[];
-    demographicFields: any[];
-    outcomeFields: any[];
-    totalRows: number;
+    versions?: DatasetVersion[]; // 添加可选的版本信息
+    onVersionChange?: (versionId: string) => void; // 添加版本变化回调
 }
 
 export interface CategoryDistribution {
@@ -36,14 +37,96 @@ interface ColumnStats {
 }
 
 export function StatisticsTab({
-                                  stats,
-                                  demographicFields,
-                                  outcomeFields,
-                                  totalRows
+                                  versions,
+                                  onVersionChange
                               }: StatisticsTabProps) {
+    const [stats, setStats] = useState<ColumnStats[]>([]);
+    const [totalRows, setTotalRows] = useState<number>(0);
+    const [loading, setLoading] = useState<boolean>(false);
     const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
     const [hiddenVariables, setHiddenVariables] = useState<Set<string>>(new Set());
     const [showFilter, setShowFilter] = useState(false);
+    const [selectedVersion, setSelectedVersion] = useState<any>(null);
+
+    // 获取最新审核通过的版本
+    const getLatestApprovedVersion = (versions: any[]) => {
+        if (!versions || versions.length === 0) return null;
+
+        const approvedVersions = versions
+            .filter(version => version.approved === true)
+            .sort((a, b) => new Date(b.approvedAt).getTime() - new Date(a.approvedAt).getTime());
+
+        return approvedVersions.length > 0 ? approvedVersions[0] : null;
+    };
+
+    // 在 useEffect 中设置选中的版本，避免在渲染过程中设置状态
+    useEffect(() => {
+        if (versions && versions.length > 0) {
+            const latestApproved = getLatestApprovedVersion(versions);
+            setSelectedVersion(latestApproved);
+        } else {
+            setSelectedVersion(null);
+        }
+    }, [versions]);
+
+    // 当选中的版本发生变化时，重新获取统计数据
+    useEffect(() => {
+        const fetchStatistics = async () => {
+            if (!selectedVersion) {
+                setStats([]);
+                setTotalRows(0);
+                return;
+            }
+
+            try {
+                setLoading(true);
+                // 根据版本ID获取统计数据
+                const statsResponse = await getDatasetStatisticsByVersionId(selectedVersion.id);
+
+                if (statsResponse.data.success && statsResponse.data.data.statisticalFile) {
+                    // 解码Base64编码并解压GZIP压缩的统计数据
+                    const binaryString = atob(statsResponse.data.data.statisticalFile);
+                    const compressedData = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        compressedData[i] = binaryString.charCodeAt(i);
+                    }
+
+                    // 使用pako解压GZIP数据
+                    const decompressedData = pako.inflate(compressedData, { to: 'string' });
+                    const decodedStats = JSON.parse(decompressedData);
+                    setStats(decodedStats);
+                }
+                setTotalRows(selectedVersion.recordCount || 0);
+            } catch (err) {
+                console.error('Error fetching statistics:', err);
+                toast({
+                    title: "加载失败",
+                    description: "获取统计数据时发生错误",
+                    variant: "destructive"
+                });
+                setStats([]);
+                setTotalRows(0);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchStatistics();
+    }, [selectedVersion]);
+
+    // 处理版本选择变化
+    const handleVersionChange = (versionId: string) => {
+        if (versions) {
+            const selected = versions.find(v => v.id === versionId);
+            if (selected) {
+                setSelectedVersion(selected);
+                // 调用父组件的回调函数（如果有）
+                if (onVersionChange) {
+                    onVersionChange(versionId);
+                }
+            }
+        }
+    };
 
     // Filter stats based on visibility
     const visibleStats = useMemo(() => {
@@ -181,8 +264,77 @@ export function StatisticsTab({
         return a.localeCompare(b);
     });
 
+    if (loading) {
+        return (
+            <div className="w-full space-y-6 flex items-center justify-center h-64">
+                <p className="text-muted-foreground">正在加载统计数据...</p>
+            </div>
+        );
+    }
+
     return (
         <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* 版本选择器 - 仅在提供了版本信息时显示 */}
+            {versions && versions.length > 0 && (
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <h3 className="font-medium text-gray-900">统计数据版本选择</h3>
+                            <p className="text-sm text-gray-500 mt-1">
+                                选择要查看统计数据的版本
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <select
+                                value={selectedVersion?.id || ""}
+                                onChange={(e) => handleVersionChange(e.target.value)}
+                                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                                {[...versions]
+                                    .sort((a, b) =>
+                                        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                                    )
+                                    .map((version) => (
+                                        <option key={version.id} value={version.id}>
+                                            版本 {version.versionNumber} ({new Date(version.createdAt).toLocaleDateString()})
+                                        </option>
+                                    ))}
+                            </select>
+
+                            {/* 版本状态指示器 */}
+                            {selectedVersion && (
+                                <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-md border border-gray-200">
+                                    {selectedVersion.approved === true ? (
+                                        <>
+                                            <CheckCircle className="h-4 w-4 text-green-500" />
+                                            <span className="text-sm font-medium text-green-700">已审核</span>
+                                        </>
+                                    ) : selectedVersion.approved === false ? (
+                                        <>
+                                            <XCircle className="h-4 w-4 text-red-500" />
+                                            <span className="text-sm font-medium text-red-700">已拒绝</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <ClockIcon className="h-4 w-4 text-yellow-500" />
+                                            <span className="text-sm font-medium text-yellow-700">待审核</span>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 当前版本信息展示 */}
+            {selectedVersion && (
+                <div className="bg-blue-50 p-3 rounded-md border border-blue-200">
+                    <p className="text-sm font-medium text-blue-800">
+                        当前版本: {selectedVersion.versionNumber}
+                    </p>
+                </div>
+            )}
 
             {/* Controls Container */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
@@ -246,8 +398,8 @@ export function StatisticsTab({
                                                 className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                                             />
                                             <span className={`truncate ${isHidden ? 'text-slate-400' : 'text-slate-700'}`} title={s.variable}>
-                          {s.variable}
-                        </span>
+                                                {s.variable}
+                                            </span>
                                         </label>
                                     );
                                 })}
@@ -279,8 +431,8 @@ export function StatisticsTab({
                                     <span className="bg-slate-200 text-slate-600 text-xs px-2 py-0.5 rounded-full font-medium">{count}</span>
                                 </div>
                                 <span className="text-xs text-slate-400 font-medium">
-                  {isCollapsed ? '展开' : '收起'}
-                </span>
+                                    {isCollapsed ? '展开' : '收起'}
+                                </span>
                             </button>
 
                             {!isCollapsed && (
@@ -346,9 +498,9 @@ export function StatisticsTab({
                                                             <div className="space-y-1">
                                                                 {row.categoryDistribution?.map((cat, i) => (
                                                                     <div key={i} className="flex items-center justify-between text-xs group">
-                                      <span className="text-slate-700 truncate max-w-[180px] bg-slate-100 px-1.5 py-0.5 rounded" title={cat.name}>
-                                        {cat.name}
-                                      </span>
+                                                                        <span className="text-slate-700 truncate max-w-[180px] bg-slate-100 px-1.5 py-0.5 rounded" title={cat.name}>
+                                                                            {cat.name}
+                                                                        </span>
                                                                         <div className="flex items-center gap-2">
                                                                             <span className="text-slate-400 text-[10px] tabular-nums">({cat.count})</span>
                                                                             <span className="font-medium text-indigo-600 w-12 text-right">{cat.percentage}</span>

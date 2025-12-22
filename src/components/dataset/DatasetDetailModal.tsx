@@ -40,10 +40,6 @@ export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuer
     const [error, setError] = useState<string | null>(null);
     const [institution, setInstitution] = useState<any>(null);
     const [versions, setVersions] = useState<any[]>([]);
-    const [statistics, setStatistics] = useState<any[]>([]);
-    const [totalRows, setTotalRows] = useState<number>(0);
-    const [demographicFields, setDemographicFields] = useState<any[]>([]);
-    const [outcomeFields, setOutcomeFields] = useState<any[]>([]);
     const [parentDataset, setParentDataset] = useState<Dataset>(null);
     const [followUpModals, setFollowUpModals] = useState<{ [key: string]: boolean }>({}); // 管理随访数据集对话框
     const [selectedStatVersion, setSelectedStatVersion] = useState<DatasetVersion | null>(null); // 新增状态用于跟踪选中的统计数据版本
@@ -115,10 +111,6 @@ export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuer
             // Reset all state to initial values
             setDetailDataset(null);
             setVersions([]);
-            setStatistics([]);
-            setTotalRows(0);
-            setDemographicFields([]);
-            setOutcomeFields([]);
             setInstitution(null);
             setParentDataset(null);
             setError(null);
@@ -126,52 +118,6 @@ export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuer
             setSelectedStatVersion(null); // 重置选中的统计数据版本
         }
     }, [open]);
-
-    // 当数据集详情加载完成时，获取统计数据
-    useEffect(() => {
-        const fetchStatistics = async () => {
-            if (!detailDataset) return;
-
-            try {
-                let version;
-                if (useAdvancedQuery && detailDataset.versions && detailDataset.versions.length > 0) {
-                    // 如果使用高级查询且有选中的统计版本，则使用选中的版本
-                    version = selectedStatVersion || detailDataset.versions[detailDataset.versions.length-1];
-                } else {
-                    // 获取最新批准的版本
-                    const latestApprovedVersion = getLatestApprovedVersion(detailDataset.versions);
-                    if (!latestApprovedVersion) return;
-                    version = latestApprovedVersion;
-                }
-
-                // 根据版本ID获取统计数据
-                const statsResponse = await getDatasetStatisticsByVersionId(version.id);
-
-                if (statsResponse.data.success && statsResponse.data.data.statisticalFile) {
-                    // 解码Base64编码并解压GZIP压缩的统计数据
-                    const binaryString = atob(statsResponse.data.data.statisticalFile);
-                    const compressedData = new Uint8Array(binaryString.length);
-                    for (let i = 0; i < binaryString.length; i++) {
-                        compressedData[i] = binaryString.charCodeAt(i);
-                    }
-
-                    // 使用pako解压GZIP数据
-                    const decompressedData = pako.inflate(compressedData, {to: 'string'});
-                    const decodedStats = JSON.parse(decompressedData);
-                    setStatistics(decodedStats);
-                }
-                setTotalRows(version.recordCount);
-                // 设置人口统计学和结果字段
-                setDemographicFields(detailDataset.demographicFields || []);
-                setOutcomeFields(detailDataset.outcomeFields || []);
-            } catch (err) {
-                console.error('Error fetching statistics:', err);
-                // 即使统计数据获取失败，也不应该阻止其他内容显示
-            }
-        };
-
-        fetchStatistics();
-    }, [detailDataset, selectedStatVersion]); // 添加 selectedStatVersion 作为依赖项
 
     // Fetch institution information when we have the dataset provider ID
     useEffect(() => {
@@ -202,14 +148,6 @@ export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuer
     const latestApprovedVersion = getLatestApprovedVersion(currentDataset.versions);
     const recordCount = latestApprovedVersion?.recordCount;
     const variableCount = latestApprovedVersion?.variableCount;
-
-    // 处理统计数据版本选择
-    const handleStatVersionChange = (versionId: string) => {
-        const version = currentDataset.versions.find((v: DatasetVersion) => v.id === versionId);
-        if (version) {
-            setSelectedStatVersion(version);
-        }
-    };
 
     if (loading) {
         return (
@@ -259,12 +197,6 @@ export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuer
         });
     };
 
-    // 获取当前选中的统计版本，如果没有则默认为最后一个版本（针对高级查询）或者最新的已批准版本
-    const currentStatVersion = useAdvancedQuery 
-        ? (selectedStatVersion || (currentDataset.versions && currentDataset.versions.length > 0 
-            ? currentDataset.versions[currentDataset.versions.length - 1] 
-            : null))
-        : latestApprovedVersion;
 
     return (
         <>
@@ -339,16 +271,13 @@ export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuer
                                         dataset={currentDataset}
                                         recordCount={recordCount}
                                         variableCount={variableCount}
-                                        demographicFields={demographicFields}
-                                        outcomeFields={outcomeFields}
                                         institution={institution}
                                         parentDataset={useAdvancedQuery ? parentDataset : null}
                                         useAdvancedQuery={useAdvancedQuery}
                                         onEditDataset={(updatedDataset) => {
                                             // 更新当前数据集状态
                                             setDetailDataset(updatedDataset);
-                                            // 调用回调通知数据集已更新
-                                            onDatasetUpdated?.();
+                                            onDatasetUpdated?.(); // 调用回调通知数据集已更新
                                         }}
                                     />
                                 </TabsContent>
@@ -360,65 +289,8 @@ export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuer
 
                                 {/* (3) Statistics Tab */}
                                 <TabsContent value="statistics" className="space-y-4 mt-4">
-                                    {/* 版本选择器 - 仅在使用高级查询时显示 */}
-                                    {useAdvancedQuery && currentDataset.versions && currentDataset.versions.length > 0 && (
-                                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                                <div>
-                                                    <h3 className="font-medium text-gray-900">统计数据版本选择</h3>
-                                                    <p className="text-sm text-gray-500 mt-1">
-                                                        选择要查看统计数据的版本
-                                                    </p>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <select
-                                                        value={currentStatVersion?.id || ""}
-                                                        onChange={(e) => handleStatVersionChange(e.target.value)}
-                                                        className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                    >
-                                                        {currentDataset.versions
-                                                            .slice()
-                                                            .sort((a: DatasetVersion, b: DatasetVersion) => 
-                                                                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-                                                            )
-                                                            .map((version: DatasetVersion) => (
-                                                                <option key={version.id} value={version.id}>
-                                                                    版本 {version.versionNumber} ({new Date(version.createdAt).toLocaleDateString()})
-                                                                </option>
-                                                            ))}
-                                                    </select>
-                                                    
-                                                    {/* 版本状态指示器 */}
-                                                    {currentStatVersion && (
-                                                        <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-md border border-gray-200">
-                                                            {currentStatVersion.approved === true ? (
-                                                                <>
-                                                                    <CheckCircle className="h-4 w-4 text-green-500" />
-                                                                    <span className="text-sm font-medium text-green-700">已审核</span>
-                                                                </>
-                                                            ) : currentStatVersion.approved === false ? (
-                                                                <>
-                                                                    <XCircle className="h-4 w-4 text-red-500" />
-                                                                    <span className="text-sm font-medium text-red-700">已拒绝</span>
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <ClockIcon className="h-4 w-4 text-yellow-500" />
-                                                                    <span className="text-sm font-medium text-yellow-700">待审核</span>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                    
                                     <StatisticsTab
-                                        stats={statistics}
-                                        demographicFields={demographicFields}
-                                        outcomeFields={outcomeFields}
-                                        totalRows={totalRows}
+                                        versions={useAdvancedQuery ? currentDataset.versions : undefined}
                                     />
                                 </TabsContent>
 
@@ -439,7 +311,7 @@ export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuer
                                         currentVersionNumber={currentDataset.versionNumber}
                                         showAllVersions={useAdvancedQuery} // 传递参数控制是否显示所有版本
                                         useAdvancedQuery={useAdvancedQuery} // 传递参数控制是否使用高级查询
-                                        datasetId={currentDataset.id} // 传递数据集ID
+                                        dataset={currentDataset} // 传递数据集
                                         onVersionAdded={() => {
                                             // 重新加载版本信息
                                             api.get(`/datasets/${dataset.id}/versions`).then(response => {
@@ -449,7 +321,7 @@ export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuer
                                             }).catch(err => {
                                                 console.error('Error reloading versions:', err);
                                             });
-                                            
+
                                             // 调用回调通知数据集已更新
                                             onDatasetUpdated?.();
                                         }}

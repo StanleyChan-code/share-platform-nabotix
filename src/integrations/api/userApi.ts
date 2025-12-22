@@ -76,6 +76,14 @@ export const userApi = {
     return response.data;
   },
 
+  // 平台管理员获取全部用户列表（分页）
+  async getAllUsers(page: number = 0, size: number = 10) {
+    const response = await api.get<Page<User>>('/manage/users/all', {
+      params: { page, size }
+    });
+    return response.data;
+  },
+
   // 根据ID获取用户信息
   async getUserById(userId: string) {
     const response = await api.get<User>(`/manage/users/${userId}`);
@@ -97,6 +105,12 @@ export const userApi = {
   // 获取用户权限列表
   async getUserAuthorities(userId: string) {
     const response = await api.get<string[]>(`/manage/authorities/${userId}`);
+    return response.data;
+  },
+
+  // 获取系统权限列表
+  async getAvailableAuthorities() {
+    const response = await api.get<string[]>('/manage/authorities');
     return response.data;
   },
 

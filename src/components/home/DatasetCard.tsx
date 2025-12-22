@@ -47,7 +47,7 @@ export const DatasetCard = ({ dataset, showRecommendationBadge = false }: Datase
         {/* 描述 */}
         {dataset.description && (
             <p
-                className="text-sm text-gray-600 line-clamp-3 mb-4 flex-1 leading-relaxed"
+                className="text-sm text-gray-600 line-clamp-3 mb-4 flex-1 leading-relaxed  whitespace-pre-line"
                 title={dataset.description}
             >
               {dataset.description}

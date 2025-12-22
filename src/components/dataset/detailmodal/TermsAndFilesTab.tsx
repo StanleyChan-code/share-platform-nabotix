@@ -245,7 +245,7 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
             <CardContent className="space-y-6">
                 <div className="prose prose-sm max-w-none space-y-2">
                     {/* 版本选择器 - 仅在使用高级查询且存在多个版本时显示 */}
-                    {useAdvancedQuery && dataset.versions && dataset.versions.length > 0 && (
+                    {(useAdvancedQuery && dataset.versions && dataset.versions.length > 0) ? (
                         <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                                 <div>
@@ -262,7 +262,7 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
                                     >
                                         {dataset.versions
                                             .slice()
-                                            .sort((a: any, b: any) => 
+                                            .sort((a: any, b: any) =>
                                                 new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
                                             )
                                             .map((version: any) => (
@@ -271,23 +271,24 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
                                                 </option>
                                             ))}
                                     </select>
-                                    
+
                                     {/* 版本状态指示器 */}
                                     {currentVersion && (
-                                        <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-md border border-gray-200">
+                                        <div
+                                            className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-md border border-gray-200">
                                             {currentVersion.approved === true ? (
                                                 <>
-                                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                                    <CheckCircle className="h-4 w-4 text-green-500"/>
                                                     <span className="text-sm font-medium text-green-700">已审核</span>
                                                 </>
                                             ) : currentVersion.approved === false ? (
                                                 <>
-                                                    <XCircle className="h-4 w-4 text-red-500" />
+                                                    <XCircle className="h-4 w-4 text-red-500"/>
                                                     <span className="text-sm font-medium text-red-700">已拒绝</span>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <ClockIcon className="h-4 w-4 text-yellow-500" />
+                                                    <ClockIcon className="h-4 w-4 text-yellow-500"/>
                                                     <span className="text-sm font-medium text-yellow-700">待审核</span>
                                                 </>
                                             )}
@@ -296,15 +297,14 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
                                 </div>
                             </div>
                         </div>
-                    )}
-
-                    {currentVersion && (
+                    ) : currentVersion && (
                         <div className="bg-blue-50 p-3 rounded-md border border-blue-200">
                             <p className="text-sm font-medium text-blue-800">
                                 当前版本: {currentVersion.versionNumber}
                             </p>
                         </div>
                     )}
+
                     <h4 className="font-semibold mb-2">数据使用条款</h4>
                     <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
                         <li>数据仅用于学术研究，不得用于商业用途</li>
@@ -424,10 +424,10 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
                         )}
                     </div>
                 )}
-                
-                <ApplyDialog 
-                    open={applyDialogOpen} 
-                    onOpenChange={setApplyDialogOpen} 
+
+                <ApplyDialog
+                    open={applyDialogOpen}
+                    onOpenChange={setApplyDialogOpen}
                     datasetId={dataset.id}
                 />
             </CardContent>

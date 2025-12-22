@@ -13,7 +13,6 @@ import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Verify from "./pages/Verify";
-import InstitutionDashboard from "./pages/InstitutionDashboard";
 
 const queryClient = new QueryClient();
 
@@ -31,7 +30,6 @@ const App = () => (
           <Route path="/about" element={<About />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/admin" element={<Admin />} />
-          <Route path="/institution-dashboard" element={<InstitutionDashboard />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/auth/v1/verify" element={<Verify />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

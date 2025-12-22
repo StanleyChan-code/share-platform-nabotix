@@ -270,7 +270,7 @@ export function DatasetTreeView({datasets, onDatasetClick}: DatasetTreeViewProps
 
                                 {/* 描述 */}
                                 {dataset.description && (
-                                    <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+                                    <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed whitespace-pre-line">
                                         {dataset.description}
                                     </p>
                                 )}

@@ -8,11 +8,12 @@
 
 - 新增 `/api/datasets/annual` 接口用于获取每年发布数据集数量统计
 - 新增 `/api/datasets/my-approved` 接口供用户查询自己申请通过的数据集
-- 新增 `/api/datasets/with-approved-applications-and-versions` 接口用于获取拥有已审核通过申请记录且有已审核通过版本的数据集列表
+- 新增 `/api/datasets/with-approved-applications-and-versions` 接口用于获取拥有已审核通过申请记录且有已审核通过版本的数据集列表，也就是热门申请数据集列表
 - 新增 `/api/datasets/query` 接口中 `loadTimeline` 和 `onlyApproved` 参数
 - 新增 `/api/datasets/{datasetId}/approved-research-outputs` 接口用于获取与指定数据集关联的已审核研究成果列表
 - 管理接口新增高级搜索功能
 - 管理接口权限细化，增加DATASET_APPROVER角色支持
+- 在 `/api/manage/datasets/advanced` 接口中新增 `hasPendingVersion` 参数，用于筛选有待审核版本的数据集
 
 ## 1. 公共数据集接口
 
@@ -401,7 +402,7 @@
 **说明**: 
 - 用户查询自己申请通过的数据集列表，按批准时间倒序排列
 
-### 1.8 获取拥有已审核通过申请记录且有已审核通过版本的数据集列表
+### 1.8 获取已审核申请记录多少为排序的已审核的数据集列表
 
 **接口地址**: `GET /api/datasets/with-approved-applications-and-versions`
 
@@ -1023,21 +1024,22 @@
 
 **请求参数**:
 
-| 参数名                     | 类型      | 必填 | 默认值                 | 描述                                 |
-|--------------------------|---------|----|---------------------|------------------------------------|
-| institutionId            | UUID    | 否  | -                   | 机构ID                               |
-| subjectAreaId            | UUID    | 否  | -                   | 学科领域ID                             |
-| titleCnOrKey             | string  | 否  | -                   | 中文标题或关键词                           |
-| providerId               | UUID    | 否  | -                   | 提供者ID                              |
-| isTopLevel               | Boolean | 否  | -                   | 是否只显示顶级数据集                         |
-| currentVersionDateFrom   | Instant | 否  | -                   | 当前版本日期起始时间                       |
-| currentVersionDateTo     | Instant | 否  | -                   | 当前版本日期结束时间                       |
-| type                     | string  | 否  | -                   | 数据集类型 (可选值: PROJECT, COHORT, CASE_CONTROL, CROSS_SECTIONAL, OTHER) |
-| published                | Boolean | 否  | -                   | 是否已发布                              |
-| page                     | int     | 否  | 0                   | 页码                                 |
-| size                     | int     | 否  | 10                  | 每页大小                               |
-| sortBy                   | string  | 否  | currentVersionDate  | 排序字段                               |
-| sortDir                  | string  | 否  | desc                | 排序方向（asc/desc）                     |
+| 参数名                    | 类型      | 必填 | 默认值                | 描述                                                                 |
+|------------------------|---------|----|--------------------|--------------------------------------------------------------------|
+| institutionId          | UUID    | 否  | -                  | 机构ID                                                               |
+| subjectAreaId          | UUID    | 否  | -                  | 学科领域ID                                                             |
+| titleCnOrKey           | string  | 否  | -                  | 中文标题或关键词                                                           |
+| providerId             | UUID    | 否  | -                  | 提供者ID                                                              |
+| isTopLevel             | Boolean | 否  | -                  | 是否只显示基线数据集（没有父数据集的数据集）                                             |
+| currentVersionDateFrom | Instant | 否  | -                  | 当前版本日期起始时间                                                         |
+| currentVersionDateTo   | Instant | 否  | -                  | 当前版本日期结束时间                                                         |
+| type                   | string  | 否  | -                  | 数据集类型 (可选值: PROJECT, COHORT, CASE_CONTROL, CROSS_SECTIONAL, OTHER) |
+| published              | Boolean | 否  | -                  | 是否已发布                                                              |
+| hasPendingVersion      | Boolean | 否  | -                  | 是否有待审核版本（true表示只查询有待审核版本的数据集）                                      |
+| page                   | int     | 否  | 0                  | 页码                                                                 |
+| size                   | int     | 否  | 10                 | 每页大小                                                               |
+| sortBy                 | string  | 否  | currentVersionDate | 排序字段                                                               |
+| sortDir                | string  | 否  | desc               | 排序方向（asc/desc）                                                     |
 
 **说明**: 
 - 平台管理员可查询所有数据集
@@ -1045,6 +1047,7 @@
 - 数据集上传员只能查询自己上传的数据集
 - 数据集审核员可以查询数据集
 - 支持多种查询条件组合
+- `hasPendingVersion`参数用于筛选有待审核版本的数据集，方便审核员快速定位需要处理的数据集
 
 **响应示例**:
 ```json

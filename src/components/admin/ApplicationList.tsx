@@ -36,6 +36,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {getCurrentUser, getCurrentUserInfo} from "@/lib/authUtils.ts";
+import {hasPermissionRole, PermissionRoles} from "@/lib/permissionUtils.ts";
 
 interface ApplicationListProps {
     variant?: 'my-applications' | 'provider-applications' | 'pending-applications';
@@ -178,6 +180,11 @@ const ApplicationList: React.FC<ApplicationListProps> = ({
         }
     };
 
+    const hasDeletionPermission = (application: Application) => {
+        // 只有申请人本人可以删除申请记录
+        return application.applicantId === getCurrentUser().id || hasPermissionRole(PermissionRoles.PLATFORM_ADMIN);
+    };
+
     const renderApplicationItem = (application: Application) => (
         <Card key={application.id} className="hover:shadow-md transition-shadow border-l-4 border-l-primary">
             <CardHeader className="pb-3">
@@ -235,7 +242,7 @@ const ApplicationList: React.FC<ApplicationListProps> = ({
                                     <p>查看详情</p>
                                 </TooltipContent>
                             </Tooltip>
-                            {variant === 'my-applications' && (
+                            {(variant === 'my-applications' && hasDeletionPermission(application)) && (
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button

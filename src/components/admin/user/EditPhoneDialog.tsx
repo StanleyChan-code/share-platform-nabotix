@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,7 +32,7 @@ interface EditPhoneDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   user: any;
-  onPhoneUpdated: () => void;
+  onPhoneUpdated: (newPhone: string) => void;
 }
 
 const EditPhoneDialog = ({
@@ -42,6 +42,7 @@ const EditPhoneDialog = ({
   onPhoneUpdated,
 }: EditPhoneDialogProps) => {
   const { toast } = useToast();
+  const prevOpenRef = useRef(open);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -58,14 +59,24 @@ const EditPhoneDialog = ({
     }
   }, [user, form]);
 
+  // 当对话框打开状态改变时，如果是打开，则重置表单为当前手机号
+  useEffect(() => {
+    if (!prevOpenRef.current && open && user) {
+      form.reset({
+        newPhone: user.phone || "",
+      });
+    }
+    prevOpenRef.current = open;
+  }, [open, user, form]);
+
   const onSubmit = async (values: { newPhone: string }) => {
     try {
       await userApi.updatePhone(user.id, values);
       toast({
-        title: "成功",
+        title: "更新成功",
         description: "手机号更新成功",
       });
-      onPhoneUpdated();
+      onPhoneUpdated(values.newPhone);
       onOpenChange(false);
     } catch (error: any) {
       console.error("更新手机号失败:", error);
@@ -77,8 +88,16 @@ const EditPhoneDialog = ({
     }
   };
 
+  const handleClose = (open: boolean) => {
+    // 关闭对话框时重置表单
+    if (!open) {
+      form.reset({ newPhone: user?.phone || "" });
+    }
+    onOpenChange(open);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>修改手机号</DialogTitle>
@@ -98,12 +117,14 @@ const EditPhoneDialog = ({
                 </FormItem>
               )}
             />
-
+            <div className="text-sm text-muted-foreground">
+              <p>注意：修改手机号后需要重新登录</p>
+            </div>
             <div className="flex justify-end space-x-2 pt-4">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={() => handleClose(false)}
               >
                 取消
               </Button>

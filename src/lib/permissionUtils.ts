@@ -1,21 +1,24 @@
 // 权限角色枚举
+import {getCurrentUserInfo, getCurrentUserRoles} from "@/lib/authUtils.ts";
+import {useCallback} from "react";
+
 export const PermissionRoles = {
-  PLATFORM_ADMIN: 'PLATFORM_ADMIN',
-  INSTITUTION_SUPERVISOR: 'INSTITUTION_SUPERVISOR',
-  INSTITUTION_USER_MANAGER: 'INSTITUTION_USER_MANAGER',
-  DATASET_UPLOADER: 'DATASET_UPLOADER',
-  DATASET_APPROVER: 'DATASET_APPROVER',
-  RESEARCH_OUTPUT_APPROVER: 'RESEARCH_OUTPUT_APPROVER'
+    PLATFORM_ADMIN: 'PLATFORM_ADMIN',
+    INSTITUTION_SUPERVISOR: 'INSTITUTION_SUPERVISOR',
+    INSTITUTION_USER_MANAGER: 'INSTITUTION_USER_MANAGER',
+    DATASET_UPLOADER: 'DATASET_UPLOADER',
+    DATASET_APPROVER: 'DATASET_APPROVER',
+    RESEARCH_OUTPUT_APPROVER: 'RESEARCH_OUTPUT_APPROVER'
 } as const;
 
 // 权限角色中文映射
 export const PERMISSION_ROLE_DISPLAY_NAMES: Record<string, string> = {
-  'PLATFORM_ADMIN': '平台管理员',
-  'INSTITUTION_SUPERVISOR': '机构管理员',
-  'INSTITUTION_USER_MANAGER': '机构用户管理员',
-  'DATASET_UPLOADER': '数据集上传员',
-  'DATASET_APPROVER': '数据集审核员',
-  'RESEARCH_OUTPUT_APPROVER': '研究成果审核员'
+    'PLATFORM_ADMIN': '平台管理员',
+    'INSTITUTION_SUPERVISOR': '机构管理员',
+    'INSTITUTION_USER_MANAGER': '机构用户管理员',
+    'DATASET_UPLOADER': '数据集上传员',
+    'DATASET_APPROVER': '数据集审核员',
+    'RESEARCH_OUTPUT_APPROVER': '研究成果审核员'
 };
 
 /**
@@ -24,7 +27,7 @@ export const PERMISSION_ROLE_DISPLAY_NAMES: Record<string, string> = {
  * @returns 中文显示名称，如果未定义则返回原始英文名
  */
 export function getPermissionRoleDisplayName(role: string): string {
-  return PERMISSION_ROLE_DISPLAY_NAMES[role] || role;
+    return PERMISSION_ROLE_DISPLAY_NAMES[role] || role;
 }
 
 /**
@@ -33,6 +36,20 @@ export function getPermissionRoleDisplayName(role: string): string {
  * @returns 中文显示名称数组
  */
 export function getUserPermissionRoleDisplayNames(roles: string[]): string[] {
-  if (!roles) return [];
-  return roles.map(role => getPermissionRoleDisplayName(role));
+    if (!roles) return [];
+    return roles.map(role => getPermissionRoleDisplayName(role));
+}
+
+export function hasPermissionRole(checkRole: string, targetInstitutionId?: string, targetUserId?: string): boolean {
+    const roles = getCurrentUserRoles();
+    const user = getCurrentUserInfo().user;
+    if (!user || !roles) return false;
+    // 检查权限
+    return roles.includes(checkRole);
+}
+
+export function canUploadDataset(): boolean {
+    return hasPermissionRole(PermissionRoles.DATASET_UPLOADER) ||
+        hasPermissionRole(PermissionRoles.INSTITUTION_SUPERVISOR) ||
+        hasPermissionRole(PermissionRoles.PLATFORM_ADMIN);
 }

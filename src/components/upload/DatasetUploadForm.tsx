@@ -8,14 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge.tsx";
 import { Upload, Loader2, Plus, X, File, CheckCircle, XCircle, Clock as ClockIcon, Link2, ArrowRight, Info, TrendingUp, Shield, Clock, BarChart3, FileText } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
-import {toast} from "sonner";
-import FileUploader, { FileInfo, FileUploaderHandles } from "@/components/upload/FileUploader.tsx";
+import FileUploader, { FileUploaderHandles } from "@/components/upload/FileUploader.tsx";
 import { BaselineDatasetSelector } from "@/components/upload/BaselineDatasetSelector.tsx";
 import { InstitutionSelector } from "@/components/dataset/InstitutionSelector"; // 引入新组件
+import { AdminInstitutionSelector } from "@/components/admin/AdminInstitutionSelector";
 import { datasetApi } from "@/integrations/api/datasetApi.ts";
 import { institutionApi } from "@/integrations/api/institutionApi.ts";
 import { getCurrentUserRoles } from "@/lib/authUtils";
 import { PermissionRoles } from "@/lib/permissionUtils";
+import { FileInfo } from "@/integrations/api/fileApi";
+import { toast } from "sonner";
 
 interface DatasetUploadFormProps {
   onSuccess?: () => void;
@@ -47,6 +49,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
     versionDescription: '',
     applicationInstitutionIds: [] as string[],
     noInstitutionRestriction: true, // 新增字段，控制是否限制机构
+    institutionId: '' // 平台管理员可设置的数据集所属机构
   });
   const [newKeyword, setNewKeyword] = useState('');
   const [agreements, setAgreements] = useState({
@@ -185,6 +188,41 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
     e.preventDefault();
 
     // 检查必要字段是否已填写
+    if (!formData.titleCn.trim()) {
+      toast.error('请填写数据集标题');
+      return;
+    }
+
+    if (!formData.description.trim()) {
+      toast.error('请填写数据集描述');
+      return;
+    }
+
+    if (!formData.type) {
+      toast.error('请选择研究类型');
+      return;
+    }
+
+    if (!formData.datasetLeader.trim()) {
+      toast.error('请填写数据集负责人');
+      return;
+    }
+
+    if (!formData.dataCollectionUnit.trim()) {
+      toast.error('请填写数据采集单位');
+      return;
+    }
+
+    if (!formData.contactPerson.trim()) {
+      toast.error('请填写联系人');
+      return;
+    }
+
+    if (!formData.contactInfo.trim()) {
+      toast.error('请填写联系方式');
+      return;
+    }
+
     if (!formData.startDate) {
       toast.error('请填写采集开始时间');
       return;
@@ -197,6 +235,40 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
 
     if (!formData.subjectAreaId) {
       toast.error('请选择学科领域');
+      return;
+    }
+
+    if (!formData.versionNumber.trim()) {
+      toast.error('请填写版本号');
+      return;
+    }
+
+    if (!formData.versionDescription.trim()) {
+      toast.error('请填写版本描述');
+      return;
+    }
+
+    // 如果是平台管理员且没有选择指定机构，则必须选择一个机构
+    if (isPlatformAdmin() && !formData.institutionId) {
+      toast.error('请选择数据集所属机构');
+      return;
+    }
+
+    // 如果是随访数据集，必须选择基线数据集
+    if (formData.isFollowup && !formData.parentDatasetId) {
+      toast.error('请选择基线数据集');
+      return;
+    }
+
+    // 如果不限制申请机构，但选择了申请机构，则必须至少选择一个
+    if (!formData.noInstitutionRestriction && formData.applicationInstitutionIds.length === 0) {
+      toast.error('请至少选择一个开放申请机构');
+      return;
+    }
+
+    // 关键词至少需要一个
+    if (formData.keywords.length === 0) {
+      toast.error('请至少添加一个关键词');
       return;
     }
 
@@ -263,16 +335,15 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
         termsAgreementRecordId: termsFileInfo.id,
         dataSharingRecordId: sharingFileInfo.id,
         recordCount: 0,
-        variableCount: 0
+        variableCount: 0,
+        ...(isPlatformAdmin() && formData.institutionId && { institutionId: formData.institutionId })
       };
 
       const response = await datasetApi.createDataset(datasetData)
 
       if (response.success) {
-        toast({
-          title: "数据集创建成功",
-          description: "您的数据集已成功提交，正在等待审核。",
-          variant: "success"
+        toast.success("数据集创建成功", {
+          description: "您的数据集已成功提交，正在等待审核。"
         });
 
         // 重置表单
@@ -300,6 +371,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
           versionDescription: '',
           applicationInstitutionIds: [],
           noInstitutionRestriction: true,
+          institutionId: ''
         });
 
         // 重置文件上传组件
@@ -350,7 +422,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="title">数据集标题 *</Label>
+                    <Label htmlFor="title">数据集标题 <span className="text-destructive">*</span></Label>
                     <Input
                         id="title"
                         value={formData.titleCn}
@@ -361,7 +433,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="type">研究类型 *</Label>
+                    <Label htmlFor="type">研究类型 <span className="text-destructive">*</span></Label>
                     <Select value={formData.type} onValueChange={(value) =>
                         setFormData(prev => ({ ...prev, type: value }))
                     }>
@@ -382,7 +454,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="datasetLeader">数据集负责人 *</Label>
+                    <Label htmlFor="datasetLeader">数据集负责人 <span className="text-destructive">*</span></Label>
                     <Input
                         id="datasetLeader"
                         value={formData.datasetLeader}
@@ -393,7 +465,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="contactPerson">联系人 *</Label>
+                    <Label htmlFor="contactPerson">联系人 <span className="text-destructive">*</span></Label>
                     <Input
                         id="contactPerson"
                         value={formData.contactPerson}
@@ -405,7 +477,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="startDate">开始日期 *</Label>
+                      <Label htmlFor="startDate">开始日期 <span className="text-destructive">*</span></Label>
                       <Input
                           id="startDate"
                           type="date"
@@ -415,7 +487,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="endDate">结束日期 *</Label>
+                      <Label htmlFor="endDate">结束日期 <span className="text-destructive">*</span></Label>
                       <Input
                           id="endDate"
                           type="date"
@@ -427,7 +499,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="versionNumber">版本号 *</Label>
+                    <Label htmlFor="versionNumber">版本号 <span className="text-destructive">*</span></Label>
                     <Input
                         id="versionNumber"
                         value={formData.versionNumber}
@@ -440,7 +512,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="description">数据集描述 *</Label>
+                    <Label htmlFor="description">数据集描述 <span className="text-destructive">*</span></Label>
                     <Textarea
                         id="description"
                         rows={4}
@@ -452,7 +524,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="subjectAreaId">学科领域 *</Label>
+                    <Label htmlFor="subjectAreaId">学科领域 <span className="text-destructive">*</span></Label>
                     <Select
                         value={formData.subjectAreaId}
                         onValueChange={(value) => setFormData(prev => ({ ...prev, subjectAreaId: value }))}
@@ -479,7 +551,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="dataCollectionUnit">数据采集单位 *</Label>
+                    <Label htmlFor="dataCollectionUnit">数据采集单位 <span className="text-destructive">*</span></Label>
                     <Input
                         id="dataCollectionUnit"
                         value={formData.dataCollectionUnit}
@@ -490,7 +562,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="contactInfo">联系方式 *</Label>
+                    <Label htmlFor="contactInfo">联系方式 <span className="text-destructive">*</span></Label>
                     <Input
                         id="contactInfo"
                         value={formData.contactInfo}
@@ -511,7 +583,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="versionDescription">版本描述 *</Label>
+                    <Label htmlFor="versionDescription">版本描述 <span className="text-destructive">*</span></Label>
                     <Input
                         id="versionDescription"
                         value={formData.versionDescription}
@@ -548,10 +620,13 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                 </div>
 
                 {formData.isFollowup && (
-                    <BaselineDatasetSelector
-                        value={formData.parentDatasetId}
-                        onChange={(value) => setFormData(prev => ({ ...prev, parentDatasetId: value }))}
-                    />
+                    <div className="space-y-2">
+                      <Label>基线数据集 <span className="text-destructive">*</span></Label>
+                      <BaselineDatasetSelector
+                          value={formData.parentDatasetId}
+                          onChange={(value) => setFormData(prev => ({ ...prev, parentDatasetId: value }))}
+                      />
+                    </div>
                 )}
               </div>
 
@@ -565,6 +640,23 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                 />
               </div>
             </div>
+
+            {/* 机构选择 - 仅对平台管理员可见 */}
+            {isPlatformAdmin() && (
+                <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">数据集所属机构</h3>
+                    <div className="space-y-2">
+                        <Label htmlFor="institutionId">选择机构 <span className="text-destructive">*</span></Label>
+                        <AdminInstitutionSelector
+                            value={formData.institutionId}
+                            onChange={(value) => setFormData(prev => ({ ...prev, institutionId: value }))}
+                        />
+                        <p className="text-sm text-muted-foreground">
+                            作为平台管理员，您可以为数据集指定所属机构。
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* 开放申请机构设置 */}
             <div className="space-y-4">
@@ -587,18 +679,15 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                   }
                 }}
               />
-              
-              {/* 显示提示信息，仅对平台管理员可见 */}
-              {isPlatformAdmin() && (
-                <p className="text-sm text-muted-foreground">
-                  作为平台管理员，您可以指定哪些机构可以申请此数据集。如果不限制，则任何机构均可申请。
-                </p>
+
+              {!formData.noInstitutionRestriction && formData.applicationInstitutionIds.length === 0 && (
+                <p className="text-sm text-destructive">请至少选择一个开放申请机构</p>
               )}
             </div>
 
             {/* 关键词 */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">关键词</h3>
+              <h3 className="text-lg font-semibold">关键词 <span className="text-destructive">*</span></h3>
 
               <div className="flex gap-2">
                 <Input
@@ -625,6 +714,9 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                     ))}
                   </div>
               )}
+              {formData.keywords.length === 0 && (
+                <p className="text-sm text-destructive">请至少添加一个关键词</p>
+              )}
             </div>
 
             {/* 文件上传 - 优化为两列布局 */}
@@ -634,7 +726,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="dataFile">完整数据集文件 *</Label>
+                    <Label htmlFor="dataFile">完整数据集文件 <span className="text-destructive">*</span></Label>
                     <FileUploader
                         ref={dataFileRef}
                         onUploadComplete={setDataFileInfo}
@@ -649,7 +741,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="sharingFile">数据分享文件（用户申请后可下载） *</Label>
+                    <Label htmlFor="sharingFile">数据分享文件（用户申请后可下载） <span className="text-destructive">*</span></Label>
                     <FileUploader
                         ref={sharingFileRef}
                         onUploadComplete={setSharingFileInfo}
@@ -665,7 +757,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="dictFile">数据字典文件 *</Label>
+                    <Label htmlFor="dictFile">数据字典文件 <span className="text-destructive">*</span></Label>
                     <FileUploader
                         ref={dictFileRef}
                         onUploadComplete={setDictFileInfo}
@@ -679,7 +771,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="termsFile">数据使用协议 *</Label>
+                    <Label htmlFor="termsFile">数据使用协议 <span className="text-destructive">*</span></Label>
                     <FileUploader
                         ref={termsFileRef}
                         onUploadComplete={setTermsFileInfo}

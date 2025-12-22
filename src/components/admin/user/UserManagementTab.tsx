@@ -55,6 +55,7 @@ const UserManagementTab = () => {
     const [showUserInfoDialog, setShowUserInfoDialog] = useState(false);
     const [currentPage, setCurrentPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0); // 新增总元素数状态
     const [showEditUserDialog, setShowEditUserDialog] = useState(false);
     const [showEditPhoneDialog, setShowEditPhoneDialog] = useState(false);
     const [showEditAuthoritiesDialog, setShowEditAuthoritiesDialog] = useState(false);
@@ -64,7 +65,7 @@ const UserManagementTab = () => {
     const [institutionMap, setInstitutionMap] = useState<Record<string, { fullName: string }>>({});
     const {toast} = useToast();
 
-    // 检查用户是否为平台管理员并获取用户所属机构
+    // 检查用户是否为平台管理员并获取用户所属机构，同时初始化用户列表
     useEffect(() => {
         const userInfo = getCurrentUserInfo();
         if (userInfo) {
@@ -72,12 +73,22 @@ const UserManagementTab = () => {
             setIsPlatformAdmin(isPlatformAdminUser);
             setUserInstitutionId(userInfo.user.institutionId);
 
-            // 如果不是平台管理员，设置默认机构为用户所属机构
+            // 设置初始机构
             if (!isPlatformAdminUser) {
                 setSelectedInstitutionId(userInfo.user.institutionId);
             }
         }
     }, []);
+
+    // 自动获取用户列表
+    useEffect(() => {
+        // 平台管理员：可以立即获取（不选机构时获取所有用户）
+        // 非平台管理员：需要等待机构设置
+        if (isPlatformAdmin || selectedInstitutionId) {
+            setCurrentPage(0);
+            fetchUsers(0);
+        }
+    }, [isPlatformAdmin, selectedInstitutionId]);
 
     // 获取机构详细信息
     const fetchInstitutionDetails = async (institutionId: string) => {
@@ -102,7 +113,7 @@ const UserManagementTab = () => {
     };
 
     const fetchUsers = async (page: number = 0) => {
-        if (!selectedInstitutionId) {
+        if (!selectedInstitutionId && !isPlatformAdmin) {
             setUsers([]);
             setUserRoles({});
             return;
@@ -112,11 +123,20 @@ const UserManagementTab = () => {
         try {
             // 获取用户列表
             const size = 5;
-            const response = await userApi.getUsers(page, size, selectedInstitutionId);
+            let response;
+            
+            if (isPlatformAdmin && !selectedInstitutionId) {
+                // 平台管理员且未选择机构时，获取所有用户
+                response = await userApi.getAllUsers(page, size);
+            } else {
+                // 获取指定机构的用户列表
+                response = await userApi.getUsers(page, size, selectedInstitutionId!);
+            }
 
             const userList = response.data.content;
             setUsers(userList);
             setTotalPages(response.data.page.totalPages);
+            setTotalElements(response.data.page.totalElements); // 设置总元素数
 
             // 获取每个用户的角色
             const rolesMap: Record<string, string[]> = {};
@@ -147,14 +167,19 @@ const UserManagementTab = () => {
     };
 
     // 根据手机号搜索用户
-    const handleSearchByPhone = async () => {
-        if (!searchPhone.trim()) {
-            // 如果搜索框为空，清空搜索结果并重新加载用户列表
+    const handleSearchByPhone = async (phone?: string) => {
+        const searchPhoneValue = phone || searchPhone;
+        
+        // 如果搜索框为空，清空搜索结果并重新加载用户列表
+        if (!searchPhoneValue.trim()) {
             setSearchResultUser(null);
-            fetchUsers(currentPage);
+            setSearchPhone(""); // 清空搜索框
+            fetchUsers(0); // 重置到第一页
+            setCurrentPage(0);
             return;
         }
 
+        // 权限检查
         if (!isPlatformAdmin && !selectedInstitutionId) {
             toast({
                 title: "错误",
@@ -166,10 +191,13 @@ const UserManagementTab = () => {
 
         setLoading(true);
         try {
-            const apiResponse = await userApi.getUserByPhone(searchPhone);
+            const apiResponse = await userApi.getUserByPhone(searchPhoneValue);
             const user = apiResponse.data;
-            if (user !== null) {
+            
+            if (user) {
+                // 机构权限检查
                 if (isPlatformAdmin) {
+                    // 平台管理员可以查看任何用户，但显示提示
                     if (selectedInstitutionId && user.institutionId !== selectedInstitutionId) {
                         toast({
                             title: "提示",
@@ -177,20 +205,21 @@ const UserManagementTab = () => {
                         });
                     }
                 } else {
-                    // 不是平台管理员的情况下，检查用户是否属于当前用户的机构
+                    // 非平台管理员只能查看本机构用户
                     if (user.institutionId !== userInstitutionId) {
                         toast({
                             title: "提示",
                             description: "该用户不属于当前机构",
                         });
+                        setLoading(false);
                         return;
                     }
                 }
 
                 setSearchResultUser(user);
-
-                // 获取用户角色
-                const rolesMap: Record<string, string[]> = {...userRoles};
+                
+                // 更新用户角色信息
+                const rolesMap = {...userRoles};
                 try {
                     rolesMap[user.id] = getUserPermissionRoleDisplayNames(user.authorities);
                 } catch (error) {
@@ -199,7 +228,7 @@ const UserManagementTab = () => {
                 }
                 setUserRoles(rolesMap);
 
-                // 获取用户所属机构的详细信息
+                // 获取机构信息
                 if (user.institutionId && !institutionMap[user.institutionId]) {
                     fetchInstitutionDetails(user.institutionId);
                 }
@@ -207,20 +236,28 @@ const UserManagementTab = () => {
                 setSearchResultUser(null);
                 toast({
                     title: "提示",
-                    description: "未找到该手机号对应的用户或用户不属于当前机构",
+                    description: "未找到该手机号对应的用户",
                 });
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("搜索用户失败:", error);
             setSearchResultUser(null);
             toast({
                 title: "错误",
-                description: error.response.data.message || "搜索用户失败，请确认手机号是否正确",
+                description: error.response?.data?.message || "搜索用户失败，请确认手机号是否正确",
                 variant: "destructive"
             });
         } finally {
             setLoading(false);
         }
+    };
+
+    // 修改清空搜索的逻辑
+    const handleClearSearch = () => {
+        setSearchPhone("");
+        setSearchResultUser(null);
+        setCurrentPage(0);
+        fetchUsers(0);
     };
 
     // 初始化获取用户列表
@@ -281,10 +318,11 @@ const UserManagementTab = () => {
         setShowEditUserDialog(false);
     };
 
-    const handlePhoneUpdated = () => {
+    const handlePhoneUpdated = (newPhone: string) => {
         // 根据是否有搜索条件决定刷新方式
         if (searchPhone.trim()) {
-            handleSearchByPhone();
+            setSearchPhone(newPhone);
+            handleSearchByPhone(newPhone);
         } else {
             fetchUsers(currentPage);
         }
@@ -337,22 +375,6 @@ const UserManagementTab = () => {
 
     return (
         <div className="space-y-6">
-            {isPlatformAdmin && (
-                <div className="flex flex-col gap-4">
-                    <div>
-                        <h3 className="text-lg font-medium">选择机构</h3>
-                        <p className="text-sm text-muted-foreground">
-                            请选择要管理用户的机构
-                        </p>
-                    </div>
-                    <AdminInstitutionSelector
-                        value={selectedInstitutionId}
-                        onChange={setSelectedInstitutionId}
-                        placeholder="选择要管理的机构"
-                    />
-                </div>
-            )}
-
             <Card>
                 <CardHeader>
                     <CardTitle>用户管理</CardTitle>
@@ -361,7 +383,15 @@ const UserManagementTab = () => {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-
+                    {isPlatformAdmin && (
+                        <div className="mb-6 p-4 border rounded-lg bg-muted/50">
+                            <AdminInstitutionSelector
+                                value={selectedInstitutionId}
+                                onChange={setSelectedInstitutionId}
+                                placeholder="选择要管理的机构（可选）"
+                            />
+                        </div>
+                    )}
                     <div className="mb-4 flex justify-between items-center">
                         {/* 添加手机号搜索框 */}
                         <div className="mb-4 flex gap-2 max-w-lg">
@@ -370,7 +400,13 @@ const UserManagementTab = () => {
                                 <Input
                                     placeholder="输入完整手机号搜索用户"
                                     value={searchPhone}
-                                    onChange={(e) => setSearchPhone(e.target.value)}
+                                    onChange={(e) => {
+                                        setSearchPhone(e.target.value);
+                                        // 如果清空搜索框，立即清空搜索结果
+                                        if (!e.target.value.trim()) {
+                                            handleClearSearch();
+                                        }
+                                    }}
                                     className="pl-8"
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter') {
@@ -379,15 +415,17 @@ const UserManagementTab = () => {
                                     }}
                                 />
                             </div>
-                            <Button onClick={handleSearchByPhone}>搜索</Button>
+                            <Button 
+                                onClick={() => handleSearchByPhone()}
+                                disabled={loading || !searchPhone.trim()}
+                            >
+                                {loading ? "搜索中..." : "搜索"}
+                            </Button>
                             {(searchResultUser || searchPhone) && (
                                 <Button
                                     variant="outline"
-                                    onClick={() => {
-                                        setSearchPhone("");
-                                        setSearchResultUser(null);
-                                        fetchUsers(currentPage);
-                                    }}
+                                    onClick={handleClearSearch}
+                                    disabled={loading}
                                 >
                                     清空搜索
                                 </Button>
@@ -434,7 +472,7 @@ const UserManagementTab = () => {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>ID</TableHead>
+                                        <TableHead>姓名</TableHead>
                                         <TableHead>手机号</TableHead>
                                         <TableHead>角色</TableHead>
                                         <TableHead>注册时间</TableHead>
@@ -442,58 +480,58 @@ const UserManagementTab = () => {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {(searchResultUser ? [searchResultUser] : users)?.map((user) => (
-                                        <TableRow key={user.id}>
-                                            <TableCell className="font-medium">{user.id}</TableCell>
+                                    {searchResultUser ? (
+                                        // 显示单个搜索结果
+                                        <TableRow key={searchResultUser.id}>
+                                            {/* 表格内容保持不变 */}
+                                            <TableCell className="font-medium">{searchResultUser.realName}</TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
-                                                    {user.phone || '-'}
+                                                    {searchResultUser.phone || '-'}
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
                                                         className="p-1 h-auto"
                                                         onClick={() => {
-                                                            setSelectedUser(user);
+                                                            setSelectedUser(searchResultUser);
                                                             setShowEditPhoneDialog(true);
                                                         }}
                                                     >
-                                                        <Phone
-                                                            className="h-4 w-4 text-muted-foreground hover:text-foreground"/>
+                                                        <Phone className="h-4 w-4 text-muted-foreground hover:text-foreground"/>
                                                     </Button>
                                                 </div>
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
                                                     <div>
-                                                        {userRoles[user.id]?.map((role, index) => (
+                                                        {userRoles[searchResultUser.id]?.map((role, index) => (
                                                             <Badge key={index} variant="outline" className="mr-1">
                                                                 {getPermissionRoleDisplayName(role)}
                                                             </Badge>
                                                         ))}
                                                     </div>
-                                                    {(isPlatformAdmin || !user.authorities.includes(PermissionRoles.PLATFORM_ADMIN)) && (
+                                                    {(isPlatformAdmin || !searchResultUser.authorities.includes(PermissionRoles.PLATFORM_ADMIN)) && (
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
                                                             className="p-1 h-auto"
                                                             onClick={() => {
-                                                                setSelectedUser(user);
+                                                                setSelectedUser(searchResultUser);
                                                                 setShowEditAuthoritiesDialog(true);
                                                             }}
                                                         >
-                                                            <Shield
-                                                                className="h-4 w-4 text-muted-foreground hover:text-foreground"/>
+                                                            <Shield className="h-4 w-4 text-muted-foreground hover:text-foreground"/>
                                                         </Button>
                                                     )}
                                                 </div>
                                             </TableCell>
-                                            <TableCell>{formatDateTime(user.createdAt)}</TableCell>
+                                            <TableCell>{formatDateTime(searchResultUser.createdAt)}</TableCell>
                                             <TableCell className="flex gap-2">
-                                                <InfoDialog open={showUserInfoDialog && selectedUser?.id === user.id}
+                                                <InfoDialog open={showUserInfoDialog && selectedUser?.id === searchResultUser.id}
                                                             onOpenChange={setShowUserInfoDialog}>
                                                     <InfoDialogTrigger asChild>
                                                         <Button variant="outline" size="sm"
-                                                                onClick={() => showUserDetails(user)}>
+                                                                onClick={() => showUserDetails(searchResultUser)}>
                                                             <Eye className="h-4 w-4"/>
                                                         </Button>
                                                     </InfoDialogTrigger>
@@ -559,7 +597,7 @@ const UserManagementTab = () => {
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={() => {
-                                                        setSelectedUser(user);
+                                                        setSelectedUser(searchResultUser);
                                                         setShowEditUserDialog(true);
                                                     }}
                                                 >
@@ -567,50 +605,189 @@ const UserManagementTab = () => {
                                                 </Button>
                                             </TableCell>
                                         </TableRow>
-                                    ))}
+                                    ) : (
+                                        // 显示正常用户列表
+                                        users?.map((user) => (
+                                            <TableRow key={user.id}>
+                                                <TableCell className="font-medium">{user.realName}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        {user.phone || '-'}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="p-1 h-auto"
+                                                            onClick={() => {
+                                                                setSelectedUser(user);
+                                                                setShowEditPhoneDialog(true);
+                                                            }}
+                                                        >
+                                                            <Phone
+                                                                className="h-4 w-4 text-muted-foreground hover:text-foreground"/>
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        <div>
+                                                            {userRoles[user.id]?.map((role, index) => (
+                                                                <Badge key={index} variant="outline" className="mr-1">
+                                                                    {getPermissionRoleDisplayName(role)}
+                                                                </Badge>
+                                                            ))}
+                                                        </div>
+                                                        {(isPlatformAdmin || !user.authorities.includes(PermissionRoles.PLATFORM_ADMIN)) && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="p-1 h-auto"
+                                                                onClick={() => {
+                                                                    setSelectedUser(user);
+                                                                    setShowEditAuthoritiesDialog(true);
+                                                                }}
+                                                            >
+                                                                <Shield
+                                                                    className="h-4 w-4 text-muted-foreground hover:text-foreground"/>
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>{formatDateTime(user.createdAt)}</TableCell>
+                                                <TableCell className="flex gap-2">
+                                                    <InfoDialog open={showUserInfoDialog && selectedUser?.id === user.id}
+                                                                onOpenChange={setShowUserInfoDialog}>
+                                                        <InfoDialogTrigger asChild>
+                                                            <Button variant="outline" size="sm"
+                                                                    onClick={() => showUserDetails(user)}>
+                                                                <Eye className="h-4 w-4"/>
+                                                            </Button>
+                                                        </InfoDialogTrigger>
+                                                        <InfoDialogContent className="max-w-2xl">
+                                                            <InfoDialogHeader>
+                                                                <InfoDialogTitle>用户详细信息</InfoDialogTitle>
+                                                            </InfoDialogHeader>
+                                                            {selectedUser && (
+                                                                <div className="grid gap-4 py-4">
+                                                                    {renderInfoField("ID:", selectedUser.id)}
+                                                                    {renderInfoField("用户名:", selectedUser.username)}
+                                                                    {renderInfoField("真实姓名:", selectedUser.realName)}
+                                                                    {renderInfoField("邮箱:", selectedUser.email)}
+                                                                    {renderInfoField("手机号:", selectedUser.phone || "-")}
+                                                                    {renderInfoField(
+                                                                        "所属机构:",
+                                                                        selectedUser.institutionId
+                                                                            ? (institutionMap[selectedUser.institutionId]?.fullName || selectedUser.institutionId)
+                                                                            : "未分配"
+                                                                    )}
+                                                                    {renderInfoField("注册时间:", formatDateTime(selectedUser.createdAt))}
+                                                                    {renderInfoField(
+                                                                        "证件类型:",
+                                                                        selectedUser.idType
+                                                                            ? (ID_TYPE_DISPLAY_NAMES[selectedUser.idType] || selectedUser.idType)
+                                                                            : "未填写"
+                                                                    )}
+
+                                                                    {renderInfoField(
+                                                                        "证件号码:",
+                                                                        maskIdNumber(selectedUser.idType, selectedUser.idNumber)
+                                                                    )}
+
+                                                                    {renderInfoField(
+                                                                        "学历:",
+                                                                        selectedUser.education
+                                                                            ? (EducationLevels[selectedUser.education as keyof typeof EducationLevels] || selectedUser.education)
+                                                                            : "未填写"
+                                                                    )}
+
+                                                                    {renderInfoField("职称:", selectedUser.title || "未填写")}
+                                                                    {renderInfoField("专业领域:", selectedUser.field || "未填写")}
+
+                                                                    {/* 角色字段特殊处理 */}
+                                                                    <div className="grid grid-cols-4 items-start gap-4">
+                                                                        <span
+                                                                            className="text-right font-medium">角色:</span>
+                                                                        <div className="col-span-3">
+                                                                            {userRoles[selectedUser.id]?.map((role, index) => (
+                                                                                <Badge key={index} variant="outline"
+                                                                                       className="mr-1 mb-1">
+                                                                                    {getPermissionRoleDisplayName(role)}
+                                                                                </Badge>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </InfoDialogContent>
+                                                    </InfoDialog>
+
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            setSelectedUser(user);
+                                                            setShowEditUserDialog(true);
+                                                        }}
+                                                    >
+                                                        <Pencil className="h-4 w-4"/>
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
                                 </TableBody>
                             </Table>
-                            {/* 只有在没有搜索结果时才显示分页 */}
-                            {!searchResultUser && totalPages > 1 && (
-                                <div className="mt-6 flex justify-center">
-                                    <ReactPaginate
-                                        breakLabel="..."
-                                        nextLabel={
-                                            <span className="flex items-center gap-1">
-                                                下一页 <ChevronRightIcon className="h-4 w-4"/>
-                                            </span>
-                                        }
-                                        onPageChange={handlePageClick}
-                                        pageRangeDisplayed={3}
-                                        marginPagesDisplayed={1}
-                                        pageCount={totalPages}
-                                        previousLabel={
-                                            <span className="flex items-center gap-1">
-                                                <ChevronLeftIcon className="h-4 w-4"/> 上一页
-                                            </span>
-                                        }
-                                        renderOnZeroPageCount={null}
-                                        containerClassName="flex items-center justify-center gap-2"
-                                        pageClassName=""
-                                        pageLinkClassName="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
-                                        previousClassName=""
-                                        previousLinkClassName="flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:hover:border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
-                                        nextClassName=""
-                                        nextLinkClassName="flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:hover:border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
-                                        breakClassName=""
-                                        breakLinkClassName="flex h-10 w-10 items-center justify-center text-gray-500 dark:text-gray-400"
-                                        activeClassName=""
-                                        activeLinkClassName="!border-blue-500 !bg-blue-500 !text-white hover:!bg-blue-600 hover:!border-blue-600 dark:!border-blue-500 dark:!bg-blue-500"
-                                        disabledClassName="opacity-40 cursor-not-allowed"
-                                        disabledLinkClassName="hover:border-gray-200 hover:bg-white hover:text-gray-700 dark:hover:border-gray-700 dark:hover:bg-gray-800"
-                                        forcePage={currentPage}
-                                    />
+                            
+                            {/* 显示总数信息 */}
+                            {!searchResultUser && (
+                                <div className="mt-4 text-sm text-muted-foreground flex justify-between items-center">
+                                    <div>
+                                        共 {totalElements} 条记录
+                                    </div>
+                                    {/* 只有在没有搜索结果且总页数大于1时才显示分页 */}
+                                    {totalPages > 1 && (
+                                        <div className="flex justify-center">
+                                            <ReactPaginate
+                                                breakLabel="..."
+                                                nextLabel={
+                                                    <span className="flex items-center gap-1">
+                                                        下一页 <ChevronRightIcon className="h-4 w-4"/>
+                                                    </span>
+                                                }
+                                                onPageChange={handlePageClick}
+                                                pageRangeDisplayed={3}
+                                                marginPagesDisplayed={1}
+                                                pageCount={totalPages}
+                                                previousLabel={
+                                                    <span className="flex items-center gap-1">
+                                                        <ChevronLeftIcon className="h-4 w-4"/> 上一页
+                                                    </span>
+                                                }
+                                                renderOnZeroPageCount={null}
+                                                containerClassName="flex items-center justify-center gap-2"
+                                                pageClassName=""
+                                                pageLinkClassName="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
+                                                previousClassName=""
+                                                previousLinkClassName="flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:hover:border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
+                                                nextClassName=""
+                                                nextLinkClassName="flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:hover:border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
+                                                breakClassName=""
+                                                breakLinkClassName="flex h-10 w-10 items-center justify-center text-gray-500 dark:text-gray-400"
+                                                activeClassName=""
+                                                activeLinkClassName="!border-blue-500 !bg-blue-500 !text-white hover:!bg-blue-600 hover:!border-blue-600 dark:!border-blue-500 dark:!bg-blue-500"
+                                                disabledClassName="opacity-40 cursor-not-allowed"
+                                                disabledLinkClassName="hover:border-gray-200 hover:bg-white hover:text-gray-700 dark:hover:border-gray-700 dark:hover:bg-gray-800"
+                                                forcePage={currentPage}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </>
                     ) : (
                         <div className="text-center py-8 text-muted-foreground">
-                            请选择一个机构以查看其用户列表
+                            {isPlatformAdmin 
+                                ? "请选择一个机构以查看其用户列表，或不选择机构查看所有用户" 
+                                : "请选择一个机构以查看其用户列表"}
                         </div>
                     )}
                 </CardContent>

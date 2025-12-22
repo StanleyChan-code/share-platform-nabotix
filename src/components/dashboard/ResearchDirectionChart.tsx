@@ -16,10 +16,10 @@ export function ResearchDirectionChart() {
         setLoading(true);
         setError(null);
         
-        // 获取热门研究方向列表
+        // 获取热门研究学科列表
         const response = await getPopularSubjects();
         if (response.data.success) {
-          // 获取每个研究方向的具体热度值
+          // 获取每个研究学科的具体热度值
           const subjectsWithPopularity = await Promise.all(
             response.data.data.content.map(async (subject) => {
               try {
@@ -29,7 +29,7 @@ export function ResearchDirectionChart() {
                   searchCount
                 };
               } catch (error) {
-                console.error(`获取研究方向 ${subject.name} 的热度失败:`, error);
+                console.error(`获取研究学科 ${subject.name} 的热度失败:`, error);
                 return {
                   ...subject,
                   searchCount: 0
@@ -40,10 +40,10 @@ export function ResearchDirectionChart() {
           
           setData(subjectsWithPopularity);
         } else {
-          throw new Error(response.data.message || "获取热门研究方向失败");
+          throw new Error(response.data.message || "获取热门研究学科失败");
         }
       } catch (error) {
-        console.error("获取研究方向热度数据失败:", error);
+        console.error("获取研究学科热度数据失败:", error);
         setError("获取数据失败，显示模拟数据");
         
         // 出错时使用模拟数据
@@ -70,7 +70,7 @@ export function ResearchDirectionChart() {
   return (
     <Card className="col-span-2">
       <CardHeader>
-        <CardTitle>研究方向热度</CardTitle>
+        <CardTitle>研究学科热度</CardTitle>
         <CardDescription>按搜索频次排序的热门研究领域</CardDescription>
       </CardHeader>
       <CardContent>
@@ -102,7 +102,7 @@ export function ResearchDirectionChart() {
                   borderRadius: "6px"
                 }}
                 formatter={(value) => [value, "搜索次数"]}
-                labelFormatter={(label) => `研究方向: ${label}`}
+                labelFormatter={(label) => `研究学科: ${label}`}
               />
               <Bar 
                 dataKey="searchCount" 

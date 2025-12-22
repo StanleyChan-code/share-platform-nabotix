@@ -16,18 +16,24 @@ import {fileApi, FileInfo} from "@/integrations/api/fileApi";
 import {Download, ExternalLink, User, Calendar, FileText, Award, BookOpen} from "lucide-react";
 import {toast} from "@/hooks/use-toast.ts";
 import {DatasetDetailModal} from "@/components/dataset/DatasetDetailModal.tsx";
+import ApprovalActions from "@/components/ui/ApprovalActions.tsx";
+import {api} from "@/integrations/api/client.ts";
 
 interface OutputDetailDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     output: ResearchOutput | null;
+    canApprove?: boolean; // 是否有审核权限
+    onApprovalChange?: () => void; // 审核状态改变后的回调
+    managementMode?: boolean; // 管理模式，控制是否显示审核相关功能和文件信息
 }
 
-const OutputDetailDialog = ({open, onOpenChange, output}: OutputDetailDialogProps) => {
+const OutputDetailDialog = ({open, onOpenChange, output, canApprove = false, onApprovalChange, managementMode = false}: OutputDetailDialogProps) => {
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-    const [isAdmin, setIsAdmin] = useState<boolean>(false);
     const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
     const [isDatasetModalOpen, setIsDatasetModalOpen] = useState(false);
+    const isSubmitter = currentUserId && output.submitter && output.submitter.id === currentUserId;
+    const canViewSensitiveInfo = isSubmitter || managementMode;
 
     useEffect(() => {
         const fetchCurrentUser = async () => {
@@ -41,7 +47,7 @@ const OutputDetailDialog = ({open, onOpenChange, output}: OutputDetailDialogProp
         };
 
         const fetchFileInfo = async () => {
-            if (output?.fileId && (currentUserId && output.submitter && output.submitter.id === currentUserId || isAdmin)) {
+            if (output?.fileId && canViewSensitiveInfo) {
                 try {
                     const info = await fileApi.getFileInfo(output.fileId);
                     setFileInfo(info.data);
@@ -55,12 +61,10 @@ const OutputDetailDialog = ({open, onOpenChange, output}: OutputDetailDialogProp
             fetchCurrentUser();
             fetchFileInfo();
         }
-    }, [open, output, currentUserId, isAdmin]);
+    }, [open, output, currentUserId]);
 
     if (!output) return null;
 
-    const isSubmitter = currentUserId && output.submitter && output.submitter.id === currentUserId;
-    const canViewSensitiveInfo = isSubmitter || isAdmin;
 
     const handleDownloadFile = async () => {
         if (!output?.id || !output?.fileId) return;
@@ -69,7 +73,7 @@ const OutputDetailDialog = ({open, onOpenChange, output}: OutputDetailDialogProp
             let response;
             if (isSubmitter) {
                 response = await outputApi.downloadOutputFile(output.id, output.fileId);
-            } else if (isAdmin) {
+            } else if (output.submitter.id !== currentUserId) {
                 response = await outputApi.downloadManagedOutputFile(output.id, output.fileId);
             } else {
                 return;
@@ -109,6 +113,40 @@ const OutputDetailDialog = ({open, onOpenChange, output}: OutputDetailDialogProp
             return <Badge variant="destructive">已拒绝</Badge>;
         } else {
             return <Badge variant="secondary" className="bg-amber-100 text-amber-800 hover:bg-amber-100">待审核</Badge>;
+        }
+    };
+
+    // 处理审核操作
+    const handleApproval = async (approved: boolean, comment: string) => {
+        if (!output) return;
+        
+        try {
+            const response = await api.put(`/manage/research-outputs/${output.id}/approval`, {
+                approved,
+                rejectionReason: approved ? null : (comment || null)
+            });
+
+            if (response.data.success) {
+                toast({
+                    title: "操作成功",
+                    description: approved ? "研究成果已审核通过" : "研究成果已被拒绝"
+                });
+
+                // 触发外部状态更新
+                if (onApprovalChange) {
+                    onApprovalChange();
+                }
+                
+                // 关闭对话框
+                onOpenChange(false);
+            }
+        } catch (error: any) {
+            console.error('Approval error:', error);
+            toast({
+                title: "操作失败",
+                description: error.message || "审核操作失败，请重试",
+                variant: "destructive"
+            });
         }
     };
 
@@ -400,6 +438,40 @@ const OutputDetailDialog = ({open, onOpenChange, output}: OutputDetailDialogProp
                                                 value={output.approver.realName || output.approver.username}
                                             />
                                         )}
+                                    </div>
+                                </DetailSection>
+                            )}
+                            
+                            {/* 审核操作 */}
+                            {managementMode && canApprove && output.approved !== false && (
+                                <DetailSection title="审核操作" icon={Award}>
+                                    <div className="space-y-4">
+                                        {output.approved === null ? (
+                                            // 待审核状态：显示通过和拒绝按钮
+                                            <ApprovalActions
+                                                showCommentDialog={true}
+                                                requireCommentOnApprove={false}
+                                                requireCommentOnReject={true}
+                                                approveDialogTitle="审核通过确认"
+                                                rejectDialogTitle="审核拒绝原因"
+                                                onSuccess={handleApproval}
+                                                approveButtonText="通过"
+                                                rejectButtonText="拒绝"
+                                            />
+                                        ) : output.approved === true ? (
+                                            // 已通过状态：显示驳回通过按钮
+                                            <ApprovalActions
+                                                showCommentDialog={true}
+                                                requireCommentOnApprove={false}
+                                                requireCommentOnReject={true}
+                                                approveDialogTitle="审核通过确认"
+                                                rejectDialogTitle="驳回通过原因"
+                                                onSuccess={(approved, comment) => handleApproval(approved, comment)}
+                                                approveButtonText="通过"
+                                                rejectButtonText="驳回通过"
+                                                showRevokeApprovalButton={true}
+                                            />
+                                        ) : null}
                                     </div>
                                 </DetailSection>
                             )}

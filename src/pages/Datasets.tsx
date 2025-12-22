@@ -1,7 +1,6 @@
 import {Navigation} from "@/components/Navigation";
 import {Card, CardContent} from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
-import {DatasetUpload} from "@/components/upload/DatasetUpload";
 import {Upload, List, Grid, Database} from "lucide-react";
 import {useState, useEffect, useCallback} from "react";
 import {DatasetDetailModal} from "@/components/dataset/DatasetDetailModal";
@@ -15,7 +14,6 @@ import {datasetApi} from "@/integrations/api/datasetApi";
 import {ScrollArea} from "@radix-ui/react-scroll-area";
 import PaginatedList from "@/components/ui/PaginatedList";
 import { getCurrentUserRoles } from "@/lib/authUtils";
-import { PermissionRoles } from "@/lib/permissionUtils";
 import { useNavigate } from "react-router-dom";
 
 // Type mappings for database enum values
@@ -27,7 +25,6 @@ const Datasets = () => {
     const [selectedCategory, setSelectedCategory] = useState("all");
     const [dateFrom, setDateFrom] = useState<Date | undefined>();
     const [dateTo, setDateTo] = useState<Date | undefined>();
-    const [showUpload, setShowUpload] = useState(false);
     const [selectedDataset, setSelectedDataset] = useState(null);
     const [showDetail, setShowDetail] = useState(false);
     const [viewMode, setViewMode] = useState<'grid' | 'tree'>('grid');
@@ -43,18 +40,6 @@ const Datasets = () => {
         const roles = getCurrentUserRoles();
         setUserRoles(roles);
     }, []);
-
-    // Check if user has permission to upload datasets
-    const canUploadDataset = useCallback(() => {
-        return userRoles.includes(PermissionRoles.PLATFORM_ADMIN) || 
-               userRoles.includes(PermissionRoles.INSTITUTION_SUPERVISOR) || 
-               userRoles.includes(PermissionRoles.DATASET_UPLOADER);
-    }, [userRoles]);
-
-    // Check if user is platform admin
-    const isPlatformAdmin = useCallback(() => {
-        return userRoles.includes(PermissionRoles.PLATFORM_ADMIN);
-    }, [userRoles]);
 
     // Listen for custom event to open dataset detail
     useEffect(() => {
@@ -182,18 +167,7 @@ const Datasets = () => {
                             浏览已发布的临床研究数据集，支持按研究类型、学科领域筛选查找
                         </p>
                     </div>
-                    {canUploadDataset() && (
-                        <Button onClick={() => navigate('/profile?tab=datasets')} className="gap-2">
-                            <Database className="h-4 w-4"/>
-                            我的数据集
-                        </Button>
-                    )}
                 </div>
-
-                {/* Upload Component */}
-                {showUpload && (
-                    <DatasetUpload onSuccess={() => setShowUpload(false)} />
-                )}
 
                 {/* Annual Chart */}
                 {annualLoading ? (
@@ -298,7 +272,7 @@ const Datasets = () => {
                     dataset={selectedDataset}
                     open={showDetail}
                     onOpenChange={setShowDetail}
-                    useAdvancedQuery={isPlatformAdmin()} // Pass advanced query flag based on user role
+                    useAdvancedQuery={false}
                 />
             </main>
         </div>

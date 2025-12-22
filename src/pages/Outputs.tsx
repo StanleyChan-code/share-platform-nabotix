@@ -5,7 +5,21 @@ import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
-import {FileText,Database,User,Hash ,Trophy, Target,Code  ,Calendar , Award, BookOpen, ExternalLink, Search} from "lucide-react";
+import {
+    FileText,
+    Database,
+    User,
+    Hash,
+    Trophy,
+    Target,
+    Code,
+    Calendar,
+    Award,
+    BookOpen,
+    ExternalLink,
+    Search,
+    Star, Download, Eye
+} from "lucide-react";
 import {useState, useEffect, useCallback} from "react";
 import SubmitOutputDialog from "@/components/outputs/SubmitOutputDialog";
 import OutputDetailDialog from "@/components/outputs/OutputDetailDialog";
@@ -248,28 +262,6 @@ const Outputs = () => {
                                     <span className="whitespace-nowrap">{formatDate(output.createdAt)}</span>
                                 </div>
                             </div>
-                        </div>
-
-                        {/* 额外信息展示 */}
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
-                            {output.citations && output.citations > 0 && (
-                                <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-full">
-                                    <Star className="h-3 w-3 text-amber-500" />
-                                    <span className="font-medium">被引用 {output.citations} 次</span>
-                                </div>
-                            )}
-                            {output.downloadCount !== undefined && output.downloadCount > 0 && (
-                                <div className="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-full">
-                                    <Download className="h-3 w-3 text-blue-500" />
-                                    <span className="font-medium">下载 {output.downloadCount} 次</span>
-                                </div>
-                            )}
-                            {output.viewCount !== undefined && output.viewCount > 0 && (
-                                <div className="flex items-center gap-1 bg-green-50 px-2 py-1 rounded-full">
-                                    <Eye className="h-3 w-3 text-green-500" />
-                                    <span className="font-medium">浏览 {output.viewCount} 次</span>
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>

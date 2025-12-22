@@ -13,6 +13,7 @@
 - 在公共接口的 `/api/research-outputs/public` 接口中新增 keyword 和 submitterId 参数
 - 在管理接口中新增 `/api/manage/research-outputs/{id}/files/{fileId}` 接口用于管理员下载研究成果文件
 - 将研究成果的引用次数(citationCount)字段替换为成果价值(value)字段
+- 在管理接口的 `/api/manage/research-outputs` 接口中新增 institutionId、title 参数用于增强查询功能
 
 ## 1. 公共研究成果接口
 
@@ -589,13 +590,15 @@
 
 **请求参数**:
 
-| 参数名     | 类型     | 必填 | 默认值       | 描述                                 |
-|---------|--------|----|-----------|------------------------------------|
-| status  | string | 否  | -         | 状态筛选（all/pending/processed/denied） |
-| page    | int    | 否  | 0         | 页码                                 |
-| size    | int    | 否  | 10        | 每页大小                               |
-| sortBy  | string | 否  | createdAt | 排序字段                               |
-| sortDir | string | 否  | desc      | 排序方向（asc/desc）                     |
+| 参数名        | 类型     | 必填 | 默认值       | 描述                                               |
+|------------|--------|----|-----------|--------------------------------------------------|
+| status     | string | 否  | -         | 状态筛选（all/pending/processed/denied）               |
+| institutionId | UUID   | 否  | -         | 机构ID（仅PLATFORM_ADMIN可用，其他用户自动使用所属机构ID）     |
+| title      | string | 否  | -         | 成果标题关键词，用于模糊搜索                                 |
+| page       | int    | 否  | 0         | 页码                                               |
+| size       | int    | 否  | 10        | 每页大小                                             |
+| sortBy     | string | 否  | createdAt | 排序字段                                             |
+| sortDir    | string | 否  | desc      | 排序方向（asc/desc）                                   |
 
 **说明**: 
 - 平台管理员可以查看所有研究成果
@@ -604,6 +607,9 @@
 - 当status为pending时，查询待审核的研究成果（approved=null）
 - 当status为processed时，查询审核通过的研究成果（approved=true）
 - 当status为denied时，查询审核拒绝的研究成果（approved=false）
+- institutionId参数仅平台管理员可用，用于筛选特定机构的研究成果
+- title参数用于模糊搜索研究成果标题
+- 可以组合使用多个参数进行筛选，例如同时指定status和title参数
 
 **响应示例**:
 ```json

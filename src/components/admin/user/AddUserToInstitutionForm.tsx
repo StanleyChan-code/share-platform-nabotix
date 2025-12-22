@@ -47,6 +47,11 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
         setSelectedInstitutionId(propInstitutionId);
       }
     }
+    
+    // 组件卸载时清理状态
+    return () => {
+      resetForm();
+    };
   }, [propInstitutionId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -134,6 +139,17 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
       toast({
         title: "错误",
         description: "请输入正确的手机号码",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
+    // 检查证件信息
+    if (!formData.idType || !formData.idNumber) {
+      toast({
+        title: "错误",
+        description: "请填写证件类型和证件号码",
         variant: "destructive",
       });
       setLoading(false);
@@ -248,21 +264,21 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
       ]
     },
     {
+      title: "身份信息（必填）",
+      icon: IdCard,
+      required: true,
+      fields: [
+        { name: "idType", label: "证件类型", icon: IdCard, required: true, type: "select", options: idTypeOptions },
+        { name: "idNumber", label: "证件号码", icon: IdCard, required: true, type: "text" },
+      ]
+    },
+    {
       title: "账户信息（选填）",
       icon: User,
       required: false,
       fields: [
         { name: "username", label: "用户名", icon: User, required: false, type: "text" },
         { name: "email", label: "邮箱地址", icon: Mail, required: false, type: "email" },
-      ]
-    },
-    {
-      title: "身份信息（选填）",
-      icon: IdCard,
-      required: false,
-      fields: [
-        { name: "idType", label: "证件类型", icon: IdCard, required: false, type: "select", options: idTypeOptions },
-        { name: "idNumber", label: "证件号码", icon: IdCard, required: false, type: "text" },
       ]
     },
     {
@@ -476,7 +492,7 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
 
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t">
                 <div className="text-xs text-muted-foreground space-y-1">
-                  <div>必填字段：真实姓名、手机号{isPlatformAdmin && '、所属机构'}</div>
+                  <div>必填字段：真实姓名、手机号、证件类型、证件号码{isPlatformAdmin && '、所属机构'}</div>
                   <div>初始密码：123456（用户首次登录后建议修改）</div>
                 </div>
                 <div className="flex gap-2">

@@ -11,6 +11,7 @@ import { datasetApi } from "@/integrations/api/datasetApi.ts";
 import { toast } from "sonner";
 import { InstitutionSelector } from "@/components/dataset/InstitutionSelector";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
+import {canUploadDataset} from "@/lib/permissionUtils.ts";
 
 interface OverviewTabProps {
   dataset: any;
@@ -176,27 +177,30 @@ export function OverviewTab({
                 <Database className="h-5 w-5 text-primary" />
                 基本信息
               </CardTitle>
-              {onEditDataset && !isEditing && (
-                  <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleEditClick}
-                      className="flex items-center gap-2"
-                  >
-                    <Pen className="h-4 w-4" />
-                    编辑
-                  </Button>
-              )}
-              {isEditing && (
-                  <div className="flex space-x-2">
-                    <Button variant="outline" onClick={handleCancelEdit} size="sm">
-                      取消
-                    </Button>
-                    <Button onClick={handleSaveChanges} size="sm">
-                      保存更改
-                    </Button>
-                  </div>
-              )}
+                {canUploadDataset() && useAdvancedQuery && (
+                    <div className="flex space-x-2">
+                        {isEditing ? (
+                            <>
+                                <Button variant="outline" onClick={handleCancelEdit} size="sm">
+                                    取消
+                                </Button>
+                                <Button onClick={handleSaveChanges} size="sm">
+                                    保存更改
+                                </Button>
+                            </>
+                        ) : (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleEditClick}
+                                className="flex items-center gap-2"
+                            >
+                                <Pen className="h-4 w-4" />
+                                编辑
+                            </Button>
+                        )}
+                    </div>
+                )}
             </div>
           </CardHeader>
 
@@ -213,9 +217,9 @@ export function OverviewTab({
                         placeholder="请输入数据集描述..."
                     />
                 ) : (
-                    <p className="text-sm text-muted-foreground leading-relaxed">
+                    <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
                       {dataset.description || "暂无描述"}
-                    </p>
+                    </div>
                 )}
               </div>
 

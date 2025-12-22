@@ -116,7 +116,7 @@ export function ApprovedDatasetSelector({
         <PopoverContent className="p-0 w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height]" align="start">
           <Command shouldFilter={false}>
             <CommandInput 
-              placeholder="搜索已审核通过的数据集..." 
+              placeholder="搜索已申请通过的数据集..."
               value={datasetSearchTerm}
               onValueChange={setDatasetSearchTerm}
               disabled={disabled}

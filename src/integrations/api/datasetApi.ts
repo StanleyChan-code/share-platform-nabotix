@@ -44,6 +44,7 @@ export interface Dataset {
     };
     provider: UserDto;
 
+    institutionId: string | null;
 
     // 父级数据集关系
     parentDatasetId?: string;
@@ -83,7 +84,7 @@ export interface DatasetVersion {
     dataSharingRecordId?: string;
 }
 
-// 定义研究方向（学科）结构
+// 定义研究学科结构
 export interface ResearchSubject {
     id: string;
     name: string;
@@ -154,8 +155,6 @@ export interface UpdateDatasetBasicInfoRequest {
     shareAllData: boolean;
     contactPerson: string;
     contactInfo: string;
-    demographicFields: string[] | Record<string, string>;
-    outcomeFields: string[] | Record<string, string>;
     samplingMethod: string;
     applicationInstitutionIds: string[] | null;
 }
@@ -292,19 +291,20 @@ export const datasetApi = {
     },
     // 高级搜索数据集接口
     async advancedSearchDatasets(params: {
+        hasPendingVersion?: boolean;
         institutionId?: string;
+        isTopLevel?: boolean;
+        page?: number;
+        providerId?: string;
+        size?: number;
+        sortBy?: string;
+        sortDir?: "asc" | "desc";
         subjectAreaId?: string;
         titleCnOrKey?: string;
-        providerId?: string;
-        isTopLevel?: boolean;
         currentVersionDateFrom?: string;
         currentVersionDateTo?: string;
         type?: string;
         published?: boolean;
-        page?: number;
-        size?: number;
-        sortBy?: string;
-        sortDir?: 'asc' | 'desc';
     }) {
         const queryParams = new URLSearchParams();
 
@@ -317,6 +317,7 @@ export const datasetApi = {
         if (params.currentVersionDateTo) queryParams.append('currentVersionDateTo', params.currentVersionDateTo);
         if (params.type) queryParams.append('type', params.type);
         if (params.published !== undefined) queryParams.append('published', String(params.published));
+        if (params.hasPendingVersion !== undefined) queryParams.append('hasPendingVersion', String(params.hasPendingVersion));
 
         // 分页参数
         queryParams.append('page', (params.page ?? 0).toString());

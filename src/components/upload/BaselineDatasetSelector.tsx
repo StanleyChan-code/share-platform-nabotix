@@ -21,9 +21,9 @@ export function BaselineDatasetSelector({ value, onChange }: BaselineDatasetSele
         const user = getCurrentUser();
 
 
-        const response = await datasetApi.advancedSearchDatasets( {
-          isTopLevel: true,
-          providerId: user.id,
+        const response = await datasetApi.advancedSearchDatasets({
+            isTopLevel: true,
+            providerId: user.id,
         });
         if (response.success) {
           // 过滤出没有父数据集的数据集（基线数据集）

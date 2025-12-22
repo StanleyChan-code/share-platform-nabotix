@@ -36,6 +36,9 @@ import EditOutputDialog from "@/components/outputs/EditOutputDialog";
 import {formatDateTime} from "@/lib/utils";
 import PaginatedList from "@/components/ui/PaginatedList";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
+import {Dataset} from "@/integrations/api/datasetApi.ts";
+import {getCurrentUserInfo} from "@/lib/authUtils.ts";
+import {hasPermissionRole, PermissionRoles} from "@/lib/permissionUtils.ts";
 
 const OutputsTab = () => {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -186,6 +189,11 @@ const OutputsTab = () => {
         }
     };
 
+    const hasDeletionPermission = (output: ResearchOutput) => {
+        // 只有成果创建者或平台管理员可以删除成果
+        return output.submitter?.id === getCurrentUserInfo().user.id || hasPermissionRole(PermissionRoles.PLATFORM_ADMIN);
+    };
+
     const renderOutputItem = (output: ResearchOutput) => (
         <Card
             key={output.id}
@@ -307,21 +315,23 @@ const OutputsTab = () => {
                                 </Tooltip>
                             )}
 
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={(e) => handleDeleteClick(output, e)}
-                                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                                    >
-                                        <Trash2 className="h-4 w-4"/>
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>删除成果</p>
-                                </TooltipContent>
-                            </Tooltip>
+                            {hasDeletionPermission(output) && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={(e) => handleDeleteClick(output, e)}
+                                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                        >
+                                            <Trash2 className="h-4 w-4"/>
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>删除成果</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -394,6 +404,7 @@ const OutputsTab = () => {
                     open={detailDialogOpen}
                     onOpenChange={setDetailDialogOpen}
                     output={selectedOutput}
+                    managementMode={true}
                 />
 
                 <EditOutputDialog

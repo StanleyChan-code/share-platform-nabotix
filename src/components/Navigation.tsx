@@ -7,16 +7,17 @@ import {Menu, Database, FileText, Upload, BarChart3, Info, User, Shield, LogOut}
 import {useToast} from "@/hooks/use-toast";
 import {logout, getCurrentUser, getCurrentUserRoles} from "@/integrations/api/authApi.ts";
 import {institutionApi} from "@/integrations/api/institutionApi.ts";
-import { getCurrentUserInfo } from "@/lib/authUtils.ts";
-import { PermissionRoles } from "@/lib/permissionUtils.ts";
+import {getCurrentUserInfo} from "@/lib/authUtils.ts";
+import {PermissionRoles} from "@/lib/permissionUtils.ts";
 
 // 只有这些角色的用户才能看到管理入口
-const ADMIN_ROLES = [
-  PermissionRoles.PLATFORM_ADMIN,
-  PermissionRoles.INSTITUTION_SUPERVISOR,
-  PermissionRoles.INSTITUTION_USER_MANAGER,
-  PermissionRoles.DATASET_APPROVER,
-  PermissionRoles.RESEARCH_OUTPUT_APPROVER
+const ADMIN_ROLES: string[] = [
+    PermissionRoles.PLATFORM_ADMIN,
+    PermissionRoles.INSTITUTION_SUPERVISOR,
+    PermissionRoles.INSTITUTION_USER_MANAGER,
+    PermissionRoles.DATASET_APPROVER,
+    PermissionRoles.DATASET_UPLOADER,
+    PermissionRoles.RESEARCH_OUTPUT_APPROVER
 ];
 
 const navigationItems = [
@@ -41,7 +42,7 @@ export function Navigation() {
     useEffect(() => {
         // 检查现有会话
         const userInfo = getCurrentUserInfo();
-        
+
         if (userInfo) {
             // 从sessionStorage中获取用户信息
             try {
@@ -88,7 +89,7 @@ export function Navigation() {
             if (rolesResponse.data.success) {
                 setUserRoles(rolesResponse.data.data);
             }
-            
+
             // 如果用户有机构ID，获取机构信息
             let institution = null;
             if (userResponse.data.data.institutionId) {
@@ -101,14 +102,14 @@ export function Navigation() {
                     console.warn("获取机构信息失败:", error);
                 }
             }
-            
+
             // 将用户信息、角色和机构信息存储到sessionStorage
             const userInfo = {
                 user: userResponse.data.data,
                 roles: rolesResponse.data.data,
                 institution: institution
             };
-            
+
             sessionStorage.setItem('userInfo', JSON.stringify(userInfo));
         } catch (error) {
             console.error("Failed to fetch user info or roles:", error);
@@ -145,16 +146,9 @@ export function Navigation() {
         }
     };
 
-    const getAdminHref = () => {
-        if (userRoles.includes(PermissionRoles.INSTITUTION_SUPERVISOR)) {
-            return "/institution-dashboard";
-        }
-        return "/admin";
-    };
-
     // 检查用户是否具有管理权限
     const hasAdminPermission = () => {
-        return userRoles.some(role => ADMIN_ROLES.includes(role));
+        return userRoles.some((role: string) => ADMIN_ROLES.includes(role));
     };
 
     const NavItems = ({mobile = false}) => (
@@ -170,12 +164,7 @@ export function Navigation() {
                 .map((item) => {
                     const Icon = item.icon;
                     let href = item.href;
-                    // 如果是管理链接且用户已登录，根据角色确定跳转地址
-                    if (item.href === "/admin" && user) {
-                        href = getAdminHref();
-                    }
-                    const isActive = location.pathname === item.href ||
-                        (item.href === "/admin" && location.pathname === "/institution-dashboard");
+                    const isActive = location.pathname === item.href
                     return (
                         <Link
                             key={item.href}

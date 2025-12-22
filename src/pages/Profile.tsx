@@ -11,7 +11,7 @@ import ProfileInfo from "@/components/profile/ProfileInfo";
 import ApplicationsTab from "@/components/profile/ApplicationsTab";
 import OutputsTab from "@/components/profile/OutputsTab";
 import SettingsTab from "@/components/profile/SettingsTab";
-import DatasetsTab from "@/components/profile/DatasetsTab";
+import DatasetsTab from "@/components/admin/DatasetsTab.tsx";
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState<"profile" | "applications" | "outputs" | "datasets" | "settings">("profile");
@@ -329,18 +329,6 @@ const Profile = () => {
               >
                 研究成果
               </button>
-              {canAccessDatasetsTab() && (
-                  <button
-                      onClick={() => setActiveTab("datasets")}
-                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                          activeTab === "datasets"
-                              ? "border-primary text-primary"
-                              : "border-transparent text-muted-foreground hover:text-foreground hover:border-foreground"
-                      }`}
-                  >
-                    我的数据集
-                  </button>
-              )}
               <button
                   onClick={() => setActiveTab("settings")}
                   className={`py-2 px-1 border-b-2 font-medium text-sm ${
@@ -370,10 +358,6 @@ const Profile = () => {
 
             {activeTab === "outputs" && (
                 <OutputsTab />
-            )}
-
-            {activeTab === "datasets" && canAccessDatasetsTab() && (
-                <DatasetsTab />
             )}
 
             {activeTab === "settings" && (

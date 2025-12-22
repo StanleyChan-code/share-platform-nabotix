@@ -36,8 +36,7 @@ export function getCurrentUserInfo(): UserInfo | null {
     
     // 只有当 authToken 和 userInfo 都存在时才返回用户信息
     if (token && userInfoStr) {
-      const userInfo: UserInfo = JSON.parse(userInfoStr);
-      return userInfo;
+      return JSON.parse(userInfoStr);
     }
     
     return null;
@@ -51,7 +50,7 @@ export function getCurrentUserInfo(): UserInfo | null {
  * 获取当前用户基本信息
  * @returns 用户基本信息对象，如果未登录则返回 null
  */
-export function getCurrentUser() {
+export function getCurrentUser(){
   const userInfo = getCurrentUserInfo();
   return userInfo ? userInfo.user : null;
 }

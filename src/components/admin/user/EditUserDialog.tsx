@@ -74,9 +74,10 @@ const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: EditUserDia
         },
     });
 
-    // 当用户数据变化时，更新表单默认值
+    // 当对话框开关状态改变时处理表单数据
     useEffect(() => {
-        if (user) {
+        if (open && user) {
+            // 当对话框打开且有用户数据时，填充表单
             form.reset({
                 username: user.username || "",
                 realName: user.realName || "",
@@ -88,8 +89,21 @@ const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: EditUserDia
                 title: user.title || "",
                 field: user.field || "",
             });
+        } else if (!open) {
+            // 当对话框关闭时，重置表单
+            form.reset({
+                username: "",
+                realName: "",
+                email: "",
+                phone: "",
+                idType: undefined,
+                idNumber: "",
+                education: undefined,
+                title: "",
+                field: "",
+            });
         }
-    }, [user, form]);
+    }, [open, user, form]);
 
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         try {
