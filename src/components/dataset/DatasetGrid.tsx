@@ -4,20 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Users, Database, Calendar, Building, User, Target, BarChart3, Eye, Star, Clock } from "lucide-react";
 import { DatasetTypes } from "@/lib/enums";
 import { formatDate } from "@/lib/utils";
+import {getLatestApprovedVersion} from "@/lib/datasetUtils.ts";
 
 // Type mappings for database enum values
 const typeLabels = DatasetTypes;
-
-// Helper function to get the latest approved version
-const getLatestApprovedVersion = (versions: any[]) => {
-  if (!versions || versions.length === 0) return null;
-
-  const approvedVersions = versions
-      .filter(version => version.approved === true)
-      .sort((a, b) => new Date(b.approvedAt).getTime() - new Date(a.approvedAt).getTime());
-
-  return approvedVersions.length > 0 ? approvedVersions[0] : null;
-};
 
 interface DatasetGridProps {
   datasets: any[];

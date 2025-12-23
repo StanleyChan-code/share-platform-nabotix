@@ -8,6 +8,7 @@ import { Search, ChevronsUpDown, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { institutionApi } from "@/integrations/api/institutionApi";
 import { toast } from "sonner";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface InstitutionSelectorProps {
   value: string[] | null;
@@ -22,6 +23,9 @@ export function InstitutionSelector({ value, onChange, disabled }: InstitutionSe
   const [searchLoading, setSearchLoading] = useState(false);
   const [noRestriction, setNoRestriction] = useState(value === null);
   const [selectedInstitutions, setSelectedInstitutions] = useState<Array<{ id: string; fullName: string }>>([]);
+  
+  // 添加防抖处理，延迟550ms
+  const debouncedSearchTerm = useDebounce(searchTerm, 550);
 
   // 获取已选择机构的详细信息
   useEffect(() => {
@@ -48,15 +52,15 @@ export function InstitutionSelector({ value, onChange, disabled }: InstitutionSe
 
   // 搜索机构
   useEffect(() => {
-    if (searchTerm.trim() === "") {
+    if (debouncedSearchTerm.trim() === "") {
       setSearchResults([]);
       return;
     }
 
-    const delayDebounceFn = setTimeout(async () => {
+    const searchInstitutions = async () => {
       setSearchLoading(true);
       try {
-        const response = await institutionApi.searchInstitutions(searchTerm);
+        const response = await institutionApi.searchInstitutions(debouncedSearchTerm);
         setSearchResults(response.data.content || []);
       } catch (error) {
         console.error("搜索机构失败:", error);
@@ -64,10 +68,10 @@ export function InstitutionSelector({ value, onChange, disabled }: InstitutionSe
       } finally {
         setSearchLoading(false);
       }
-    }, 300);
+    };
 
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm]);
+    searchInstitutions();
+  }, [debouncedSearchTerm]);
 
   // 切换机构选择
   const toggleInstitutionSelection = (institutionId: string) => {

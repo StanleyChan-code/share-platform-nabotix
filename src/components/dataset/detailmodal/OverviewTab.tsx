@@ -215,6 +215,7 @@ export function OverviewTab({
                         onChange={(e) => setEditableFields(prev => ({...prev, description: e.target.value}))}
                         className="w-full min-h-[100px] p-3 border rounded-md text-sm bg-white"
                         placeholder="请输入数据集描述..."
+                        maxLength={2000}
                     />
                 ) : (
                     <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
@@ -298,6 +299,7 @@ export function OverviewTab({
                               onChange={(e) => setEditableFields(prev => ({...prev, contactPerson: e.target.value}))}
                               className="w-full p-2 border rounded text-sm"
                               placeholder="请输入联系人"
+                              maxLength={100}
                           />
                         </div>
                         <div>
@@ -308,6 +310,7 @@ export function OverviewTab({
                               onChange={(e) => setEditableFields(prev => ({...prev, contactInfo: e.target.value}))}
                               className="w-full p-2 border rounded text-sm"
                               placeholder="请输入联系方式"
+                              maxLength={200}
                           />
                         </div>
                       </>

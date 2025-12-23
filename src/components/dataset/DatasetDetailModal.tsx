@@ -1,8 +1,7 @@
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from "@/components/ui/dialog";
 import {Button} from "@/components/ui/button";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
-import {Info, TrendingUp, BarChart3, FileText, Shield, Clock, Link2, ArrowRight, Building, Badge, CheckCircle, ClockIcon, XCircle} from "lucide-react";
-import {AnalysisTab} from "./AnalysisTab";
+import {Info, TrendingUp, FileText, Shield, Clock, Link2, ArrowRight} from "lucide-react";
 import {OverviewTab} from "./detailmodal/OverviewTab.tsx";
 import {StatisticsTab} from "./detailmodal/StatisticsTab.tsx";
 import {VersionsTab} from "./detailmodal/VersionsTab.tsx";
@@ -10,21 +9,9 @@ import {TermsAndFilesTab} from "./detailmodal/TermsAndFilesTab.tsx";
 import {ResearchOutputsTab} from "./detailmodal/ResearchOutputsTab.tsx";
 import {useEffect, useState} from "react";
 import {api} from "@/integrations/api/client";
-import {getDatasetStatisticsByVersionId} from "@/integrations/api/statisticsApi.ts";
-import pako from 'pako';
 import {ScrollArea} from "@radix-ui/react-scroll-area";
 import {Dataset, datasetApi, DatasetVersion} from "@/integrations/api/datasetApi.ts";
-
-// Helper function to get the latest approved version
-const getLatestApprovedVersion = (versions: DatasetVersion[]) => {
-    if (!versions || versions.length === 0) return null;
-
-    const approvedVersions = versions
-        .filter(version => version.approved === true)
-        .sort((a, b) => new Date(b.approvedAt).getTime() - new Date(a.approvedAt).getTime());
-
-    return approvedVersions.length > 0 ? approvedVersions[0] : null;
-};
+import {getLatestApprovedVersion} from "@/lib/datasetUtils.ts";
 
 interface DatasetDetailModalProps {
     dataset: any;
@@ -272,7 +259,7 @@ export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuer
                                         recordCount={recordCount}
                                         variableCount={variableCount}
                                         institution={institution}
-                                        parentDataset={useAdvancedQuery ? parentDataset : null}
+                                        parentDataset={parentDataset}
                                         useAdvancedQuery={useAdvancedQuery}
                                         onEditDataset={(updatedDataset) => {
                                             // 更新当前数据集状态
@@ -282,16 +269,9 @@ export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuer
                                     />
                                 </TabsContent>
 
-                                {/* (2) Analysis Tab */}
-                                <TabsContent value="analysis" className="mt-4">
-                                    <AnalysisTab datasetId={currentDataset.id}/>
-                                </TabsContent>
-
                                 {/* (3) Statistics Tab */}
                                 <TabsContent value="statistics" className="space-y-4 mt-4">
-                                    <StatisticsTab
-                                        versions={useAdvancedQuery ? currentDataset.versions : undefined}
-                                    />
+                                    <StatisticsTab useAdvancedQuery={useAdvancedQuery} versions={currentDataset.versions} />
                                 </TabsContent>
 
                                 {/* Research Outputs Tab */}

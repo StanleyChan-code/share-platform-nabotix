@@ -96,6 +96,11 @@ interface ApprovalActionsProps {
    * 是否显示驳回通过按钮
    */
   showRevokeApprovalButton?: boolean;
+  
+  /**
+   * 审核意见的最大字符数
+   */
+  commentMaxLength?: number;
 }
 
 const ApprovalActions = ({
@@ -112,6 +117,7 @@ const ApprovalActions = ({
   rejectButtonVariant = "destructive",
   revokeApprovalButtonVariant = "outline",
   showRevokeApprovalButton = false,
+  commentMaxLength = 1000, // 默认最大1000字符
 }: ApprovalActionsProps) => {
   const [open, setOpen] = useState(false);
   const [comment, setComment] = useState("");
@@ -122,7 +128,7 @@ const ApprovalActions = ({
       setIsApprove(true);
       setOpen(true);
     } else {
-      onSuccess?.(true, "");
+      onSuccess?.(true, comment);
     }
   };
 
@@ -131,7 +137,7 @@ const ApprovalActions = ({
       setIsApprove(false);
       setOpen(true);
     } else {
-      onSuccess?.(false, "");
+      onSuccess?.(false, comment);
     }
   };
 
@@ -140,7 +146,7 @@ const ApprovalActions = ({
       setIsApprove(false);
       setOpen(true);
     } else {
-      onSuccess?.(false, "");
+      onSuccess?.(false, comment);
     }
   };
 
@@ -197,7 +203,7 @@ const ApprovalActions = ({
             </DialogTitle>
             <DialogDescription>
               {requireComment 
-                ? `请输入您的${isApprove ? '通过意见' : '拒绝意见'}（可选）` 
+                ? `请输入您的${isApprove ? '通过意见' : '拒绝意见'}` 
                 : isApprove 
                   ? "确定要通过该审核吗？" 
                   : `确定要${showRevokeApprovalButton ? '驳回' : '拒绝'}该审核吗？`}
@@ -217,7 +223,11 @@ const ApprovalActions = ({
                     onChange={(e) => setComment(e.target.value)}
                     placeholder={`请输入${isApprove ? '通过意见' : '拒绝意见'}...`}
                     className="min-h-[100px]"
+                    maxLength={commentMaxLength}
                   />
+                  <div className="text-right text-xs text-muted-foreground mt-1">
+                    {comment.length}/{commentMaxLength} 字符
+                  </div>
                 </div>
               </div>
             </div>

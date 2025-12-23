@@ -1,6 +1,8 @@
 // 权限角色枚举
 import {getCurrentUserInfo, getCurrentUserRoles} from "@/lib/authUtils.ts";
 import {useCallback} from "react";
+import {Dataset} from "@/integrations/api/datasetApi.ts";
+import {Application} from "@/integrations/api/applicationApi.ts";
 
 export const PermissionRoles = {
     PLATFORM_ADMIN: 'PLATFORM_ADMIN',
@@ -40,7 +42,7 @@ export function getUserPermissionRoleDisplayNames(roles: string[]): string[] {
     return roles.map(role => getPermissionRoleDisplayName(role));
 }
 
-export function hasPermissionRole(checkRole: string, targetInstitutionId?: string, targetUserId?: string): boolean {
+export function hasPermissionRole(checkRole: string): boolean {
     const roles = getCurrentUserRoles();
     const user = getCurrentUserInfo().user;
     if (!user || !roles) return false;
@@ -52,4 +54,20 @@ export function canUploadDataset(): boolean {
     return hasPermissionRole(PermissionRoles.DATASET_UPLOADER) ||
         hasPermissionRole(PermissionRoles.INSTITUTION_SUPERVISOR) ||
         hasPermissionRole(PermissionRoles.PLATFORM_ADMIN);
+}
+
+export function canMangageApplication(application: Application): boolean {
+    if (hasPermissionRole(PermissionRoles.PLATFORM_ADMIN)) return true;
+
+    const user = getCurrentUserInfo().user;
+
+    // 机构的数据集管理员
+    if (application.datasetInstitutionId === user.institutionId &&
+        (hasPermissionRole(PermissionRoles.INSTITUTION_SUPERVISOR) || hasPermissionRole(PermissionRoles.DATASET_APPROVER)
+    )) {
+        return true;
+    }
+
+    // 数据集提供者
+    return user.id === application.providerId;
 }

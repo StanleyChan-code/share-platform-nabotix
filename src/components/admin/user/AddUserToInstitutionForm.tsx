@@ -6,12 +6,13 @@ import { useToast } from "@/hooks/use-toast.ts";
 import { PermissionRoles, getPermissionRoleDisplayName } from "@/lib/permissionUtils.ts";
 import { userApi } from "@/integrations/api/userApi.ts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card.tsx";
-import { AdminInstitutionSelector } from "@/components/admin/AdminInstitutionSelector.tsx";
+import { AdminInstitutionSelector } from "@/components/admin/institution/AdminInstitutionSelector.tsx";
 import { getCurrentUserInfo } from "@/lib/authUtils.ts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
-import { Asterisk, User, Mail, Phone, IdCard, GraduationCap, Briefcase, Target, Shield, Key, Info } from "lucide-react";
+import { Asterisk, User, Mail, Phone, IdCard, GraduationCap, Briefcase, Target, Shield, Key, Info, AlertCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip.tsx";
+import { FormValidator, InputWrapper } from "@/components/ui/FormValidator";
 
 interface AddUserToInstitutionFormProps {
   institutionId?: string;
@@ -24,7 +25,7 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
     realName: "",
     phone: "",
     email: "",
-    idType: "NATIONAL_ID",
+    idType: "NATIONAL_ID" as "NATIONAL_ID" | "PASSPORT" | "OTHER",
     idNumber: "",
     education: "",
     title: "",
@@ -42,13 +43,11 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
     const userInfo = getCurrentUserInfo();
     if (userInfo) {
       setIsPlatformAdmin(userInfo.roles.includes('PLATFORM_ADMIN'));
-      // 如果不是平台管理员且有传入的机构ID，则使用该ID
       if (!userInfo.roles.includes('PLATFORM_ADMIN') && propInstitutionId) {
         setSelectedInstitutionId(propInstitutionId);
       }
     }
-    
-    // 组件卸载时清理状态
+
     return () => {
       resetForm();
     };
@@ -71,41 +70,33 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
 
   const handleRoleToggle = (role: string) => {
     setSelectedRoles(prev => {
-      // 如果角色已经被选中，则取消选择
       if (prev.includes(role)) {
         return prev.filter(r => r !== role);
       }
 
-      // 如果选择的是平台管理员或机构管理员，清除其他角色
       if (role === PermissionRoles.PLATFORM_ADMIN || role === PermissionRoles.INSTITUTION_SUPERVISOR) {
         return [role];
       }
 
-      // 如果已经选择了平台管理员或机构管理员，再选择其他角色时，清除管理员角色
       const hasAdminRole = prev.includes(PermissionRoles.PLATFORM_ADMIN) || prev.includes(PermissionRoles.INSTITUTION_SUPERVISOR);
       if (hasAdminRole) {
         return [role];
       }
 
-      // 普通角色添加逻辑
       return [...prev, role];
     });
   };
 
-  // 检查角色是否被禁用
   const isRoleDisabled = (role: string) => {
-    // 如果已经选择了平台管理员或机构管理员，则禁用其他所有角色
     if (selectedRoles.includes(PermissionRoles.PLATFORM_ADMIN) || selectedRoles.includes(PermissionRoles.INSTITUTION_SUPERVISOR)) {
       return !selectedRoles.includes(role);
     }
-    // 如果选择的是普通角色，平台管理员和机构管理员应该被禁用
     if (role === PermissionRoles.PLATFORM_ADMIN || role === PermissionRoles.INSTITUTION_SUPERVISOR) {
       return selectedRoles.length > 0 && !selectedRoles.includes(role);
     }
     return false;
   };
 
-  // 获取角色描述信息
   const getRoleDescription = (role: string) => {
     const descriptions = {
       [PermissionRoles.PLATFORM_ADMIN]: "系统最高权限，可以管理所有机构和用户",
@@ -118,83 +109,125 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
     return descriptions[role as keyof typeof descriptions] || "暂无描述";
   };
 
+  // 证件号码验证函数
+  const validateIdNumber = (idType: string, idNumber: string): boolean => {
+    if (!idNumber.trim()) return false;
+
+    switch (idType) {
+      case 'NATIONAL_ID':
+        return /^\d{17}[\dXx]$|^\d{15}$/.test(idNumber.trim());
+      case 'PASSPORT':
+        return /^[a-zA-Z0-9]{5,20}$/.test(idNumber.trim());
+      default:
+        return /^[a-zA-Z0-9\-_]{2,30}$/.test(idNumber.trim());
+    }
+  };
+
+  // 生成用户名
+  const generateUsername = () => {
+    if (formData.username.trim()) return formData.username.trim();
+    if (formData.email) return formData.email.split('@')[0];
+    return `user_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // 检查必需字段
-    if (!formData.realName || !formData.phone) {
-      toast({
-        title: "错误",
-        description: "请填写真实姓名和手机号",
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
-    }
-
-    // 验证手机号格式
-    const phoneRegex = /^1[3-9]\d{9}$/;
-    if (!phoneRegex.test(formData.phone)) {
-      toast({
-        title: "错误",
-        description: "请输入正确的手机号码",
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
-    }
-
-    // 检查证件信息
-    if (!formData.idType || !formData.idNumber) {
-      toast({
-        title: "错误",
-        description: "请填写证件类型和证件号码",
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
-    }
-
-    // 检查机构ID（仅平台管理员需要选择）
-    const effectiveInstitutionId = isPlatformAdmin ? selectedInstitutionId : propInstitutionId;
-    if (!effectiveInstitutionId) {
-      toast({
-        title: "错误",
-        description: isPlatformAdmin ? "请选择一个机构" : "无法确定用户所属机构",
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
-    }
-
     try {
-      // 使用我们的API创建用户，包括权限信息
+      // 1. 检查所有必填字段
+      const requiredFields = [
+        { field: 'realName' as keyof typeof formData, label: '真实姓名' },
+        { field: 'phone' as keyof typeof formData, label: '手机号' },
+        { field: 'idType' as keyof typeof formData, label: '证件类型' },
+        { field: 'idNumber' as keyof typeof formData, label: '证件号码' }
+      ];
+
+      const missingFields = requiredFields.filter(item => !formData[item.field]);
+      if (missingFields.length > 0) {
+        toast({
+          title: "错误",
+          description: `请填写以下必填字段：${missingFields.map(item => item.label).join('、')}`,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // 2. 验证手机号格式
+      const phoneRegex = /^1[3-9]\d{9}$/;
+      if (!phoneRegex.test(formData.phone)) {
+        toast({
+          title: "错误",
+          description: "请输入正确的手机号码",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // 3. 验证证件号码格式
+      if (!validateIdNumber(formData.idType, formData.idNumber)) {
+        toast({
+          title: "错误",
+          description: "证件号码格式不正确",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // 4. 验证邮箱格式（如果提供了邮箱）
+      if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        toast({
+          title: "错误",
+          description: "邮箱格式不正确",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // 5. 检查机构ID
+      const effectiveInstitutionId = isPlatformAdmin ? selectedInstitutionId : propInstitutionId;
+      if (!effectiveInstitutionId) {
+        toast({
+          title: "错误",
+          description: isPlatformAdmin ? "请选择一个机构" : "无法确定用户所属机构",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // 6. 创建用户请求数据
       const createUserRequest = {
-        username: formData.username || formData.email?.split('@')[0] || `user_${Date.now()}`,
-        realName: formData.realName,
-        email: formData.email || null,
-        phone: formData.phone,
-        password: "123456", // 默认密码
+        username: generateUsername(),
+        realName: formData.realName.trim(),
+        email: formData.email?.trim() || null,
+        phone: formData.phone.trim(),
+        password: "123456",
         institutionId: effectiveInstitutionId,
         idType: formData.idType,
-        idNumber: formData.idNumber || '',
-        education: formData.education || null,
-        title: formData.title || null,
-        field: formData.field || null,
+        idNumber: formData.idNumber.trim(),
+        education: formData.education?.trim() || null,
+        title: formData.title?.trim() || null,
+        field: formData.field?.trim() || null,
         authorities: selectedRoles.length > 0 ? selectedRoles : undefined
       };
 
+      // 7. 调用API
       const createdUser = await userApi.createUser(createUserRequest);
 
       toast({
         title: "成功",
-        description: `用户 ${formData.realName} 已成功创建并添加到机构。初始密码为：123456`,
+        description: `用户 ${formData.realName} 已成功创建。初始密码为：123456`,
       });
 
       resetForm();
       onUserAdded();
-    } catch (error) {
+
+    } catch (error: any) {
       console.error("添加用户时出错:", error);
       toast({
         title: "错误",
@@ -224,7 +257,7 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
     }
   };
 
-  // 定义可用的角色选项（包括平台管理员）
+  // 定义可用的角色选项
   const roleOptions: { id: string; name: string }[] = [
     { id: PermissionRoles.INSTITUTION_SUPERVISOR, name: getPermissionRoleDisplayName(PermissionRoles.INSTITUTION_SUPERVISOR) },
     { id: PermissionRoles.INSTITUTION_USER_MANAGER, name: getPermissionRoleDisplayName(PermissionRoles.INSTITUTION_USER_MANAGER) },
@@ -325,7 +358,7 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <FormValidator onSubmit={handleSubmit} className="space-y-6" showAllErrorsOnSubmit={true}>
               {fieldGroups.map((group, groupIndex) => (
                   <div key={group.title} className="space-y-4">
                     <div className={`p-4 rounded-lg border-l-4 ${group.required ? 'border-l-red-500 bg-red-50' : 'border-l-blue-500 bg-blue-50'}`}>
@@ -368,15 +401,33 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
                                     </SelectContent>
                                   </Select>
                               ) : (
-                                  <Input
-                                      id={field.name}
-                                      name={field.name}
-                                      type={field.type}
-                                      value={formData[field.name as keyof typeof formData] as string}
-                                      onChange={handleChange}
-                                      placeholder={field.required ? `请输入${field.label}` : `可选项，请输入${field.label}`}
+                                  <InputWrapper
                                       required={field.required}
-                                  />
+                                      validationType={
+                                        field.name === 'phone' ? 'phone' :
+                                            field.name === 'email' ? 'email' :
+                                                field.name === 'idNumber' ? 'idNumber' : undefined
+                                      }
+                                      idType={field.name === 'idNumber' ? formData.idType : undefined}
+                                  >
+                                    <Input
+                                        id={field.name}
+                                        name={field.name}
+                                        type={field.type}
+                                        value={formData[field.name as keyof typeof formData] as string}
+                                        onChange={handleChange}
+                                        placeholder={field.required ? `请输入${field.label}` : `可选项，请输入${field.label}`}
+                                        maxLength={
+                                          field.name === 'realName' ? 100 :
+                                              field.name === 'phone' ? 20 :
+                                                  field.name === 'username' ? 100 :
+                                                      field.name === 'email' ? 200 :
+                                                          field.name === 'idNumber' ? 50 :
+                                                              field.name === 'title' ? 100 :
+                                                                  field.name === 'field' ? 200 : 100
+                                        }
+                                    />
+                                  </InputWrapper>
                               )}
                             </div>
                         ))}
@@ -427,7 +478,7 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {roleOptions.map((role) => {
-                    const disabled = isRoleDisabled(role.name);
+                    const disabled = isRoleDisabled(role.id);
                     const isSelected = selectedRoles.includes(role.id);
                     const description = getRoleDescription(role.id);
 
@@ -504,7 +555,7 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
                   </Button>
                 </div>
               </div>
-            </form>
+            </FormValidator>
           </CardContent>
         </Card>
       </TooltipProvider>

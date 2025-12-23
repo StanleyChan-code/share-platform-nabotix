@@ -41,7 +41,8 @@ import {DatasetUploadForm} from "@/components/upload/DatasetUploadForm.tsx";
 import ReactPaginate from "react-paginate";
 import {Input} from "@/components/ui/input.tsx";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
-import {AdminInstitutionSelector} from "@/components/admin/AdminInstitutionSelector.tsx";
+import {AdminInstitutionSelector} from "@/components/admin/institution/AdminInstitutionSelector.tsx";
+import {useDebounce} from "@/hooks/useDebounce";
 
 interface DatasetsTabProps {
     filterByCurrentUser?: boolean;
@@ -67,7 +68,10 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
     const [isTopLevel, setIsTopLevel] = useState<boolean | "all">("all");
     const [institutionId, setInstitutionId] = useState<string | null>(null);
     const [subjects, setSubjects] = useState<ResearchSubject[]>([]);
-    const [showFilters, setShowFilters] = useState(false);
+    const [showFilters, setShowFilters] = useState(true);
+    
+    // 添加防抖处理，延迟550ms
+    const debouncedSearchTerm = useDebounce(searchTerm, 550);
 
     // 添加分页相关状态
     const [datasets, setDatasets] = useState<Dataset[]>([]);
@@ -120,7 +124,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                     sortBy: 'updatedAt',
                     sortDir: 'desc',
                     providerId: currentUser?.user?.id,
-                    titleCnOrKey: searchTerm || undefined,
+                    titleCnOrKey: debouncedSearchTerm || undefined,
                     subjectAreaId: selectedSubject !== "all" ? selectedSubject : undefined,
                     type: selectedType !== "all" ? selectedType : undefined, // 添加类型筛选
                     hasPendingVersion: hasPendingVersion !== "all" ? hasPendingVersion : undefined,
@@ -134,7 +138,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                     size: 10,
                     sortBy: 'updatedAt',
                     sortDir: 'desc',
-                    titleCnOrKey: searchTerm || undefined,
+                    titleCnOrKey: debouncedSearchTerm || undefined,
                     subjectAreaId: selectedSubject !== "all" ? selectedSubject : undefined,
                     type: selectedType !== "all" ? selectedType : undefined, // 添加类型筛选
                     isTopLevel: isTopLevel !== "all" ? isTopLevel : undefined,
@@ -159,7 +163,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
             loadingRef.current = false;
             setLoading(false);
         }
-    }, [currentUser?.user?.id, filterByCurrentUser, toast, searchTerm, selectedSubject, selectedType, hasPendingVersion, isTopLevel, institutionId]); // 添加 selectedType 到依赖数组
+    }, [currentUser?.user?.id, filterByCurrentUser, toast, debouncedSearchTerm, selectedSubject, selectedType, hasPendingVersion, isTopLevel, institutionId]); // 添加 selectedType 到依赖数组
 
     // 当filterByCurrentUser或currentUser改变时，重新获取数据
     useEffect(() => {
@@ -176,7 +180,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
         } else if (paginatedListRef.current) {
             paginatedListRef.current.refresh();
         }
-    }, [searchTerm, selectedSubject, hasPendingVersion, isTopLevel, institutionId, filterByCurrentUser, fetchDatasetList]);
+    }, [debouncedSearchTerm, selectedSubject, hasPendingVersion, isTopLevel, institutionId, filterByCurrentUser, fetchDatasetList]);
 
     // 当切换到我的数据集模式时，确保使用 PaginatedList
     useEffect(() => {
@@ -199,7 +203,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                 sortBy: 'updatedAt',
                 sortDir: 'desc',
                 providerId: currentUser?.user?.id,
-                titleCnOrKey: searchTerm || undefined,
+                titleCnOrKey: debouncedSearchTerm || undefined,
                 subjectAreaId: selectedSubject !== "all" ? selectedSubject : undefined,
                 type: selectedType !== "all" ? selectedType : undefined, // 添加类型筛选
                 hasPendingVersion: hasPendingVersion !== "all" ? hasPendingVersion : undefined,
@@ -214,7 +218,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                 size,
                 sortBy: 'updatedAt',
                 sortDir: 'desc',
-                titleCnOrKey: searchTerm || undefined,
+                titleCnOrKey: debouncedSearchTerm || undefined,
                 subjectAreaId: selectedSubject !== "all" ? selectedSubject : undefined,
                 type: selectedType !== "all" ? selectedType : undefined, // 添加类型筛选
                 hasPendingVersion: hasPendingVersion !== "all" ? hasPendingVersion : undefined,
@@ -223,7 +227,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
             });
             return response.data;
         }
-    }, [currentUser?.user?.id, filterByCurrentUser, searchTerm, selectedSubject, selectedType, hasPendingVersion, isTopLevel, institutionId]); // 添加 selectedType 到依赖数组
+    }, [currentUser?.user?.id, filterByCurrentUser, debouncedSearchTerm, selectedSubject, selectedType, hasPendingVersion, isTopLevel, institutionId]); // 添加 selectedType 到依赖数组
 
     const getStatusBadgeVariant = (dataset: Dataset) => {
         // 检查是否有已批准的版本
@@ -452,7 +456,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                             <span className="ml-2">{dataset.subjectArea?.name || '未指定'}</span>
                         </div>
                         <div>
-                            <span className="font-medium">数据类型:</span>
+                            <span className="font-medium">数据集类型:</span>
                             <span
                                 className="ml-2">{DatasetTypes[dataset.type as keyof typeof DatasetTypes] || dataset.type}</span>
                         </div>
@@ -476,37 +480,6 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
     return (
         <TooltipProvider>
             <>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <div className="space-y-1">
-                            <CardTitle className="flex items-center gap-2">
-                                <span>数据集管理</span>
-                            </CardTitle>
-                            <CardDescription>
-                                管理上传的所有数据集
-                            </CardDescription>
-                        </div>
-                        <div className="flex gap-2">
-                            <Button
-                                variant="outline"
-                                onClick={() => setShowFilters(!showFilters)}
-                                className="gap-2"
-                            >
-                                <Filter className="h-4 w-4"/>
-                                筛选
-                            </Button>
-                            {canUploadDataset() && (
-                                <Button
-                                    onClick={() => showUpload ? handleCancelUploadClick() : setShowUpload(true)}
-                                    className="gap-2"
-                                >
-                                    <Upload className="h-4 w-4"/>
-                                    {showUpload ? '取消上传' : '上传数据集'}
-                                </Button>
-                            )}
-                        </div>
-                    </CardHeader>
-                    <CardContent>
                         {/* 平台管理员机构选择器 */}
                         {hasPermissionRole(PermissionRoles.PLATFORM_ADMIN) && !filterByCurrentUser && (
                             <div className="mb-6 p-4 border rounded-lg bg-muted/50">
@@ -521,6 +494,23 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                         {/* 筛选区域 */}
                         {showFilters && (
                             <div className="mb-6 p-4 border rounded-lg bg-muted/50 space-y-4">
+
+                                <div className="flex justify-end">
+                                    {/* 重置按钮 */}
+                                    <Button variant="outline" onClick={resetFilters}>
+                                        重置筛选条件
+                                    </Button>
+
+                                    {canUploadDataset() && (
+                                        <Button
+                                            onClick={() => showUpload ? handleCancelUploadClick() : setShowUpload(true)}
+                                            className="gap-2 ml-4"
+                                        >
+                                            <Upload className="h-4 w-4"/>
+                                            {showUpload ? '取消上传' : '上传数据集'}
+                                        </Button>
+                                    )}
+                                </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                                     {/* 搜索框 */}
                                     <div className="flex items-center gap-2">
@@ -529,6 +519,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                                             placeholder="搜索标题或关键词..."
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
+                                            maxLength={100}
                                         />
                                     </div>
 
@@ -601,13 +592,6 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                                             </SelectContent>
                                         </Select>
                                     </div>
-                                </div>
-
-                                {/* 重置按钮 */}
-                                <div className="flex justify-end">
-                                    <Button variant="outline" onClick={resetFilters}>
-                                        重置筛选条件
-                                    </Button>
                                 </div>
                             </div>
                         )}
@@ -694,8 +678,6 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                                 )}
                             </div>
                         )}
-                    </CardContent>
-                </Card>
 
                 {selectedDataset && (
                     <DatasetDetailModal

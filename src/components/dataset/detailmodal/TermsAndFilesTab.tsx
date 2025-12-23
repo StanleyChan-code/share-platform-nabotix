@@ -1,40 +1,20 @@
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card.tsx";
 import {Button} from "@/components/ui/button.tsx";
-import {FileText, Download, Shield, AlertTriangle, CheckCircle, ClockIcon, XCircle} from "lucide-react";
+import {FileText, Download, Shield, AlertTriangle, CheckCircle, ClockIcon, XCircle, AlertCircle} from "lucide-react";
 import {api} from "@/integrations/api/client.ts";
 import {useToast} from "@/hooks/use-toast.ts";
 import {useNavigate} from "react-router-dom";
 import {useEffect, useState} from "react";
 import ApplyDialog from "@/components/application/ApplyDialog.tsx";
+import ApplicationDetailDialog from "@/components/admin/ApplicationDetailDialog.tsx";
+import {getLatestApprovedVersion} from "@/lib/datasetUtils.ts";
+import {formatDate} from "@/lib/utils.ts";
+import {Application} from "@/integrations/api/applicationApi.ts";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
 
 interface TermsAndFilesTabProps {
     dataset: any;
     useAdvancedQuery?: boolean; // 新增属性，控制是否使用高级查询
-}
-
-interface Application {
-    id: string;
-    datasetId: string;
-    datasetTitle: string;
-    applicantId: string;
-    applicantName: string;
-    supervisorId: string | null;
-    supervisorName: string | null;
-    applicantRole: string;
-    applicantType: string;
-    projectTitle: string;
-    projectDescription: string;
-    fundingSource: string;
-    purpose: string;
-    projectLeader: string;
-    approvalDocumentId: string;
-    status: string;
-    adminNotes: string | null;
-    providerNotes: string | null;
-    submittedAt: string;
-    providerReviewedAt: string | null;
-    institutionReviewedAt: string | null;
-    approvedAt: string | null;
 }
 
 export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFilesTabProps) {
@@ -44,17 +24,8 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
     const [loadingApplication, setLoadingApplication] = useState(true);
     const [applyDialogOpen, setApplyDialogOpen] = useState(false);
     const [selectedVersion, setSelectedVersion] = useState<any>(null); // 新增状态用于跟踪选中的版本
-
-    // 获取最新审核通过的版本
-    const getLatestApprovedVersion = (versions: any[]) => {
-        if (!versions || versions.length === 0) return null;
-
-        const approvedVersions = versions
-            .filter(version => version.approved === true)
-            .sort((a, b) => new Date(b.approvedAt).getTime() - new Date(a.approvedAt).getTime());
-
-        return approvedVersions.length > 0 ? approvedVersions[0] : null;
-    };
+    const [pendingApplication, setPendingApplication] = useState<Application | null>(null); // 新增状态用于跟踪待审核的申请
+    const [showPendingApplicationDetail, setShowPendingApplicationDetail] = useState(false); // 新增状态用于控制待审核申请详情对话框
 
     // 初始化选中的版本
     useEffect(() => {
@@ -64,9 +35,6 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
             setSelectedVersion(latestApproved || dataset.versions[0]);
         }
     }, [dataset]);
-
-    // 获取当前显示的数据集版本
-    const currentVersion = selectedVersion || getLatestApprovedVersion(dataset.versions);
 
     // 检查用户是否已认证
     const isAuthenticated = api.isAuthenticated();
@@ -84,12 +52,38 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
                 if (response.data.success && response.data.data.length > 0) {
                     // 获取最新的审核状态为APPROVED的申请记录
                     const applications = response.data.data;
-                    const latestApplication = applications.find(app => app.status === "APPROVED");
-                    if (!latestApplication) {
+                    const approvedApplication = applications.find(app => app.status === "APPROVED");
+                    
+                    // 检查是否有待审核的申请
+                    const pendingApplication = applications.find(app => 
+                        app.status === "SUBMITTED" || 
+                        app.status === "PENDING_PROVIDER_REVIEW" || 
+                        app.status === "PENDING_INSTITUTION_REVIEW"
+                    );
+                    
+                    // 检查是否所有申请都被拒绝
+                    const allDenied = applications.every(app => app.status === "DENIED");
+                    
+                    if (approvedApplication) {
+                        setApplicationStatus(approvedApplication);
+                        setPendingApplication(null); // 有批准的申请时，不需要显示待审核的申请
+                    } else if (allDenied) {
+                        // 所有申请都被拒绝，允许重新申请
                         setApplicationStatus(null);
-                        return;
+                        setPendingApplication(null); // 不显示待审核的申请
+                    } else if (pendingApplication) {
+                        // 有待审核的申请，不允许重新申请
+                        setApplicationStatus(null);
+                        setPendingApplication(pendingApplication);
+                    } else {
+                        // 没有批准的申请，也没有待审核的申请，但有被拒绝的申请
+                        setApplicationStatus(null);
+                        setPendingApplication(null);
                     }
-                    setApplicationStatus(latestApplication);
+                } else {
+                    // 没有任何申请记录
+                    setApplicationStatus(null);
+                    setPendingApplication(null);
                 }
             } catch (error) {
                 console.error("检查申请状态时出错:", error);
@@ -234,6 +228,9 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
     // 用户是否有下载数据文件的权限（申请已批准）
     const hasDataFilePermission = applicationStatus?.status === "APPROVED";
 
+    // 获取当前显示的数据集版本
+    const currentVersion = selectedVersion || getLatestApprovedVersion(dataset.versions);
+
     return (
         <Card>
             <CardHeader>
@@ -255,27 +252,28 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <select
-                                        value={currentVersion?.id || ""}
-                                        onChange={(e) => handleVersionChange(e.target.value)}
-                                        className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    >
-                                        {dataset.versions
-                                            .slice()
-                                            .sort((a: any, b: any) =>
-                                                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-                                            )
-                                            .map((version: any) => (
-                                                <option key={version.id} value={version.id}>
-                                                    版本 {version.versionNumber} ({new Date(version.createdAt).toLocaleDateString()})
-                                                </option>
-                                            ))}
-                                    </select>
+
+                                    <Select value={currentVersion?.id || ""} onValueChange={handleVersionChange}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="选择版本" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {dataset.versions
+                                                .slice()
+                                                .sort((a: any, b: any) =>
+                                                    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                                                )
+                                                .map((version: any) => (
+                                                    <SelectItem key={version.id} value={version.id}>
+                                                        版本 {version.versionNumber} ({formatDate(version.createdAt)})
+                                                    </SelectItem>
+                                                ))}
+                                        </SelectContent>
+                                    </Select>
 
                                     {/* 版本状态指示器 */}
                                     {currentVersion && (
-                                        <div
-                                            className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-md border border-gray-200">
+                                        <div className="inline-flex items-center gap-1.5 bg-white px-3 py-2 rounded-md border border-gray-200 whitespace-nowrap">
                                             {currentVersion.approved === true ? (
                                                 <>
                                                     <CheckCircle className="h-4 w-4 text-green-500"/>
@@ -343,6 +341,44 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
                     <div className="space-y-4">
                         <h4 className="font-semibold">可下载文件</h4>
 
+
+                        {/* 显示申请状态提醒 */}
+                        {pendingApplication ? (
+                            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                <div className="flex items-start gap-2">
+                                    <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0"/>
+                                    <div>
+                                        <h4 className="font-medium text-yellow-800">存在待审核的申请</h4>
+                                        <p className="text-sm text-yellow-700 mt-1">
+                                            您有一个申请正在审核中: "{pendingApplication.projectTitle}"。
+                                            请等待审核完成。
+                                        </p>
+                                        <Button
+                                            onClick={() => setShowPendingApplicationDetail(true)}
+                                            variant="outline"
+                                            size="sm"
+                                            className="mt-2"
+                                        >
+                                            查看申请详情
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : applicationStatus ? (
+                            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                                <div className="flex items-start gap-2">
+                                    <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0"/>
+                                    <div>
+                                        <h4 className="font-medium text-green-800">已获得数据集访问权限</h4>
+                                        <p className="text-sm text-green-700 mt-1">
+                                            您的申请已获批准: "{applicationStatus.projectTitle}"。
+                                            现在您可以下载数据文件。
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : null}
+
                         {/* 数据文件 - 需要申请权限 */}
                         <div className="flex items-center justify-between p-4 border rounded-lg">
                             <div className="flex items-center gap-3">
@@ -362,7 +398,7 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
                                         setApplyDialogOpen(true);
                                     }
                                 }}
-                                disabled={!currentVersion?.id}
+                                disabled={!currentVersion?.id || pendingApplication !== null}
                             >
                                 <>
                                     {(hasDataFilePermission || useAdvancedQuery) ? (
@@ -430,6 +466,15 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
                     onOpenChange={setApplyDialogOpen}
                     datasetId={dataset.id}
                 />
+                
+                {/* 待审核申请详情对话框 */}
+                {pendingApplication && (
+                    <ApplicationDetailDialog
+                        open={showPendingApplicationDetail}
+                        onOpenChange={setShowPendingApplicationDetail}
+                        application={pendingApplication}
+                    />
+                )}
             </CardContent>
         </Card>
     );

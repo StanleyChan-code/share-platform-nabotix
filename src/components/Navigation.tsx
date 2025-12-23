@@ -1,14 +1,29 @@
-import {useState, useEffect} from "react";
-import {Link, useLocation, useNavigate} from "react-router-dom";
-import {Button} from "@/components/ui/button";
-import {Sheet, SheetContent, SheetTrigger} from "@/components/ui/sheet";
-import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from "@/components/ui/dropdown-menu";
-import {Menu, Database, FileText, Upload, BarChart3, Info, User, Shield, LogOut} from "lucide-react";
-import {useToast} from "@/hooks/use-toast";
-import {logout, getCurrentUser, getCurrentUserRoles} from "@/integrations/api/authApi.ts";
-import {institutionApi} from "@/integrations/api/institutionApi.ts";
-import {getCurrentUserInfo} from "@/lib/authUtils.ts";
-import {PermissionRoles} from "@/lib/permissionUtils.ts";
+import { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import {
+    Menu,
+    Database,
+    FileText,
+    BarChart3,
+    Info,
+    User,
+    Shield,
+    LogOut,
+    Home,
+    Award,
+    ChevronDown,
+    X,
+    Building2
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { logout, getCurrentUser, getCurrentUserRoles } from "@/integrations/api/authApi.ts";
+import { institutionApi } from "@/integrations/api/institutionApi.ts";
+import { getCurrentUserInfo } from "@/lib/authUtils.ts";
+import { getPermissionRoleDisplayName, PermissionRoles } from "@/lib/permissionUtils.ts";
 
 // 只有这些角色的用户才能看到管理入口
 const ADMIN_ROLES: string[] = [
@@ -21,12 +36,12 @@ const ADMIN_ROLES: string[] = [
 ];
 
 const navigationItems = [
-    {name: "首页", name_en: "Home", href: "/", icon: BarChart3},
-    {name: "数据集", name_en: "Datasets", href: "/datasets", icon: Database},
-    {name: "成果", name_en: "Outputs", href: "/outputs", icon: FileText},
-    {name: "关于", name_en: "About", href: "/about", icon: Info},
-    {name: "个人中心", name_en: "My Center", href: "/profile", icon: User},
-    {name: "管理", name_en: "Admin", href: "/admin", icon: Shield, adminOnly: true},
+    { name: "首页", name_en: "Home", href: "/", icon: Home, description: "平台概览" },
+    { name: "数据集", name_en: "Datasets", href: "/datasets", icon: Database, description: "浏览数据集" },
+    { name: "研究成果", name_en: "Outputs", href: "/outputs", icon: Award, description: "查看成果" },
+    { name: "关于平台", name_en: "About", href: "/about", icon: Info, description: "了解平台" },
+    { name: "个人中心", name_en: "My Center", href: "/profile", icon: User, description: "个人管理" },
+    { name: "管理面板", name_en: "Admin", href: "/admin", icon: Shield, description: "系统管理", adminOnly: true },
 ];
 
 export function Navigation() {
@@ -37,7 +52,7 @@ export function Navigation() {
     const [session, setSession] = useState<any | null>(null);
     const [userProfile, setUserProfile] = useState<any>(null);
     const [userRoles, setUserRoles] = useState<string[]>([]);
-    const {toast} = useToast();
+    const { toast } = useToast();
 
     useEffect(() => {
         // 检查现有会话
@@ -46,10 +61,10 @@ export function Navigation() {
         if (userInfo) {
             // 从sessionStorage中获取用户信息
             try {
-                setUser({id: userInfo.user.id, email: userInfo.user.email});
-                setUserProfile(userInfo.user);
+                setUser({ id: userInfo.user.id, email: userInfo.user.email });
+                setUserProfile(userInfo);
                 setUserRoles(userInfo.roles);
-                setSession({token: localStorage.getItem('authToken')});
+                setSession({ token: localStorage.getItem('authToken') });
             } catch (error) {
                 console.error("Failed to parse user info from sessionStorage:", error);
                 // 如果解析失败，清除token并跳转到登录页
@@ -79,9 +94,9 @@ export function Navigation() {
             const userResponse = await getCurrentUser();
             if (userResponse.data.success) {
                 const userData = userResponse.data.data;
-                setUser({id: userData.id, email: userData.email});
+                setUser({ id: userData.id, email: userData.email });
                 setUserProfile(userData);
-                setSession({token: localStorage.getItem('authToken')});
+                setSession({ token: localStorage.getItem('authToken') });
             }
 
             // 获取用户角色
@@ -151,7 +166,7 @@ export function Navigation() {
         return userRoles.some((role: string) => ADMIN_ROLES.includes(role));
     };
 
-    const NavItems = ({mobile = false}) => (
+    const NavItems = ({ mobile = false }) => (
         <>
             {navigationItems
                 .filter((item) => {
@@ -163,23 +178,29 @@ export function Navigation() {
                 })
                 .map((item) => {
                     const Icon = item.icon;
-                    let href = item.href;
-                    const isActive = location.pathname === item.href
+                    const isActive = location.pathname === item.href;
+
                     return (
                         <Link
                             key={item.href}
-                            to={href}
+                            to={item.href}
                             onClick={() => mobile && setIsOpen(false)}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                            className={`group flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                                 isActive
-                                    ? "bg-primary text-primary-foreground"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                                    ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg"
+                                    : "text-muted-foreground hover:text-blue-700 hover:bg-blue-50/50"
                             } ${mobile ? "justify-start" : ""}`}
                         >
-                            <Icon className="h-4 w-4"/>
-                            <span className={mobile ? "block" : "hidden md:block"}>
-                              {item.name}
-                            </span>
+                            <Icon className={`h-5 w-5 ${isActive ? "text-white" : "text-current"}`} />
+                            <div className="flex flex-col">
+                                <span className="font-semibold">{item.name}</span>
+                                {mobile && (
+                                    <span className="text-xs opacity-70">{item.description}</span>
+                                )}
+                            </div>
+                            {isActive && !mobile && (
+                                <div className="ml-auto w-2 h-2 bg-white rounded-full"></div>
+                            )}
                         </Link>
                     );
                 })}
@@ -187,95 +208,229 @@ export function Navigation() {
     );
 
     return (
-        <header
-            className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="container flex h-14 items-center">
-                <div className="mr-4 flex">
-                    <Link to="/" className="mr-6 flex items-center space-x-2">
-                        <Database className="h-6 w-6 text-primary"/>
-                        <span className="hidden font-bold sm:inline-block">
-              Nabotix Platform
-            </span>
+        <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md supports-[backdrop-filter]:bg-white/60 shadow-sm">
+            <div className="container flex h-16 items-center px-4">
+                {/* Logo */}
+                <div className="flex items-center gap-3">
+                    <Link to="/" className="flex items-center space-x-3 group">
+                        <div className="p-2 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow duration-300">
+                            <Database className="h-6 w-6 text-white" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-xl font-bold bg-gradient-to-r from-gray-900 to-blue-800 bg-clip-text text-transparent">
+                                Nabotix Platform
+                            </span>
+                            <span className="text-xs text-muted-foreground -mt-1">临床研究数据平台</span>
+                        </div>
                     </Link>
                 </div>
 
                 {/* Desktop Navigation */}
-                <nav className="hidden md:flex items-center space-x-1 flex-1">
-                    <NavItems/>
+                <nav className="hidden lg:flex items-center space-x-1 flex-1 ml-8">
+                    <NavItems />
                 </nav>
 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-3 ml-auto">
                     {/* Auth Section */}
                     {user ? (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                                    <User className="h-4 w-4"/>
-                                    <span className="hidden sm:inline">{userProfile?.username || user.email}</span>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => navigate('/profile')}>
-                                    <User className="h-4 w-4 mr-2"/>
-                                    个人资料
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={handleLogout}>
-                                    <LogOut className="h-4 w-4 mr-2"/>
-                                    登出
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <div className="flex items-center gap-3">
+                            {/* 用户角色徽章 */}
+                            <div className="hidden md:flex items-center gap-1">
+                                {userRoles.slice(0, 2).map((role, index) => (
+                                    <Badge
+                                        key={index}
+                                        variant="secondary"
+                                        className="bg-blue-100 text-blue-800 hover:bg-blue-200 text-xs font-medium border-0"
+                                    >
+                                        {getPermissionRoleDisplayName(role)}
+                                    </Badge>
+                                ))}
+                                {userRoles.length > 2 && (
+                                    <Badge variant="outline" className="text-xs">
+                                        +{userRoles.length - 2}
+                                    </Badge>
+                                )}
+                            </div>
+
+                            {/* 用户下拉菜单 */}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-blue-50/50 transition-colors"
+                                    >
+                                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-sm">
+                                            <User className="h-4 w-4 text-white" />
+                                        </div>
+                                        <div className="hidden sm:flex flex-col items-start">
+                                            <span className="text-sm font-medium text-gray-900">
+                                                {userProfile?.user?.realName || userProfile?.user?.username || '用户'}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground">
+                                                {userProfile?.institution?.fullName || '未设置机构'}
+                                            </span>
+                                        </div>
+                                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                    align="end"
+                                    className="w-64 border-blue-200/50 shadow-xl rounded-xl"
+                                >
+                                    {/* 用户信息头部 */}
+                                    <div className="p-4 border-b border-blue-200/30">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-sm">
+                                                <User className="h-6 w-6 text-white" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-semibold text-gray-900 truncate">
+                                                    {userProfile?.user?.realName || userProfile?.user?.username || '用户'}
+                                                </p>
+                                                <p className="text-sm text-muted-foreground truncate">
+                                                    {userProfile?.user?.email}
+                                                </p>
+                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                    {userRoles.slice(0, 2).map((role, index) => (
+                                                        <Badge
+                                                            key={index}
+                                                            variant="secondary"
+                                                            className="bg-blue-100 text-blue-800 text-xs"
+                                                        >
+                                                            {getPermissionRoleDisplayName(role)}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <DropdownMenuItem
+                                        onClick={() => navigate('/profile')}
+                                        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-blue-50/50"
+                                    >
+                                        <User className="h-4 w-4 text-blue-600" />
+                                        <div>
+                                            <span className="font-medium">个人资料</span>
+                                            <p className="text-xs text-muted-foreground">查看和编辑个人信息</p>
+                                        </div>
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuItem
+                                        onClick={handleLogout}
+                                        className="flex items-center gap-3 px-4 py-3 cursor-pointer text-red-600 hover:bg-red-50/50"
+                                    >
+                                        <LogOut className="h-4 w-4" />
+                                        <div>
+                                            <span className="font-medium">退出登录</span>
+                                            <p className="text-xs text-muted-foreground">安全退出系统</p>
+                                        </div>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     ) : (
                         location.pathname !== '/auth' && (
-                            <Button asChild variant="ghost" size="sm">
-                                <Link to="/auth">登录</Link>
+                            <Button
+                                asChild
+                                variant="default"
+                                size="sm"
+                                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                            >
+                                <Link to="/auth" className="flex items-center gap-2">
+                                    <User className="h-4 w-4" />
+                                    <span>登录系统</span>
+                                </Link>
                             </Button>
                         )
                     )}
 
-                    {/* Mobile Navigation */}
+                    {/* Mobile Navigation Trigger */}
                     <Sheet open={isOpen} onOpenChange={setIsOpen}>
                         <SheetTrigger asChild>
                             <Button
                                 variant="ghost"
-                                className="md:hidden"
+                                className="lg:hidden p-2 rounded-xl hover:bg-blue-50/50"
                                 size="icon"
                             >
-                                <Menu className="h-5 w-5"/>
-                                <span className="sr-only">Toggle menu</span>
+                                {isOpen ? (
+                                    <X className="h-5 w-5" />
+                                ) : (
+                                    <Menu className="h-5 w-5" />
+                                )}
+                                <span className="sr-only">切换菜单</span>
                             </Button>
                         </SheetTrigger>
-                        <SheetContent side="left" className="pr-0">
-                            <Link
-                                to="/"
-                                className="flex items-center space-x-2 mb-6"
-                                onClick={() => setIsOpen(false)}
-                            >
-                                <Database className="h-6 w-6 text-primary"/>
-                                <span className="font-bold">Nabotix Platform</span>
-                            </Link>
-                            <nav className="flex flex-col space-y-1">
-                                <NavItems mobile/>
-                            </nav>
+                        <SheetContent
+                            side="right"
+                            className="w-80 pr-0 border-l-blue-200/50 bg-white/95 backdrop-blur-md"
+                        >
+                            <div className="flex flex-col h-full">
+                                {/* Header */}
+                                <div className="p-6 border-b border-blue-200/30">
+                                    <Link
+                                        to="/"
+                                        className="flex items-center space-x-3 group"
+                                        onClick={() => setIsOpen(false)}
+                                    >
+                                        <div className="p-2 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-lg">
+                                            <Database className="h-6 w-6 text-white" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-lg font-bold bg-gradient-to-r from-gray-900 to-blue-800 bg-clip-text text-transparent">
+                                                Nabotix Platform
+                                            </span>
+                                            <span className="text-xs text-muted-foreground -mt-1">临床研究数据平台</span>
+                                        </div>
+                                    </Link>
+                                </div>
 
-                            {/* Mobile Auth Section */}
-                            <div className="mt-6 pt-6 border-t">
-                                {user ? (
-                                    <div className="space-y-2">
-                                        <div
-                                            className="text-sm text-muted-foreground px-3">{userProfile?.username || user.email}</div>
-                                        <Button variant="outline" onClick={handleLogout} className="w-full">
-                                            <LogOut className="h-4 w-4 mr-2"/>
-                                            登出
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    location.pathname !== '/auth' && (
-                                        <Button asChild className="w-full">
-                                            <Link to="/auth" onClick={() => setIsOpen(false)}>登录</Link>
-                                        </Button>
-                                    )
-                                )}
+                                {/* Navigation Items */}
+                                <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+                                    <NavItems mobile />
+                                </nav>
+
+                                {/* User Section */}
+                                <div className="p-4 border-t border-blue-200/30 bg-blue-50/30">
+                                    {user ? (
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-3 p-3 bg-white/50 rounded-xl border border-blue-200/30">
+                                                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-sm">
+                                                    <User className="h-5 w-5 text-white" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-semibold text-gray-900 text-sm truncate">
+                                                        {userProfile?.user?.realName || userProfile?.user?.username || '用户'}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground truncate">
+                                                        {userProfile?.institution?.fullName || '未设置机构'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <Button
+                                                onClick={handleLogout}
+                                                variant="outline"
+                                                className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                            >
+                                                <LogOut className="h-4 w-4 mr-2" />
+                                                退出登录
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        location.pathname !== '/auth' && (
+                                            <Button
+                                                asChild
+                                                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg"
+                                            >
+                                                <Link to="/auth" onClick={() => setIsOpen(false)}>
+                                                    <User className="h-4 w-4 mr-2" />
+                                                    登录系统
+                                                </Link>
+                                            </Button>
+                                        )
+                                    )}
+                                </div>
                             </div>
                         </SheetContent>
                     </Sheet>

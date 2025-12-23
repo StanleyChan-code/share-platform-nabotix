@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Button } from "@/components/ui/button.tsx";
+import { Badge } from "@/components/ui/badge.tsx";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover.tsx";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command.tsx";
 import { Search, ChevronsUpDown, Check, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { institutionApi } from "@/integrations/api/institutionApi";
+import { cn } from "@/lib/utils.ts";
+import { institutionApi } from "@/integrations/api/institutionApi.ts";
 import { toast } from "sonner";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface AdminInstitutionSelectorProps {
   value: string | null;
@@ -26,6 +27,9 @@ export function AdminInstitutionSelector({
   const [searchResults, setSearchResults] = useState<Array<{ id: string; fullName: string }>>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [selectedInstitution, setSelectedInstitution] = useState<{ id: string; fullName: string } | null>(null);
+  
+  // 添加防抖处理，延迟550ms
+  const debouncedSearchTerm = useDebounce(searchTerm, 550);
 
   // 获取已选择机构的详细信息
   useEffect(() => {
@@ -49,15 +53,15 @@ export function AdminInstitutionSelector({
 
   // 搜索机构（平台管理员专用）
   useEffect(() => {
-    if (searchTerm.trim() === "") {
+    if (debouncedSearchTerm.trim() === "") {
       setSearchResults([]);
       return;
     }
 
-    const delayDebounceFn = setTimeout(async () => {
+    const searchInstitutions = async () => {
       setSearchLoading(true);
       try {
-        const response = await institutionApi.searchInstitutionsForAdmin(searchTerm);
+        const response = await institutionApi.searchInstitutionsForAdmin(debouncedSearchTerm);
         setSearchResults(response.data.content || []);
       } catch (error) {
         console.error("搜索机构失败:", error);
@@ -65,10 +69,10 @@ export function AdminInstitutionSelector({
       } finally {
         setSearchLoading(false);
       }
-    }, 300);
+    };
 
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm]);
+    searchInstitutions();
+  }, [debouncedSearchTerm]);
 
   // 选择机构
   const selectInstitution = (institutionId: string) => {

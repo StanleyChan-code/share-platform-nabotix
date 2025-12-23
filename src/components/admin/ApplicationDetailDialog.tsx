@@ -2,11 +2,9 @@ import React, {useState, useEffect} from 'react';
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from "@/components/ui/dialog";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import {Button} from "@/components/ui/button";
-import {Badge} from "@/components/ui/badge";
 import {ScrollArea} from "@/components/ui/scroll-area";
 import {
     FileText,
-    Calendar,
     User,
     Building,
     Download,
@@ -123,16 +121,17 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
 
         // 提供者审核
         if (application.providerReviewedAt) {
-            const isProviderRejected = application.status === 'DENIED' && !application.institutionReviewedAt;
+            // 根据最终状态判断提供者审核结果
+            const isProviderApproved = application.providerReviewResult === true;
             items.push({
-                status: isProviderRejected ? '提供者审核拒绝' : '提供者审核通过',
+                status: isProviderApproved ? '提供者审核通过' : '提供者审核拒绝',
                 date: application.providerReviewedAt,
                 completed: true,
                 icon: <User className="h-4 w-4"/>,
                 notes: application.providerNotes,
                 reviewer: null
             });
-        } else if (application.status !== 'SUBMITTED') {
+        } else if (['PENDING_PROVIDER_REVIEW', 'PENDING_INSTITUTION_REVIEW', 'APPROVED', 'DENIED'].includes(application.status)) {
             items.push({
                 status: '待提供者审核',
                 date: null,
@@ -145,9 +144,10 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
 
         // 机构审核
         if (application.institutionReviewedAt) {
-            const isInstitutionRejected = application.status === 'DENIED' && application.providerReviewedAt;
+            // 根据最终状态判断机构审核结果
+            const isFinalApproved = application.institutionReviewResult === true;
             items.push({
-                status: isInstitutionRejected ? '机构审核拒绝' : '机构审核通过',
+                status: isFinalApproved ? '机构审核通过' : '机构审核拒绝',
                 date: application.institutionReviewedAt,
                 completed: true,
                 icon: <Building className="h-4 w-4"/>,
@@ -156,7 +156,7 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
             });
         } else if (['PENDING_INSTITUTION_REVIEW', 'APPROVED', 'DENIED'].includes(application.status)) {
             items.push({
-                status: '机构审核',
+                status: '待机构审核',
                 date: null,
                 completed: false,
                 icon: <Building className="h-4 w-4"/>,
@@ -166,12 +166,13 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
         }
 
         // 最终状态
-        if (application.approvedAt) {
+        if (application.status === 'APPROVED' || application.status === 'DENIED') {
+            const isApproved = application.status === 'APPROVED';
             items.push({
-                status: '审批完成',
-                date: application.approvedAt,
+                status: isApproved ? '审批完成' : '审批结束',
+                date: application.approvedAt || application.institutionReviewedAt,
                 completed: true,
-                icon: <CheckCircle className="h-4 w-4"/>,
+                icon: isApproved ? <CheckCircle className="h-4 w-4"/> : <XCircle className="h-4 w-4"/> ,
                 notes: null,
                 reviewer: null
             });
@@ -242,7 +243,7 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
                     <p>{application.datasetTitle}</p>
                 </div>
 
-                <Tabs defaultValue="basic" className="w-full mt-4">
+                <Tabs defaultValue="basic" className="w-full mt-4 h-[600px]">
                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="basic">基本信息</TabsTrigger>
                         <TabsTrigger value="timeline">审核进度</TabsTrigger>
@@ -330,7 +331,7 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
                     </TabsContent>
 
                     <TabsContent value="timeline" className="space-y-6">
-                        <ScrollArea className="h-[300px] w-full pr-4">
+                        <ScrollArea className="w-full pr-4">
                             <div className="relative">
                                 {timelineItems.map((item, index) => (
                                     <div key={index} className="relative flex gap-4 pb-6 last:pb-0">

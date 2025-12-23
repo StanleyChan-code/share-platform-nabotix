@@ -15,7 +15,7 @@ import {FileInfo} from "@/integrations/api/fileApi";
 import {useRef} from 'react';
 import ResearchOutputForm from "@/components/outputs/ResearchOutputForm";
 import {ApprovedDatasetSelector} from "./ApprovedDatasetSelector.tsx";
-import FileUploader from "@/components/upload/FileUploader";
+import FileUploader from "@/components/fileuploader/FileUploader.tsx";
 import {getJournalPartitionValue} from "@/lib/outputUtils.ts";
 
 interface SubmitOutputDialogProps {
@@ -331,6 +331,8 @@ const SubmitOutputDialog = ({open, onOpenChange, onSubmit}: SubmitOutputDialogPr
                                 onDatasetSelect={handleDatasetSelect}
                                 DatasetSelectorComponent={ApprovedDatasetSelector}
                                 FileUploaderComponent={FileUploader}
+                                maxSize={500 * 1024 * 1024} // 500MB
+                                acceptedFileTypes={['.zip', '.rar', '.7z', '.pdf', '.doc', '.docx', '.txt', '.ppt', '.pptx']} // 压缩包和文档格式
                                 isLoadingPubmed={isLoadingPubmed}
                                 pubmedError={pubmedError}
                                 onFetchPubMed={handleFetchPubMedData}

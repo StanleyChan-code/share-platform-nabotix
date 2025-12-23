@@ -12,6 +12,7 @@ import {institutionApi, Institution} from "@/integrations/api/institutionApi.ts"
 import ReactPaginate from "react-paginate";
 import {InstitutionTypes} from "@/lib/enums.ts";
 import { ApiResponse, Page } from "@/integrations/api/client";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const InstitutionManagementTab = () => {
     const [showAddInstitutionForm, setShowAddInstitutionForm] = useState(false);
@@ -28,6 +29,9 @@ const InstitutionManagementTab = () => {
 
     // 搜索相关状态
     const [searchTerm, setSearchTerm] = useState("");
+    
+    // 添加防抖处理，延迟550ms
+    const debouncedSearchTerm = useDebounce(searchTerm, 550);
 
     // 获取机构列表
     const fetchInstitutions = useCallback(async (page: number = 0, searchName: string = "") => {
@@ -61,9 +65,21 @@ const InstitutionManagementTab = () => {
         fetchInstitutions(0);
     }, [fetchInstitutions]);
 
+    // 监听防抖后的搜索值变化，执行搜索
+    useEffect(() => {
+        // 重置到第一页并使用防抖后的搜索值
+        fetchInstitutions(0, debouncedSearchTerm);
+    }, [debouncedSearchTerm, fetchInstitutions]);
+
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        // 由于使用了防抖，这里不需要额外操作，只需确保搜索值被更新
+        // 防抖的useEffect会自动处理搜索
+    };
+
     const handleInstitutionAdded = () => {
         // 重新获取机构数据
-        fetchInstitutions(currentPage, searchTerm);
+        fetchInstitutions(currentPage, debouncedSearchTerm);
 
         toast({
             title: "刷新数据",
@@ -71,14 +87,9 @@ const InstitutionManagementTab = () => {
         });
     };
 
-    const handleSearch = (e: React.FormEvent) => {
-        e.preventDefault();
-        fetchInstitutions(0, searchTerm);
-    };
-
     const handlePageClick = (event: { selected: number }) => {
         const page = event.selected;
-        fetchInstitutions(page, searchTerm);
+        fetchInstitutions(page, debouncedSearchTerm);
     };
 
     return (
@@ -117,6 +128,7 @@ const InstitutionManagementTab = () => {
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="pl-10"
+                                    maxLength={100}
                                 />
                             </div>
                             <Button type="submit" className="w-full sm:w-auto">

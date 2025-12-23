@@ -68,12 +68,7 @@ export function ResearchDirectionChart() {
   }
 
   return (
-    <Card className="col-span-2">
-      <CardHeader>
-        <CardTitle>研究学科热度</CardTitle>
-        <CardDescription>按搜索频次排序的热门研究领域</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div className="col-span-2">
         {loading ? (
           <div className="flex items-center justify-center h-[300px]">
             <p>加载中...</p>
@@ -113,7 +108,6 @@ export function ResearchDirectionChart() {
             </BarChart>
           </ResponsiveContainer>
         )}
-      </CardContent>
-    </Card>
+    </div>
   );
 }

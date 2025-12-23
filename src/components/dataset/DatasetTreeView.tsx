@@ -23,6 +23,7 @@ import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {DatasetTypes} from "@/lib/enums";
 import {Dataset} from "@/integrations/api/datasetApi.ts";
+import {getLatestApprovedVersion} from "@/lib/datasetUtils.ts";
 
 interface DatasetTreeViewProps {
     datasets: Dataset[];
@@ -92,20 +93,9 @@ export function DatasetTreeView({datasets, onDatasetClick}: DatasetTreeViewProps
         setExpandedIds(newExpanded);
     };
 
-    // 获取最新批准版本的信息
-    const getLatestVersionInfo = (dataset: Dataset) => {
-        if (!dataset.versions || dataset.versions.length === 0) return null;
-
-        const approvedVersions = dataset.versions
-            .filter(version => version.approved === true)
-            .sort((a, b) => new Date(b.approvedAt).getTime() - new Date(a.approvedAt).getTime());
-
-        return approvedVersions.length > 0 ? approvedVersions[0] : null;
-    };
-
     // 统计字段数量
     const getFieldStats = (dataset: Dataset) => {
-        const latestVersion = getLatestVersionInfo(dataset);
+        const latestVersion = getLatestApprovedVersion(dataset.versions);
         const recordCount = latestVersion?.recordCount || 0;
         const variableCount = latestVersion?.variableCount || 0;
 
@@ -171,7 +161,7 @@ export function DatasetTreeView({datasets, onDatasetClick}: DatasetTreeViewProps
         const sortedChildren = [...children].sort((a, b) => {
             if (!a.firstPublishedDate) return 1;
             if (!b.firstPublishedDate) return -1;
-            return new Date(a.firstPublishedDate).getTime() - new Date(b.firstPublishedDate).getTime();
+            return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
         });
 
         return (

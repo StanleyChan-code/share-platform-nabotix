@@ -1,25 +1,26 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { outputApi, ResearchOutput } from "@/integrations/api/outputApi";
-import OutputDetailDialog from "@/components/outputs/OutputDetailDialog";
-import { AdminInstitutionSelector } from "@/components/admin/AdminInstitutionSelector";
-import { api } from "@/integrations/api/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card.tsx";
+import { Button } from "@/components/ui/button.tsx";
+import { useToast } from "@/hooks/use-toast.ts";
+import { outputApi, ResearchOutput } from "@/integrations/api/outputApi.ts";
+import OutputDetailDialog from "@/components/outputs/OutputDetailDialog.tsx";
+import { AdminInstitutionSelector } from "@/components/admin/institution/AdminInstitutionSelector.tsx";
+import { api } from "@/integrations/api/client.ts";
 import { CheckCircle, XCircle, Clock, Eye, ChevronLeftIcon, ChevronRightIcon, Search } from "lucide-react";
-import { formatDate } from "@/lib/utils";
-import { getOutputTypeDisplayName, getOutputTypeIconComponent, getAllOutputTypes } from "@/lib/outputUtils";
+import { formatDate } from "@/lib/utils.ts";
+import { getOutputTypeDisplayName, getOutputTypeIconComponent, getAllOutputTypes } from "@/lib/outputUtils.ts";
 import ReactPaginate from "react-paginate";
-import { getCurrentUserInfo } from "@/lib/authUtils";
-import { hasPermissionRole, PermissionRoles } from "@/lib/permissionUtils";
-import { Input } from "@/components/ui/input";
+import { getCurrentUserInfo } from "@/lib/authUtils.ts";
+import { hasPermissionRole, PermissionRoles } from "@/lib/permissionUtils.ts";
+import { Input } from "@/components/ui/input.tsx";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/select.tsx";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const ResearchOutputsManagementTab = () => {
   const [selectedInstitution, setSelectedInstitution] = useState<string | null>(null);
@@ -36,6 +37,9 @@ const ResearchOutputsManagementTab = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>("all"); // 状态筛选
   const [selectedType, setSelectedType] = useState<string>("all"); // 类型筛选
   const { toast } = useToast();
+  
+  // 添加防抖处理，延迟550ms
+  const debouncedSearchTitle = useDebounce(searchTitle, 550);
 
   // 使用 ref 来跟踪搜索条件变化，避免不必要的重渲染
   const searchParamsRef = useRef({
@@ -83,7 +87,7 @@ const ResearchOutputsManagementTab = () => {
         sortBy: 'createdAt',
         sortDir: 'desc',
         status: selectedStatus !== "all" ? selectedStatus : undefined,
-        title: searchTitle || undefined,
+        title: debouncedSearchTitle || undefined,
         type: selectedType !== "all" ? selectedType : undefined
       };
 
@@ -113,7 +117,7 @@ const ResearchOutputsManagementTab = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedInstitution, isPlatformAdmin, selectedStatus, searchTitle, selectedType, toast]);
+  }, [selectedInstitution, isPlatformAdmin, selectedStatus, debouncedSearchTitle, selectedType, toast]);
 
   // 页面更改处理
   const handlePageClick = (event: { selected: number }) => {
@@ -152,19 +156,7 @@ const ResearchOutputsManagementTab = () => {
       searchParamsRef.current = currentParams;
       fetchResearchOutputs(0);
     }
-  }, [selectedInstitution, isPlatformAdmin, selectedStatus, selectedType, searchTitle, fetchResearchOutputs]);
-
-  // 标题搜索防抖处理 - 独立处理，避免与其他条件冲突
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      // 只有当标题发生变化时才触发搜索
-      if (searchTitle !== searchParamsRef.current.searchTitle) {
-        fetchResearchOutputs(0);
-      }
-    }, 500);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchTitle, fetchResearchOutputs]);
+  }, [selectedInstitution, isPlatformAdmin, selectedStatus, selectedType, debouncedSearchTitle, fetchResearchOutputs]);
 
   // 初始加载数据
   useEffect(() => {
@@ -257,14 +249,8 @@ const ResearchOutputsManagementTab = () => {
   );
 
   return (
-      <Card>
-        <CardHeader>
-          <CardTitle>研究成果管理</CardTitle>
-          <CardDescription>
-            管理平台内的研究成果，包括审核和查看详情
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+      <>
+        <div className="space-y-6">
           {/* 筛选和搜索区域 */}
           <div className="space-y-4">
             {/* 仅平台管理员可以使用机构选择器 */}
@@ -290,6 +276,7 @@ const ResearchOutputsManagementTab = () => {
                       value={searchTitle}
                       onChange={(e) => setSearchTitle(e.target.value)}
                       className="pl-8"
+                      maxLength={100}
                   />
                 </div>
 
@@ -397,8 +384,8 @@ const ResearchOutputsManagementTab = () => {
               onApprovalChange={() => fetchResearchOutputs(currentPage)}
               managementMode={true}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </>
   );
 };
 

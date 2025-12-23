@@ -70,12 +70,7 @@ export function DatasetTypeChart({ data }: DatasetTypeChartProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>数据集类型分布</CardTitle>
-        <CardDescription>不同类型数据集的占比情况</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div>
         <ResponsiveContainer width="100%" height={300}>
           <PieChart>
             <Pie
@@ -98,7 +93,6 @@ export function DatasetTypeChart({ data }: DatasetTypeChartProps) {
             />
           </PieChart>
         </ResponsiveContainer>
-      </CardContent>
-    </Card>
+    </div>
   );
 }

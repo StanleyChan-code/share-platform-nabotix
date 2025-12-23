@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,8 @@ import { Phone, Lock, User as UserIcon, Mail, Send, Building, CreditCard, Check,
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useDebounce } from "@/hooks/useDebounce";
+import { FormValidator, InputWrapper } from "@/components/ui/FormValidator";
 
 interface SignupTabProps {
   phone: string;
@@ -37,7 +39,40 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
   const [searchValue, setSearchValue] = useState("");
   const [searchResults, setSearchResults] = useState<Institution[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const passwordRef = useRef<any>(null);
+  const confirmPasswordRef = useRef<any>(null);
   const { toast } = useToast();
+  
+  // 添加防抖处理，延迟550ms
+  const debouncedSearchValue = useDebounce(searchValue, 550);
+
+  // 密码验证函数
+  const validatePassword = (value: string): boolean | string => {
+    if (value.length < 6) {
+      return "密码长度至少为6位";
+    }
+    if (!/(?=.*[a-zA-Z])/.test(value)) {
+      return "密码必须包含字母";
+    }
+    if (!/(?=.*\d)/.test(value)) {
+      return "密码必须包含数字";
+    }
+    return true;
+  };
+
+  // 用户名验证函数
+  const validateUsername = (value: string): boolean | string => {
+    if (value.length < 2) {
+      return "用户名至少2个字符";
+    }
+    if (value.length > 20) {
+      return "用户名不能超过20个字符";
+    }
+    if (!/^[a-zA-Z0-9_\u4e00-\u9fa5]+$/.test(value)) {
+      return "用户名只能包含中文、英文、数字和下划线";
+    }
+    return true;
+  };
 
   // 倒计时处理
   useEffect(() => {
@@ -51,15 +86,15 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
 
   // 机构搜索
   useEffect(() => {
-    const searchTimeout = setTimeout(async () => {
-      if (searchValue.trim() === "") {
-        setSearchResults([]);
-        return;
-      }
+    if (debouncedSearchValue.trim() === "") {
+      setSearchResults([]);
+      return;
+    }
 
+    const searchInstitutions = async () => {
       setIsSearching(true);
       try {
-        const response = await institutionApi.searchInstitutions(searchValue);
+        const response = await institutionApi.searchInstitutions(debouncedSearchValue);
         if (response.success) {
           setSearchResults(response.data.content || []);
         }
@@ -69,16 +104,27 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
       } finally {
         setIsSearching(false);
       }
-    }, 300);
+    };
 
-    return () => clearTimeout(searchTimeout);
-  }, [searchValue]);
+    searchInstitutions();
+  }, [debouncedSearchValue]);
 
   const handleSendVerificationCode = async () => {
     if (!phone) {
       toast({
         title: "错误",
         description: "请输入手机号。",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // 验证手机号格式
+    const phoneRegex = /^1[3-9]\d{9}$/;
+    if (!phoneRegex.test(phone)) {
+      toast({
+        title: "手机号格式错误",
+        description: "请输入有效的手机号码",
         variant: "destructive",
       });
       return;
@@ -121,36 +167,8 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
     }
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // 表单验证
-    if (!phone || !verificationCode || !username || !realName || !password || !idType || !idNumber || !institutionId) {
-      toast({
-        title: "错误",
-        description: "请填写所有必填字段。",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      toast({
-        title: "错误",
-        description: "两次输入的密码不一致。",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (password.length < 6) {
-      toast({
-        title: "错误",
-        description: "密码长度至少为6位。",
-        variant: "destructive",
-      });
-      return;
-    }
 
     setLoading(true);
     try {
@@ -199,22 +217,24 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
   }, [institutionId, searchResults]);
 
   return (
-          <form onSubmit={handleSignup} className="space-y-4">
+          <FormValidator onSubmit={handleSubmit} className="space-y-4" showAllErrorsOnSubmit={true}>
             {/* 手机号与验证码行 */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div className="md:col-span-2 space-y-2">
                 <Label htmlFor="signup-phone" className="text-sm font-medium">手机号 *</Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                      id="signup-phone"
-                      type="tel"
-                      placeholder="请输入手机号"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="pl-10 h-11"
-                      required
-                  />
+                  <InputWrapper required validationType="phone">
+                    <Input
+                        id="signup-phone"
+                        type="tel"
+                        placeholder="请输入手机号"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="pl-10 h-11"
+                        maxLength={11}
+                    />
+                  </InputWrapper>
                 </div>
               </div>
 
@@ -237,40 +257,45 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
               <Label htmlFor="signup-verification-code" className="text-sm font-medium">验证码 *</Label>
               <div className="relative">
                 <Shield className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                    id="signup-verification-code"
-                    type="text"
-                    placeholder="请输入验证码"
-                    value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value)}
-                    className="pl-10 h-11"
-                    required
-                />
+                <InputWrapper required validationType="verificationCode">
+                  <Input
+                      id="signup-verification-code"
+                      type="text"
+                      placeholder="请输入6位验证码"
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value)}
+                      className="pl-10 h-11"
+                      maxLength={6}
+                  />
+                </InputWrapper>
               </div>
             </div>
 
-            {/* 用户名和真实姓名行 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="signup-username" className="text-sm font-medium">用户名 *</Label>
-                <div className="relative">
-                  <UserIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            {/* 用户名 */}
+            <div className="space-y-2">
+              <Label htmlFor="signup-username" className="text-sm font-medium">用户名 *</Label>
+              <div className="relative">
+                <UserIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <InputWrapper required customValidation={validateUsername}>
                   <Input
                       id="signup-username"
                       type="text"
-                      placeholder="请输入用户名"
+                      placeholder="2-20个字符，支持中文、英文、数字"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       className="pl-10 h-11"
-                      required
+                      maxLength={20}
                   />
-                </div>
+                </InputWrapper>
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="signup-realname" className="text-sm font-medium">真实姓名 *</Label>
-                <div className="relative">
-                  <BadgeCheck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            {/* 真实姓名 */}
+            <div className="space-y-2">
+              <Label htmlFor="signup-realname" className="text-sm font-medium">真实姓名 *</Label>
+              <div className="relative">
+                <BadgeCheck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <InputWrapper required>
                   <Input
                       id="signup-realname"
                       type="text"
@@ -278,9 +303,9 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
                       value={realName}
                       onChange={(e) => setRealName(e.target.value)}
                       className="pl-10 h-11"
-                      required
+                      maxLength={20}
                   />
-                </div>
+                </InputWrapper>
               </div>
             </div>
 
@@ -376,15 +401,17 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
                 <Label htmlFor="signup-id-number" className="text-sm font-medium">证件号码 *</Label>
                 <div className="relative">
                   <CreditCard className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                      id="signup-id-number"
-                      type="text"
-                      placeholder="请输入证件号码"
-                      value={idNumber}
-                      onChange={(e) => setIdNumber(e.target.value)}
-                      className="pl-10 h-11"
-                      required
-                  />
+                  <InputWrapper required validationType="idNumber" idType={idType as 'NATIONAL_ID' | 'PASSPORT' | 'OTHER'}>
+                    <Input
+                        id="signup-id-number"
+                        type="text"
+                        placeholder="请输入证件号码"
+                        value={idNumber}
+                        onChange={(e) => setIdNumber(e.target.value)}
+                        className="pl-10 h-11"
+                        idType={idType as 'NATIONAL_ID' | 'PASSPORT' | 'OTHER'}
+                    />
+                  </InputWrapper>
                 </div>
               </div>
             </div>
@@ -394,39 +421,44 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
               <Label htmlFor="signup-email" className="text-sm font-medium">联系邮箱</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="请输入邮箱"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 h-11"
-                />
+                <InputWrapper validationType="email">
+                  <Input
+                      id="signup-email"
+                      type="email"
+                      placeholder="请输入邮箱"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10 h-11"
+                  />
+                </InputWrapper>
               </div>
             </div>
 
-            {/* 密码和确认密码行 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="signup-password" className="text-sm font-medium">密码 *</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            {/* 密码 */}
+            <div className="space-y-2">
+              <Label htmlFor="signup-password" className="text-sm font-medium">密码 *</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <InputWrapper required customValidation={validatePassword}>
                   <Input
                       id="signup-password"
                       type="password"
-                      placeholder="至少6位"
+                      placeholder="至少6位，包含字母和数字"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="pl-10 h-11"
-                      required
+                      ref={passwordRef}
                   />
-                </div>
+                </InputWrapper>
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password" className="text-sm font-medium">确认密码 *</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            {/* 确认密码 */}
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password" className="text-sm font-medium">确认密码 *</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <InputWrapper required isPasswordConfirm={true} passwordRef={passwordRef}>
                   <Input
                       id="confirm-password"
                       type="password"
@@ -434,9 +466,9 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className="pl-10 h-11"
-                      required
+                      ref={confirmPasswordRef}
                   />
-                </div>
+                </InputWrapper>
               </div>
             </div>
 
@@ -463,7 +495,7 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
                   "立即注册"
               )}
             </Button>
-          </form>
+          </FormValidator>
   );
 };
 

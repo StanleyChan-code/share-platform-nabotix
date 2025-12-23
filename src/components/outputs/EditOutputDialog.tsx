@@ -14,7 +14,7 @@ import {Dataset} from "@/integrations/api/datasetApi";
 import {DatasetSelector} from "../dataset/DatasetSelector.tsx";
 import {fileApi, FileInfo} from "@/integrations/api/fileApi";
 import ResearchOutputForm from "@/components/outputs/ResearchOutputForm";
-import FileUploader from "@/components/upload/FileUploader";
+import FileUploader from "@/components/fileuploader/FileUploader.tsx";
 import {getJournalPartitionValue} from "@/lib/outputUtils.ts";
 
 interface EditOutputDialogProps {
@@ -404,6 +404,8 @@ const EditOutputDialog = ({open, onOpenChange, output, onEdit}: EditOutputDialog
                                 onDatasetSelect={handleDatasetSelect}
                                 DatasetSelectorComponent={DatasetSelector}
                                 FileUploaderComponent={FileUploader}
+                                maxSize={500 * 1024 * 1024} // 500MB
+                                acceptedFileTypes={['.zip', '.rar', '.7z', '.pdf', '.doc', '.docx', '.txt', '.ppt', '.pptx']} // 压缩包和文档格式
                                 isLoadingPubmed={isLoadingPubmed}
                                 pubmedError={pubmedError}
                                 onFetchPubMed={handleFetchPubMedData}

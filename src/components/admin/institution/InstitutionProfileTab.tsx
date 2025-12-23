@@ -5,10 +5,12 @@ import { Label } from "@/components/ui/label.tsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
 import { useToast } from "@/hooks/use-toast.ts";
 import { institutionApi, Institution } from "@/integrations/api/institutionApi.ts";
-import { Loader2 } from "lucide-react";
-import { InstitutionTypes } from "@/lib/enums.ts";
+import { Loader2, Building, User, Mail, Phone, IdCard, Briefcase, Shield, Asterisk, Info } from "lucide-react";
+import { InstitutionTypes, ID_TYPES } from "@/lib/enums.ts";
 import { getCurrentUserRoles } from "@/lib/authUtils.ts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card.tsx";
+import { Separator } from "@/components/ui/separator.tsx";
+import { FormValidator, InputWrapper } from "@/components/ui/FormValidator";
 
 interface InstitutionProfileTabProps {
   institutionId: string;
@@ -41,7 +43,7 @@ const InstitutionProfileTab = ({ institutionId }: InstitutionProfileTabProps) =>
         if (institutionId === null) return;
         setLoading(true);
         let apiResponse = await institutionApi.getInstitutionById(institutionId);
-        
+
         const data = apiResponse.data;
         setInstitution(data);
         setFormData(data);
@@ -63,8 +65,8 @@ const InstitutionProfileTab = ({ institutionId }: InstitutionProfileTabProps) =>
   }, [institutionId, toast, isPlatformAdmin]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target;
-    setFormData(prev => ({ ...prev, [id]: value }));
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSelectChange = (name: string, value: string) => {
@@ -73,26 +75,26 @@ const InstitutionProfileTab = ({ institutionId }: InstitutionProfileTabProps) =>
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!institution) return;
 
     try {
       setSaving(true);
-      
+
       // 准备要更新的数据，排除不可更改的字段
       const updateData: Partial<Institution> = {
-        shortName: formData.shortName,
-        contactPhone: formData.contactPhone,
-        contactEmail: formData.contactEmail,
+        shortName: formData.shortName?.trim() || null,
+        contactPhone: formData.contactPhone?.trim(),
+        contactEmail: formData.contactEmail?.trim(),
       };
 
       // 只有平台管理员可以修改敏感字段
       if (isPlatformAdmin) {
-        updateData.fullName = formData.fullName;
+        updateData.fullName = formData.fullName?.trim();
         updateData.type = formData.type;
-        updateData.contactPerson = formData.contactPerson;
+        updateData.contactPerson = formData.contactPerson?.trim();
         updateData.contactIdType = formData.contactIdType;
-        updateData.contactIdNumber = formData.contactIdNumber;
+        updateData.contactIdNumber = formData.contactIdNumber?.trim();
       }
 
       // 平台管理员可以直接更新任意机构
@@ -102,7 +104,10 @@ const InstitutionProfileTab = ({ institutionId }: InstitutionProfileTabProps) =>
       } else {
         await institutionApi.updateCurrentUserInstitution(updateData);
       }
-      
+
+      // 更新本地数据
+      setInstitution(prev => prev ? { ...prev, ...updateData } : null);
+
       toast({
         title: "更新成功",
         description: "机构信息已成功更新",
@@ -119,169 +124,277 @@ const InstitutionProfileTab = ({ institutionId }: InstitutionProfileTabProps) =>
     }
   };
 
-  if (!institution) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500"></p>
-      </div>
-    );
-  }
+  const resetForm = () => {
+    if (institution) {
+      setFormData(institution);
+    }
+  };
+
+  // 字段分组配置
+  const fieldGroups = [
+    {
+      title: "机构基本信息",
+      icon: Building,
+      required: true,
+      fields: [
+        {
+          name: "fullName",
+          label: "机构全称",
+          icon: Building,
+          required: true,
+          type: "text",
+          placeholder: "请输入机构的完整名称",
+          maxLength: 200,
+          editable: false, // 只有平台管理员可编辑
+          description: "只有平台管理员可以修改此项"
+        },
+        {
+          name: "type",
+          label: "机构类型",
+          icon: Briefcase,
+          required: true,
+          type: "select",
+          options: Object.entries(InstitutionTypes).map(([key, value]) => ({ value: key, label: value })),
+          editable: false, // 只有平台管理员可编辑
+          description: "只有平台管理员可以修改此项"
+        },
+        {
+          name: "shortName",
+          label: "机构简称",
+          icon: Building,
+          required: false,
+          type: "text",
+          placeholder: "请输入机构的简称或缩写",
+          maxLength: 100,
+          editable: true
+        }
+      ]
+    },
+    {
+      title: "联系人信息",
+      icon: User,
+      required: true,
+      fields: [
+        {
+          name: "contactPerson",
+          label: "联系人姓名",
+          icon: User,
+          required: true,
+          type: "text",
+          placeholder: "请输入联系人姓名",
+          maxLength: 100,
+          editable: false, // 只有平台管理员可编辑
+          description: "只有平台管理员可以修改此项"
+        },
+        {
+          name: "contactEmail",
+          label: "联系邮箱",
+          icon: Mail,
+          required: true,
+          type: "email",
+          placeholder: "请输入联系人邮箱地址",
+          maxLength: 200,
+          editable: true
+        },
+        {
+          name: "contactPhone",
+          label: "联系电话",
+          icon: Phone,
+          required: true,
+          type: "tel",
+          placeholder: "请输入联系人电话号码",
+          maxLength: 20,
+          editable: true
+        }
+      ]
+    },
+    {
+      title: "身份验证信息",
+      icon: IdCard,
+      required: true,
+      fields: [
+        {
+          name: "contactIdType",
+          label: "证件类型",
+          icon: IdCard,
+          required: true,
+          type: "select",
+          options: Object.entries(ID_TYPES).map(([key, value]) => ({ value: key, label: value })),
+          editable: false, // 只有平台管理员可编辑
+          description: "只有平台管理员可以修改此项"
+        },
+        {
+          name: "contactIdNumber",
+          label: "证件号码",
+          icon: IdCard,
+          required: true,
+          type: "text",
+          placeholder: "请输入证件号码",
+          maxLength: 50,
+          editable: false, // 只有平台管理员可编辑
+          description: "只有平台管理员可以修改此项"
+        }
+      ]
+    }
+  ];
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+    );
+  }
+
+  if (!institution) {
+    if (isPlatformAdmin) {
+      return ;
+    }
+
+    return (
+        <div className="flex items-center justify-center h-64">
+          <p className="text-gray-500">没有相关机构信息</p>
+        </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h2 className="text-xl font-semibold mb-4">机构基本信息</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="fullName">机构全称 *</Label>
-              <Input
-                id="fullName"
-                value={formData.fullName || ""}
-                onChange={handleInputChange}
-                placeholder="机构的完整名称"
-                required
-                readOnly={!isPlatformAdmin}
-                className={!isPlatformAdmin ? "bg-gray-100 cursor-not-allowed" : ""}
-              />
+      <div className="space-y-6">
+            <FormValidator onSubmit={handleSubmit} className="space-y-6" showAllErrorsOnSubmit={true}>
+              {fieldGroups.map((group, groupIndex) => (
+                  <div key={group.title} className="space-y-4">
+                    <div className={`p-4 rounded-lg border-l-4 ${group.required ? 'border-l-red-500 bg-red-50' : 'border-l-blue-500 bg-blue-50'}`}>
+                      <div className="flex items-center gap-2 mb-4">
+                        <group.icon className={`h-4 w-4 ${group.required ? 'text-red-600' : 'text-blue-600'}`} />
+                        <h3 className="font-semibold text-sm">{group.title}</h3>
+                        {!group.required && (
+                            <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">选填</span>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {group.fields.map((field) => {
+                          const isEditable = field.editable === undefined ? true : (isPlatformAdmin ? true : field.editable);
+
+                          return (
+                              <div key={field.name} className="space-y-2">
+                                <Label htmlFor={field.name} className="flex items-center gap-2 text-sm">
+                                  <field.icon className="h-3 w-3" />
+                                  {field.label}
+                                  {field.required ? (
+                                      <Asterisk className="h-3 w-3 text-red-500" />
+                                  ) : (
+                                      <span className="text-xs text-muted-foreground">选填</span>
+                                  )}
+                                </Label>
+
+                                {field.type === "select" ? (
+                                    <Select
+                                        value={formData[field.name as keyof typeof formData] as string || ""}
+                                        onValueChange={(value) => handleSelectChange(field.name, value)}
+                                        disabled={!isEditable}
+                                    >
+                                      <SelectTrigger className={!isEditable ? "bg-gray-100 opacity-50" : ""}>
+                                        <SelectValue placeholder={`请选择${field.label}`} />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {field.options?.map(option => (
+                                            <SelectItem key={option.value} value={option.value}>
+                                              {option.label}
+                                            </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                ) : (
+                                    <InputWrapper
+                                        required={field.required}
+                                        validationType={
+                                          field.name === 'contactPhone' ? 'phone' :
+                                              field.name === 'contactEmail' ? 'email' :
+                                                  field.name === 'contactIdNumber' ? 'idNumber' : undefined
+                                        }
+                                        idType={field.name === 'contactIdNumber' ? formData.contactIdType as 'NATIONAL_ID' | 'PASSPORT' | 'OTHER' : undefined}
+                                    >
+                                      <Input
+                                          id={field.name}
+                                          name={field.name}
+                                          type={field.type}
+                                          value={formData[field.name as keyof typeof formData] as string || ""}
+                                          onChange={handleInputChange}
+                                          placeholder={field.placeholder}
+                                          maxLength={field.maxLength}
+                                          readOnly={!isEditable}
+                                          className={!isEditable ? "bg-gray-100 cursor-not-allowed" : ""}
+                                      />
+                                    </InputWrapper>
+                                )}
+
+                                {!isEditable && field.description && (
+                                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                      <Info className="h-3 w-3" />
+                                      {field.description}
+                                    </p>
+                                )}
+                              </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {groupIndex < fieldGroups.length - 1 && <Separator />}
+                  </div>
+              ))}
+
+              {/* 权限提示 */}
               {!isPlatformAdmin && (
-                <p className="text-sm text-muted-foreground">只有平台管理员可以修改此项</p>
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-start gap-2">
+                      <Shield className="h-4 w-4 text-blue-600 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-blue-800">权限说明</p>
+                        <p className="text-xs text-blue-700">
+                          您当前是机构管理员，只能修改机构简称、联系邮箱和联系电话。其他敏感信息需要平台管理员进行修改。
+                        </p>
+                      </div>
+                    </div>
+                  </div>
               )}
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="type">机构类型 *</Label>
-              <Select 
-                value={formData.type || ""} 
-                onValueChange={(value) => handleSelectChange("type", value)}
-                disabled={!isPlatformAdmin}
-              >
-                <SelectTrigger className={!isPlatformAdmin ? "bg-gray-100 opacity-50" : ""}>
-                  <SelectValue placeholder="选择机构类型" />
-                </SelectTrigger>
-                <SelectContent>
-                  {
-                    Object.entries(InstitutionTypes).map(([key, value]) => (
-                      <SelectItem key={key} value={key}>{value}</SelectItem>
-                    ))
-                  }
-                </SelectContent>
-              </Select>
-              {!isPlatformAdmin && (
-                <p className="text-sm text-muted-foreground">只有平台管理员可以修改此项</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="shortName">机构简称</Label>
-              <Input
-                id="shortName"
-                value={formData.shortName || ""}
-                onChange={handleInputChange}
-                placeholder="机构的简称或缩写"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="contactEmail">联系邮箱 *</Label>
-              <Input
-                id="contactEmail"
-                type="email"
-                value={formData.contactEmail || ""}
-                onChange={handleInputChange}
-                placeholder="联系人邮箱地址"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="contactPerson">联系人 *</Label>
-              <Input
-                id="contactPerson"
-                value={formData.contactPerson || ""}
-                onChange={handleInputChange}
-                placeholder="机构联系人姓名"
-                required
-                readOnly={!isPlatformAdmin}
-                className={!isPlatformAdmin ? "bg-gray-100 cursor-not-allowed" : ""}
-              />
-              {!isPlatformAdmin && (
-                <p className="text-sm text-muted-foreground">只有平台管理员可以修改此项</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="contactPhone">联系电话 *</Label>
-              <Input
-                id="contactPhone"
-                value={formData.contactPhone || ""}
-                onChange={handleInputChange}
-                placeholder="联系人电话号码"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="contactIdType">联系人证件类型 *</Label>
-              <Select 
-                value={formData.contactIdType || ""} 
-                onValueChange={(value) => handleSelectChange("contactIdType", value)}
-                disabled={!isPlatformAdmin}
-              >
-                <SelectTrigger className={!isPlatformAdmin ? "bg-gray-100 opacity-50" : ""}>
-                  <SelectValue placeholder="选择证件类型" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="NATIONAL_ID">身份证</SelectItem>
-                  <SelectItem value="PASSPORT">护照</SelectItem>
-                  <SelectItem value="OTHER">其他</SelectItem>
-                </SelectContent>
-              </Select>
-              {!isPlatformAdmin && (
-                <p className="text-sm text-muted-foreground">只有平台管理员可以修改此项</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="contactIdNumber">联系人证件号码 *</Label>
-              <Input
-                id="contactIdNumber"
-                value={formData.contactIdNumber || ""}
-                onChange={handleInputChange}
-                placeholder="联系人证件号码"
-                required
-                readOnly={!isPlatformAdmin}
-                className={!isPlatformAdmin ? "bg-gray-100 cursor-not-allowed" : ""}
-              />
-              {!isPlatformAdmin && (
-                <p className="text-sm text-muted-foreground">只有平台管理员可以修改此项</p>
-              )}
-            </div>
-          </div>
-
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="submit" disabled={saving}>
-              {saving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  保存中...
-                </>
-              ) : (
-                "保存更改"
-              )}
-            </Button>
-          </div>
-        </form>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t">
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div className="flex items-center gap-1">
+                    <Asterisk className="h-3 w-3 text-red-500" />
+                    <span>标记的字段为必填项</span>
+                  </div>
+                  <div>修改后请确保信息的准确性</div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                      type="button"
+                      variant="outline"
+                      onClick={resetForm}
+                      disabled={saving}
+                  >
+                    重置
+                  </Button>
+                  <Button
+                      type="submit"
+                      disabled={saving}
+                      className="min-w-32"
+                  >
+                    {saving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          保存中...
+                        </>
+                    ) : (
+                        "保存更改"
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </FormValidator>
       </div>
-    </div>
   );
 };
 

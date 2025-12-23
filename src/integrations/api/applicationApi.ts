@@ -5,6 +5,7 @@ import { FileInfo } from './fileApi';
 export interface Application {
   id: string;
   datasetId: string;
+  datasetInstitutionId: string;
   datasetTitle: string;
   applicantId: string;
   applicantName: string;
@@ -27,6 +28,8 @@ export interface Application {
   providerReviewedAt: string | null;
   institutionReviewedAt: string | null;
   approvedAt: string | null;
+  providerReviewResult: boolean | null;
+  institutionReviewResult: boolean | null;
 }
 
 // 创建申请请求体
@@ -97,14 +100,6 @@ export async function deleteApplication(id: string) {
 }
 
 /**
- * 根据数据集ID获取申请记录列表（管理接口）
- */
-export async function getApplicationsByDatasetIdManage(datasetId: string) {
-  const response = await api.get<Application[]>(`/manage/applications/by-dataset/${datasetId}`);
-  return response.data;
-}
-
-/**
  * 根据数据集ID分页获取申请记录列表（管理接口）
  */
 export async function getApplicationsByDatasetIdPageManage(
@@ -127,25 +122,6 @@ export async function reviewApplicationByApprover(id: string, request: ReviewApp
 }
 
 /**
- * 申请审核员查看待审核申请记录列表
- */
-export async function getPendingApplications(page: number = 0, size: number = 10, sortBy: string = 'submittedAt', sortDir: string = 'desc') {
-  const response = await api.get<Page<Application>>(`/manage/applications/pending-applications?page=${page}&size=${size}&sortBy=${sortBy}&sortDir=${sortDir}`);
-  return response.data;
-}
-
-/**
- * 申请审核员查看已处理申请记录列表
- */
-export async function getProcessedApplications(page: number = 0, size: number = 10, sortBy: string = 'submittedAt', sortDir: string = 'desc') {
-  const response = await api.get<{
-    approvedApplications: Page<Application>;
-    deniedApplications: Page<Application>;
-  }>(`/manage/applications/processed-applications?page=${page}&size=${size}&sortBy=${sortBy}&sortDir=${sortDir}`);
-  return response.data;
-}
-
-/**
  * 下载申请文件
  */
 export async function downloadApplicationFile(applicationId: string, fileId: string) {
@@ -158,5 +134,35 @@ export async function downloadApplicationFile(applicationId: string, fileId: str
 // 新增：获取指定数据集的已批准研究成果（用于ResearchOutputsTab）
 export async function getApprovedResearchOutputs(datasetId: string, page: number = 0, size: number = 10) {
   const response = await api.get<Page<Application>>(`/datasets/${datasetId}/approved-research-outputs?page=${page}&size=${size}`);
+  return response.data;
+}
+
+// 新增：获取所有申请记录（管理端，支持筛选）
+export async function getAllApplications(
+  page: number = 0, 
+  size: number = 10, 
+  sortBy: string = 'submittedAt', 
+  sortDir: string = 'desc',
+  institutionId?: string,
+  projectTitle?: string,
+  status?: string
+) {
+  const params = new URLSearchParams();
+  params.append('page', page.toString());
+  params.append('size', size.toString());
+  params.append('sortBy', sortBy);
+  params.append('sortDir', sortDir);
+  
+  if (institutionId) {
+    params.append('institutionId', institutionId);
+  }
+  if (projectTitle) {
+    params.append('projectTitle', projectTitle);
+  }
+  if (status) {
+    params.append('status', status);
+  }
+  
+  const response = await api.get<Page<Application>>(`/manage/applications?${params.toString()}`);
   return response.data;
 }

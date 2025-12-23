@@ -4,12 +4,11 @@ import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/c
 import {Badge} from "@/components/ui/badge";
 import {useToast} from "@/hooks/use-toast";
 import {getPermissionRoleDisplayName, getUserPermissionRoleDisplayNames, PermissionRoles} from "@/lib/permissionUtils";
-import {formatDate, formatDateTime} from "@/lib/utils.ts";
-import CreateUserForm from "@/components/admin/user/CreateUserForm.tsx";
+import {formatDateTime} from "@/lib/utils.ts";
 import {userApi} from "@/integrations/api/userApi.ts";
 import {Button} from "@/components/ui/button.tsx";
 import {PlusCircle, Eye, Pencil, ChevronRightIcon, ChevronLeftIcon, Phone, Shield, Search} from "lucide-react";
-import {AdminInstitutionSelector} from "@/components/admin/AdminInstitutionSelector.tsx";
+import {AdminInstitutionSelector} from "@/components/admin/institution/AdminInstitutionSelector.tsx";
 import {getCurrentUserInfo} from "@/lib/authUtils.ts";
 import {
     Dialog,
@@ -26,7 +25,7 @@ import {
     DialogTitle as InfoDialogTitle,
     DialogTrigger as InfoDialogTrigger,
 } from "@/components/ui/dialog.tsx";
-import {EducationLevels} from "@/lib/enums";
+import {EducationLevels, ID_TYPES} from "@/lib/enums";
 import ReactPaginate from "react-paginate";
 import EditUserDialog from "@/components/admin/user/EditUserDialog.tsx";
 import EditPhoneDialog from "@/components/admin/user/EditPhoneDialog.tsx";
@@ -34,13 +33,7 @@ import EditUserAuthoritiesDialog from "@/components/admin/user/EditUserAuthoriti
 import {ScrollArea} from "@radix-ui/react-scroll-area";
 import {Input} from "@/components/ui/input.tsx";
 import {institutionApi} from "@/integrations/api/institutionApi.ts";
-
-// 证件类型映射
-const ID_TYPE_DISPLAY_NAMES: Record<string, string> = {
-    NATIONAL_ID: "身份证",
-    PASSPORT: "护照",
-    OTHER: "其他证件"
-};
+import {useDebounce} from "@/hooks/useDebounce";
 
 const UserManagementTab = () => {
     const [users, setUsers] = useState<any[]>([]);
@@ -64,6 +57,9 @@ const UserManagementTab = () => {
     // 存储机构信息的状态
     const [institutionMap, setInstitutionMap] = useState<Record<string, { fullName: string }>>({});
     const {toast} = useToast();
+    
+    // 添加防抖处理，延迟550ms
+    const debouncedSearchPhone = useDebounce(searchPhone, 550);
 
     // 检查用户是否为平台管理员并获取用户所属机构，同时初始化用户列表
     useEffect(() => {
@@ -168,7 +164,7 @@ const UserManagementTab = () => {
 
     // 根据手机号搜索用户
     const handleSearchByPhone = async (phone?: string) => {
-        const searchPhoneValue = phone || searchPhone;
+        const searchPhoneValue = phone || debouncedSearchPhone;
         
         // 如果搜索框为空，清空搜索结果并重新加载用户列表
         if (!searchPhoneValue.trim()) {
@@ -269,10 +265,10 @@ const UserManagementTab = () => {
     // 监听刷新事件
     useEffect(() => {
         const handleRefreshUsers = () => {
-            if (searchPhone.trim() && !searchResultUser) {
+            if (debouncedSearchPhone.trim() && !searchResultUser) {
                 // 如果正在搜索但还没有结果，执行搜索
                 handleSearchByPhone();
-            } else if (searchPhone.trim() && searchResultUser) {
+            } else if (debouncedSearchPhone.trim() && searchResultUser) {
                 // 如果有搜索结果，重新执行搜索来刷新
                 handleSearchByPhone();
             } else {
@@ -286,7 +282,15 @@ const UserManagementTab = () => {
         return () => {
             window.removeEventListener('refresh-users', handleRefreshUsers);
         };
-    }, [selectedInstitutionId, currentPage, searchPhone, searchResultUser]);
+    }, [selectedInstitutionId, currentPage, debouncedSearchPhone, searchResultUser]);
+
+    // 监听防抖后的搜索值变化，执行搜索
+    useEffect(() => {
+        // 只有当搜索值不为空时才执行搜索
+        if (debouncedSearchPhone.trim()) {
+            handleSearchByPhone();
+        }
+    }, [debouncedSearchPhone]);
 
     const handleUserAdded = () => {
         // 根据是否有搜索条件决定刷新方式
@@ -375,14 +379,6 @@ const UserManagementTab = () => {
 
     return (
         <div className="space-y-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>用户管理</CardTitle>
-                    <CardDescription>
-                        管理平台用户及其权限角色
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
                     {isPlatformAdmin && (
                         <div className="mb-6 p-4 border rounded-lg bg-muted/50">
                             <AdminInstitutionSelector
@@ -413,6 +409,7 @@ const UserManagementTab = () => {
                                             handleSearchByPhone();
                                         }
                                     }}
+                                    maxLength={20}
                                 />
                             </div>
                             <Button 
@@ -469,7 +466,8 @@ const UserManagementTab = () => {
                         </div>
                     ) : (selectedInstitutionId || isPlatformAdmin) ? (
                         <>
-                            <Table>
+
+                            <Table className="border rounded-md">
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>姓名</TableHead>
@@ -556,7 +554,7 @@ const UserManagementTab = () => {
                                                                 {renderInfoField(
                                                                     "证件类型:",
                                                                     selectedUser.idType
-                                                                        ? (ID_TYPE_DISPLAY_NAMES[selectedUser.idType] || selectedUser.idType)
+                                                                        ? (ID_TYPES[selectedUser.idType] || selectedUser.idType)
                                                                         : "未填写"
                                                                 )}
 
@@ -683,7 +681,7 @@ const UserManagementTab = () => {
                                                                     {renderInfoField(
                                                                         "证件类型:",
                                                                         selectedUser.idType
-                                                                            ? (ID_TYPE_DISPLAY_NAMES[selectedUser.idType] || selectedUser.idType)
+                                                                            ? (ID_TYPES[selectedUser.idType] || selectedUser.idType)
                                                                             : "未填写"
                                                                     )}
 
@@ -790,9 +788,6 @@ const UserManagementTab = () => {
                                 : "请选择一个机构以查看其用户列表"}
                         </div>
                     )}
-                </CardContent>
-            </Card>
-
             {selectedUser && (
                 <>
                     <EditUserDialog

@@ -162,8 +162,16 @@ const ResearchSubjectManagementTab = () => {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>研究学科管理</CardTitle>
-          <CardDescription>平台中所有研究学科的列表</CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>研究学科管理</CardTitle>
+              <CardDescription>平台中所有研究学科的列表</CardDescription>
+            </div>
+            <Button onClick={handleCreate}>
+              <Plus className="h-4 w-4" />
+              新增学科
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -246,6 +254,7 @@ const ResearchSubjectManagementTab = () => {
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
                   placeholder="请输入研究学科名称"
+                  maxLength={200}
                 />
               </div>
             </div>
@@ -260,6 +269,7 @@ const ResearchSubjectManagementTab = () => {
                   value={formData.nameEn}
                   onChange={(e) => setFormData({...formData, nameEn: e.target.value})}
                   placeholder="请输入英文名称"
+                  maxLength={200}
                 />
               </div>
             </div>
@@ -275,6 +285,7 @@ const ResearchSubjectManagementTab = () => {
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
                   placeholder="请输入描述"
                   rows={3}
+                  maxLength={1000}
                 />
               </div>
             </div>

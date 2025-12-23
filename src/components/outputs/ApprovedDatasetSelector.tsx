@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import {cn, formatDate} from "@/lib/utils";
 import { DatasetTypes } from "@/lib/enums";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface ApprovedDatasetSelectorProps {
   selectedDataset: Dataset | null;
@@ -29,25 +30,28 @@ export function ApprovedDatasetSelector({
   const [datasetSearchTerm, setDatasetSearchTerm] = useState("");
   const [datasetSearchLoading, setDatasetSearchLoading] = useState(false);
   const [datasetPopoverOpen, setDatasetPopoverOpen] = useState(false);
+  
+  // 添加防抖处理，延迟550ms
+  const debouncedDatasetSearchTerm = useDebounce(datasetSearchTerm, 550);
 
   // 获取用户已审核通过的数据集
   useEffect(() => {
     const searchDatasets = async () => {
-      if (datasetSearchTerm.trim() === "" || disabled) {
+      if (debouncedDatasetSearchTerm.trim() === "" || disabled) {
         // 如果没有搜索词，获取最新的已审核通过的数据集
         try {
           setDatasetSearchLoading(true);
           const response = await datasetApi.getMyApprovedDatasets({ size: size });
           
           // 如果没有搜索词，直接显示最新数据
-          if (datasetSearchTerm.trim() === "") {
+          if (debouncedDatasetSearchTerm.trim() === "") {
             setFilteredDatasets(response.data.content);
           } else {
             // 过滤搜索结果
             const filtered = response.data.content.filter(dataset =>
-              dataset.titleCn.toLowerCase().includes(datasetSearchTerm.toLowerCase()) ||
+              dataset.titleCn.toLowerCase().includes(debouncedDatasetSearchTerm.toLowerCase()) ||
               (dataset.keywords && dataset.keywords.some(keyword => 
-                keyword.toLowerCase().includes(datasetSearchTerm.toLowerCase())))
+                keyword.toLowerCase().includes(debouncedDatasetSearchTerm.toLowerCase())))
             );
             setFilteredDatasets(filtered.slice(0, size));
           }
@@ -66,9 +70,9 @@ export function ApprovedDatasetSelector({
         
         // 过滤搜索结果
         const filtered = response.data.content.filter(dataset =>
-          dataset.titleCn.toLowerCase().includes(datasetSearchTerm.toLowerCase()) ||
+          dataset.titleCn.toLowerCase().includes(debouncedDatasetSearchTerm.toLowerCase()) ||
           (dataset.keywords && dataset.keywords.some(keyword => 
-            keyword.toLowerCase().includes(datasetSearchTerm.toLowerCase())))
+            keyword.toLowerCase().includes(debouncedDatasetSearchTerm.toLowerCase())))
         );
         setFilteredDatasets(filtered.slice(0, size));
       } catch (error) {
@@ -79,12 +83,8 @@ export function ApprovedDatasetSelector({
       }
     };
 
-    const delayDebounceFn = setTimeout(() => {
-      searchDatasets();
-    }, 300);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [datasetSearchTerm, disabled]);
+    searchDatasets();
+  }, [debouncedDatasetSearchTerm, disabled]);
 
   const handleDatasetSelect = (dataset: Dataset) => {
     if (disabled) return;

@@ -77,10 +77,10 @@ export const getOutputTypeIconComponent = (type: string) => {
  * 根据期刊分区来定义加载
  */
 export const getJournalPartitionValue = (journalName: string) => {
-    return journalName === "cas_1" || journalName === "jcr_q1" ? 2 :
-        journalName === "cas_2" || journalName === "jcr_q2" ? 1 :
-            journalName === "cas_3" || journalName === "jcr_q3" ? 0 :
-                journalName === "cas_4" || journalName === "jcr_q4" ? 0 : 0;
+    return journalName === "cas_1" || journalName === "jcr_q1" ? 4 :
+        journalName === "cas_2" || journalName === "jcr_q2" ? 3 :
+            journalName === "cas_3" || journalName === "jcr_q3" ? 2 :
+                journalName === "cas_4" || journalName === "jcr_q4" ? 1 : 0;
 
 }
 
