@@ -1,4 +1,5 @@
 import {api, Page} from './client';
+import {ResearchSubject} from "@/integrations/api/datasetApi.ts";
 
 // 定义平台统计数据结构
 interface PlatformStatistics {
@@ -45,11 +46,6 @@ export const getPlatformStatistics = async () => {
 // 获取热门研究主题
 export const getPopularSubjects = async () => {
   return api.get<Page<ResearchSubject>>('/popularity/subjects/popular');
-};
-
-// 获取特定研究主题的热度
-export const getSubjectPopularity = async (subjectId: string) => {
-  return api.get<number>(`/popularity/subjects/popularity?subjectId=${subjectId}`);
 };
 
 // 获取年度数据集统计

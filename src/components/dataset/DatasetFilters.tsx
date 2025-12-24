@@ -1,4 +1,3 @@
-import {Input} from "@/components/ui/input";
 import {Button} from "@/components/ui/button";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover";
@@ -8,6 +7,7 @@ import {format} from "date-fns";
 import {cn} from "@/lib/utils";
 import {ResearchSubject} from "@/integrations/api/datasetApi.ts";
 import {DatasetTypes} from "@/lib/enums.ts";
+import {Input} from "@/components/ui/FormValidator.tsx";
 
 interface DatasetFiltersProps {
     searchTerm: string;

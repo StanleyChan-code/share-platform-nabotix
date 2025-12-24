@@ -34,15 +34,15 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog.tsx";
-import {getCurrentUserInfo, getCurrentUserRoles} from '@/lib/authUtils.ts';
+import {getCurrentUserInfoFromSession, getCurrentUserRolesFromSession} from '@/lib/authUtils.ts';
 import {canUploadDataset, hasPermissionRole, PermissionRoles} from '@/lib/permissionUtils.ts';
 import {DatasetTypes} from "@/lib/enums.ts";
 import {DatasetUploadForm} from "@/components/upload/DatasetUploadForm.tsx";
 import ReactPaginate from "react-paginate";
-import {Input} from "@/components/ui/input.tsx";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
 import {AdminInstitutionSelector} from "@/components/admin/institution/AdminInstitutionSelector.tsx";
 import {useDebounce} from "@/hooks/useDebounce";
+import {Input} from "@/components/ui/FormValidator.tsx";
 
 interface DatasetsTabProps {
     filterByCurrentUser?: boolean;
@@ -58,7 +58,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
     const [userRoles, setUserRoles] = useState<string[]>([]);
     const {toast} = useToast();
     const paginatedListRef = useRef<any>(null);
-    const currentUser = getCurrentUserInfo();
+    const currentUser = getCurrentUserInfoFromSession();
 
     // 添加筛选相关状态
     const [searchTerm, setSearchTerm] = useState("");
@@ -101,7 +101,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
 
     // Check user permissions
     useEffect(() => {
-        const roles = getCurrentUserRoles();
+        const roles = getCurrentUserRolesFromSession();
         setUserRoles(roles);
     }, []);
 
@@ -191,7 +191,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
 
     const hasDeletionPermission = (dataset: Dataset) => {
         // 只有数据集创建者或平台管理员可以删除数据集
-        return dataset.provider?.id === getCurrentUserInfo().user.id || hasPermissionRole(PermissionRoles.PLATFORM_ADMIN);
+        return dataset.provider?.id === getCurrentUserInfoFromSession().user.id || hasPermissionRole(PermissionRoles.PLATFORM_ADMIN);
     };
 
     const fetchDatasets = useCallback(async (page: number, size: number) => {
@@ -494,35 +494,38 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                         {/* 筛选区域 */}
                         {showFilters && (
                             <div className="mb-6 p-4 border rounded-lg bg-muted/50 space-y-4">
-
-                                <div className="flex justify-end">
-                                    {/* 重置按钮 */}
-                                    <Button variant="outline" onClick={resetFilters}>
-                                        重置筛选条件
-                                    </Button>
-
-                                    {canUploadDataset() && (
-                                        <Button
-                                            onClick={() => showUpload ? handleCancelUploadClick() : setShowUpload(true)}
-                                            className="gap-2 ml-4"
-                                        >
-                                            <Upload className="h-4 w-4"/>
-                                            {showUpload ? '取消上传' : '上传数据集'}
-                                        </Button>
-                                    )}
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                                    {/* 搜索框 */}
-                                    <div className="flex items-center gap-2">
-                                        <Search className="h-4 w-4 text-muted-foreground"/>
+                                <div className="flex justify-between items-center">
+                                    {/* 左侧搜索框 */}
+                                    <div className="flex items-center gap-2 w-1/3">
                                         <Input
                                             placeholder="搜索标题或关键词..."
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
                                             maxLength={100}
+                                            className="w-72"
                                         />
                                     </div>
 
+                                    {/* 右侧按钮组 */}
+                                    <div className="flex justify-end">
+                                        {/* 重置按钮 */}
+                                        <Button variant="outline" onClick={resetFilters}>
+                                            重置筛选条件
+                                        </Button>
+
+                                        {canUploadDataset() && (
+                                            <Button
+                                                onClick={() => showUpload ? handleCancelUploadClick() : setShowUpload(true)}
+                                                className="gap-2 ml-4"
+                                            >
+                                                <Upload className="h-4 w-4"/>
+                                                {showUpload ? '取消上传' : '上传数据集'}
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                     {/* 学科领域筛选 */}
                                     <div>
                                         <Select value={selectedSubject} onValueChange={setSelectedSubject}>

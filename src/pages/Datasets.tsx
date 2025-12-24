@@ -164,15 +164,6 @@ const Datasets = () => {
                             浏览已发布的临床研究数据集，支持按研究类型、学科领域筛选查找
                         </p>
                     </div>
-
-                    <div className="flex gap-3">
-                        <Button
-                            className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-                        >
-                            <Upload className="h-4 w-4"/>
-                            上传数据集
-                        </Button>
-                    </div>
                 </div>
 
                 {/* Annual Chart */}
@@ -203,7 +194,7 @@ const Datasets = () => {
                                 </div>
                                 <div>
                                     <h3 className="font-semibold text-gray-900">数据集筛选</h3>
-                                    <p className="text-sm text-muted-foreground">根据条件筛选查找数据集</p>
+                                    <p className="text-sm text-muted-foreground">根据条件筛选查找数据集（不含随访数据集）</p>
                                 </div>
                             </div>
 
@@ -246,7 +237,6 @@ const Datasets = () => {
                                 variant={viewMode === 'grid' ? 'default' : 'outline'}
                                 size="sm"
                                 onClick={() => setViewMode('grid')}
-                                className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-sm"
                             >
                                 <Grid className="h-4 w-4"/>
                                 网格视图
@@ -255,7 +245,6 @@ const Datasets = () => {
                                 variant={viewMode === 'tree' ? 'default' : 'outline'}
                                 size="sm"
                                 onClick={() => setViewMode('tree')}
-                                className="gap-2 border-blue-200/50 text-blue-700 hover:bg-blue-50"
                             >
                                 <List className="h-4 w-4"/>
                                 层级视图

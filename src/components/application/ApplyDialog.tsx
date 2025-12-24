@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -14,11 +12,12 @@ import { Dataset } from "@/integrations/api/datasetApi";
 import { DatasetSelector } from "@/components/dataset/DatasetSelector.tsx";
 import { DatasetTypes } from "@/lib/enums";
 import { formatDate } from "@/lib/utils";
-import FileUploader, { FileUploaderHandles } from "@/components/fileuploader/FileUploader.tsx";
+import FileUploader from "@/components/fileuploader/FileUploader.tsx";
+import { FileUploaderHandles} from "@/components/fileuploader/types.ts";
 import { FileInfo } from "@/integrations/api/fileApi";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
-import { getCurrentUserInfo } from "@/lib/authUtils.ts";
-import { FormValidator, InputWrapper } from "@/components/ui/FormValidator";
+import { getCurrentUserInfoFromSession } from "@/lib/authUtils.ts";
+import {FormValidator, Input, Textarea, ValidatedSelect} from "@/components/ui/FormValidator";
 import { api } from "@/integrations/api/client";
 
 interface ApplyDialogProps {
@@ -126,11 +125,7 @@ const ApplyDialog = ({ open, onOpenChange, datasetId }: ApplyDialogProps) => {
             }
         } catch (error) {
             console.error("检查申请状态时出错:", error);
-            toast({
-                title: "检查申请状态失败",
-                description: "无法获取您的申请状态，请稍后重试",
-                variant: "destructive",
-            });
+            toast.error("检查申请状态失败")
         } finally {
             setLoadingApplication(false);
         }
@@ -143,7 +138,7 @@ const ApplyDialog = ({ open, onOpenChange, datasetId }: ApplyDialogProps) => {
         if (!selectedDataset.applicationInstitutionIds) return true;
 
         // 如果用户不属于任何机构，则无法申请有限制的数据集
-        const userInstitutionId = getCurrentUserInfo().user.institutionId;
+        const userInstitutionId = getCurrentUserInfoFromSession().user.institutionId;
         if (!userInstitutionId) return false;
 
         // 检查用户所属机构是否在数据集允许申请的机构列表中
@@ -151,8 +146,6 @@ const ApplyDialog = ({ open, onOpenChange, datasetId }: ApplyDialogProps) => {
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
         // 验证必填字段
         if (!formData.agreeToTerms) {
             toast.error("请同意数据使用协议");
@@ -394,7 +387,12 @@ const ApplyDialog = ({ open, onOpenChange, datasetId }: ApplyDialogProps) => {
                                                     <Label htmlFor="applicantRole" className="flex items-center gap-1">
                                                         申请者角色类型 <Asterisk className="h-3 w-3 text-red-500" />
                                                     </Label>
-                                                    <Select
+                                                    <ValidatedSelect
+                                                        id="applicantRole"
+                                                        name="applicantRole"
+                                                        required={true}
+                                                        placeholder={"请选择申请者角色类型"}
+                                                        errorMessage={"请选择申请者角色类型"}
                                                         value={formData.applicantRole}
                                                         onValueChange={(value) => {
                                                             setFormData(prev => ({
@@ -403,17 +401,13 @@ const ApplyDialog = ({ open, onOpenChange, datasetId }: ApplyDialogProps) => {
                                                                 applicantType: ""
                                                             }));
                                                         }}
-                                                        required
                                                     >
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="请选择申请者角色" />
-                                                        </SelectTrigger>
                                                         <SelectContent>
                                                             <SelectItem value="TEAM_RESEARCHER">团队研究者</SelectItem>
                                                             <SelectItem
                                                                 value="COLLABORATIVE_RESEARCHER">合作团队研究者</SelectItem>
                                                         </SelectContent>
-                                                    </Select>
+                                                    </ValidatedSelect>
                                                 </div>
 
                                                 {formData.applicantRole === "TEAM_RESEARCHER" && (
@@ -421,22 +415,23 @@ const ApplyDialog = ({ open, onOpenChange, datasetId }: ApplyDialogProps) => {
                                                         <Label htmlFor="applicantType" className="flex items-center gap-1">
                                                             研究者类型 <Asterisk className="h-3 w-3 text-red-500" />
                                                         </Label>
-                                                        <Select
+                                                        <ValidatedSelect
+                                                            id="applicantType"
+                                                            name="applicantType"
+                                                            placeholder={"请选择研究者类型"}
+                                                            errorMessage={"请选择研究者类型"}
                                                             value={formData.applicantType}
                                                             onValueChange={(value) => setFormData(prev => ({
                                                                 ...prev,
                                                                 applicantType: value
                                                             }))}
-                                                            required
+                                                            required={formData.applicantRole === "TEAM_RESEARCHER"}
                                                         >
-                                                            <SelectTrigger>
-                                                                <SelectValue placeholder="请选择类型" />
-                                                            </SelectTrigger>
                                                             <SelectContent>
                                                                 <SelectItem value="employee">在职工作人员</SelectItem>
                                                                 <SelectItem value="student">学生</SelectItem>
                                                             </SelectContent>
-                                                        </Select>
+                                                        </ValidatedSelect>
                                                     </div>
                                                 )}
                                             </div>
@@ -447,68 +442,61 @@ const ApplyDialog = ({ open, onOpenChange, datasetId }: ApplyDialogProps) => {
                                                     <Label htmlFor="projectTitle" className="flex items-center gap-1">
                                                         项目标题 <Asterisk className="h-3 w-3 text-red-500" />
                                                     </Label>
-                                                    <InputWrapper
+                                                    <Input
+                                                        id="projectTitle"
                                                         name="projectTitle"
+                                                        value={formData.projectTitle}
+                                                        onChange={(e) => handleInputChange("projectTitle", e.target.value)}
+                                                        placeholder="请输入研究项目标题"
+                                                        maxLength={200}
                                                         required
                                                         validationType="custom"
-                                                        customValidator={validateProjectTitle}
-                                                    >
-                                                        <Input
-                                                            id="projectTitle"
-                                                            value={formData.projectTitle}
-                                                            onChange={(e) => handleInputChange("projectTitle", e.target.value)}
-                                                            placeholder="请输入研究项目标题"
-                                                            maxLength={200}
-                                                        />
-                                                    </InputWrapper>
+                                                        customValidation={validateProjectTitle}
+                                                    />
                                                 </div>
 
                                                 <div className="space-y-2">
                                                     <Label htmlFor="projectDescription" className="flex items-center gap-1">
                                                         项目描述 <Asterisk className="h-3 w-3 text-red-500" />
                                                     </Label>
-                                                    <InputWrapper
+                                                    {/* 注意：Textarea 也需要支持验证功能，如果 Textarea 不支持，需要先扩展它 */}
+                                                    <Textarea
+                                                        id="projectDescription"
                                                         name="projectDescription"
+                                                        rows={4}
+                                                        value={formData.projectDescription}
+                                                        onChange={(e) => handleInputChange("projectDescription", e.target.value)}
+                                                        placeholder="详细描述研究背景、目标、方法和预期成果"
+                                                        maxLength={2000}
                                                         required
                                                         validationType="custom"
-                                                        customValidator={validateProjectDescription}
-                                                    >
-                                                        <Textarea
-                                                            id="projectDescription"
-                                                            rows={4}
-                                                            value={formData.projectDescription}
-                                                            onChange={(e) => handleInputChange("projectDescription", e.target.value)}
-                                                            placeholder="详细描述研究背景、目标、方法和预期成果"
-                                                            maxLength={2000}
-                                                        />
-                                                    </InputWrapper>
+                                                        customValidation={validateProjectDescription}
+                                                    />
                                                 </div>
 
                                                 <div className="space-y-2">
                                                     <Label htmlFor="purpose" className="flex items-center gap-1">
                                                         数据使用目的 <Asterisk className="h-3 w-3 text-red-500" />
                                                     </Label>
-                                                    <InputWrapper
+                                                    <Textarea
+                                                        id="purpose"
                                                         name="purpose"
+                                                        rows={3}
+                                                        value={formData.purpose}
+                                                        onChange={(e) => handleInputChange("purpose", e.target.value)}
+                                                        placeholder="说明申请数据的具体用途和分析计划"
+                                                        maxLength={1000}
                                                         required
                                                         validationType="custom"
-                                                        customValidator={validatePurpose}
-                                                    >
-                                                        <Textarea
-                                                            id="purpose"
-                                                            rows={3}
-                                                            value={formData.purpose}
-                                                            onChange={(e) => handleInputChange("purpose", e.target.value)}
-                                                            placeholder="说明申请数据的具体用途和分析计划"
-                                                            maxLength={1000}
-                                                        />
-                                                    </InputWrapper>
+                                                        customValidation={validatePurpose}
+                                                    />
                                                 </div>
 
                                                 <div className="space-y-2">
                                                     <Label htmlFor="fundingSource">资助来源</Label>
                                                     <Input
                                                         id="fundingSource"
+                                                        name="fundingSource"
                                                         value={formData.fundingSource}
                                                         onChange={(e) => handleInputChange("fundingSource", e.target.value)}
                                                         placeholder="国家自然科学基金、省部级基金等（选填）"
@@ -521,20 +509,17 @@ const ApplyDialog = ({ open, onOpenChange, datasetId }: ApplyDialogProps) => {
                                                     <Label htmlFor="projectLeader" className="flex items-center gap-1">
                                                         项目负责人 <Asterisk className="h-3 w-3 text-red-500" />
                                                     </Label>
-                                                    <InputWrapper
+                                                    <Input
+                                                        id="projectLeader"
                                                         name="projectLeader"
+                                                        value={formData.projectLeader}
+                                                        onChange={(e) => handleInputChange("projectLeader", e.target.value)}
+                                                        placeholder="请输入项目负责人的姓名"
+                                                        maxLength={50}
                                                         required
                                                         validationType="custom"
-                                                        customValidator={validateProjectLeader}
-                                                    >
-                                                        <Input
-                                                            id="projectLeader"
-                                                            value={formData.projectLeader}
-                                                            onChange={(e) => handleInputChange("projectLeader", e.target.value)}
-                                                            placeholder="请输入项目负责人的姓名"
-                                                            maxLength={50}
-                                                        />
-                                                    </InputWrapper>
+                                                        customValidation={validateProjectLeader}
+                                                    />
                                                 </div>
                                             </div>
 

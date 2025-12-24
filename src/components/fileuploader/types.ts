@@ -8,10 +8,23 @@ export interface FileUploaderProps {
     acceptedFileTypes?: string[];
     allowAllFileTypes?: boolean;
     maxConcurrentUploads?: number;
+    templateFile?: string;
+    templateLabel?: string;
+    required?: boolean;
+    onValidityChange?: (isValid: boolean) => void;
+    validateOnSubmit?: boolean;
 }
 
 export interface FileUploaderHandles {
     handleReset: (cleanTmpFile?: boolean) => void;
+    validate: () => boolean;
+    checkValidity: () => boolean;
+    getValidationError: () => string | null;
+    setCustomValidity: (message: string) => void;
+    markAsTouched: () => void;
+    clearError: () => void;
+    reset: () => void;
+    acceptedAndReset: () => void;
 }
 
 export interface UploadState {

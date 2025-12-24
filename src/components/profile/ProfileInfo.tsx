@@ -2,20 +2,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { User, Edit, Building2, Mail, Phone, Calendar, GraduationCap, Briefcase, Shield, Hash } from "lucide-react";
 import { useState, useEffect } from "react";
 import { EducationLevels, ID_TYPES, InstitutionTypes } from "@/lib/enums";
-import { Institution } from "@/integrations/api/institutionApi.ts";
 import { formatDate } from "@/lib/utils.ts";
 import { toast } from "sonner";
-import { FormValidator, InputWrapper } from "@/components/ui/FormValidator";
+import { FormValidator, Input } from "@/components/ui/FormValidator";
 import { Asterisk } from "lucide-react";
+import {UserInfo} from "@/lib/authUtils.ts";
+import {updateUserProfile} from "@/integrations/api/authApi.ts";
 
 interface ProfileInfoProps {
-  userProfile: any;
-  institution?: Institution;
+  userProfile: UserInfo;
   onUpdateProfile: (formData: any) => void;
 }
 
@@ -30,7 +29,7 @@ interface EditFormData {
   education: string;
 }
 
-const ProfileInfo = ({ userProfile, institution, onUpdateProfile }: ProfileInfoProps) => {
+const ProfileInfo = ({ userProfile, onUpdateProfile }: ProfileInfoProps) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [editForm, setEditForm] = useState<EditFormData>({
@@ -45,18 +44,23 @@ const ProfileInfo = ({ userProfile, institution, onUpdateProfile }: ProfileInfoP
 
   // 表单验证状态
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [institution, setInstitution] = useState<any>(null);
+
+  useEffect(() => {
+    setInstitution(userProfile.institution);
+  }, []);
 
   // 当对话框打开时，初始化表单数据
   useEffect(() => {
     if (isEditDialogOpen && userProfile) {
       setEditForm({
-        username: userProfile.username || "",
-        realName: userProfile.realName || "",
-        title: userProfile.title || "",
-        field: userProfile.field || "",
-        phone: userProfile.phone || "",
-        email: userProfile.email || "",
-        education: userProfile.education || ""
+        username: userProfile.user.username || "",
+        realName: userProfile.user.realName || "",
+        title: userProfile.user.title || "",
+        field: userProfile.user.field || "",
+        phone: userProfile.user.phone || "",
+        email: userProfile.user.email || "",
+        education: userProfile.user.education || ""
       });
       setFormErrors({});
     }
@@ -105,18 +109,29 @@ const ProfileInfo = ({ userProfile, institution, onUpdateProfile }: ProfileInfoP
   };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
 
     if (!validateForm()) {
       return;
     }
-
     setUpdating(true);
 
     try {
-      // 调用父组件传递的更新函数
-      await onUpdateProfile(editForm);
-      setIsEditDialogOpen(false);
+      const response = await updateUserProfile({
+        username: editForm.username,
+        email: editForm.email,
+        education: editForm.education ? editForm.education : null,
+        field: editForm.field,
+        title: editForm.title
+      });
+
+      if (response.data.success) {
+        toast.success("个人信息更新成功");
+        // 调用父组件传递的更新函数
+        onUpdateProfile(editForm);
+        setIsEditDialogOpen(false);
+      } else {
+        throw new Error(response.data.message || "更新失败");
+      }
     } catch (error: any) {
       console.error("更新失败:", error);
       toast.error("更新失败: " + (error.response?.data?.message || error.message || "未知错误"));
@@ -257,52 +272,46 @@ const ProfileInfo = ({ userProfile, institution, onUpdateProfile }: ProfileInfoP
                         <Label htmlFor="username" className="text-sm font-medium flex items-center gap-1">
                           用户名 <Asterisk className="h-3 w-3 text-red-500" />
                         </Label>
-                        <InputWrapper
+                        <Input
+                            id="username"
                             name="username"
+                            value={editForm.username}
+                            onChange={(e) => setEditForm(prev => ({
+                              ...prev,
+                              username: e.target.value
+                            }))}
+                            className="focus:ring-2 focus:ring-blue-200"
+                            maxLength={50}
+                            placeholder="请输入用户名"
                             required
                             validationType="custom"
-                            customValidator={() => {
-                              if (!editForm.username.trim()) return "用户名不能为空";
-                              if (editForm.username.trim().length < 2) return "用户名至少需要2个字符";
-                              if (editForm.username.trim().length > 50) return "用户名不能超过50个字符";
+                            customValidation={(value) => {
+                              if (!value.trim()) return "用户名不能为空";
+                              if (value.trim().length < 2) return "用户名至少需要2个字符";
+                              if (value.trim().length > 50) return "用户名不能超过50个字符";
                               return true;
                             }}
-                        >
-                          <Input
-                              id="username"
-                              value={editForm.username}
-                              onChange={(e) => setEditForm(prev => ({
-                                ...prev,
-                                username: e.target.value
-                              }))}
-                              className="focus:ring-2 focus:ring-blue-200"
-                              maxLength={50}
-                              placeholder="请输入用户名"
-                          />
-                        </InputWrapper>
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="email" className="text-sm font-medium flex items-center gap-1">
                           邮箱地址
                         </Label>
-                        <InputWrapper
+                        <Input
+                            id="email"
                             name="email"
+                            type="email"
+                            value={editForm.email}
+                            onChange={(e) => setEditForm(prev => ({
+                              ...prev,
+                              email: e.target.value
+                            }))}
+                            className="focus:ring-2 focus:ring-blue-200"
+                            maxLength={200}
+                            placeholder="请输入邮箱地址"
                             validationType="email"
                             errorMessage="请输入有效的邮箱地址"
-                        >
-                          <Input
-                              id="email"
-                              type="email"
-                              value={editForm.email}
-                              onChange={(e) => setEditForm(prev => ({
-                                ...prev,
-                                email: e.target.value
-                              }))}
-                              className="focus:ring-2 focus:ring-blue-200"
-                              maxLength={200}
-                              placeholder="请输入邮箱地址"
-                          />
-                        </InputWrapper>
+                        />
                       </div>
                     </div>
 
@@ -330,51 +339,45 @@ const ProfileInfo = ({ userProfile, institution, onUpdateProfile }: ProfileInfoP
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="title" className="text-sm font-medium">职称</Label>
-                        <InputWrapper
+                        <Input
+                            id="title"
                             name="title"
+                            value={editForm.title}
+                            onChange={(e) => setEditForm(prev => ({
+                              ...prev,
+                              title: e.target.value
+                            }))}
+                            className="focus:ring-2 focus:ring-blue-200"
+                            maxLength={100}
+                            placeholder="请输入职称"
                             validationType="custom"
-                            customValidator={() => {
-                              if (editForm.title.trim().length > 100) return "职称不能超过100个字符";
+                            customValidation={(value) => {
+                              if (value.trim().length > 100) return "职称不能超过100个字符";
                               return true;
                             }}
-                        >
-                          <Input
-                              id="title"
-                              value={editForm.title}
-                              onChange={(e) => setEditForm(prev => ({
-                                ...prev,
-                                title: e.target.value
-                              }))}
-                              className="focus:ring-2 focus:ring-blue-200"
-                              maxLength={100}
-                              placeholder="请输入职称"
-                          />
-                        </InputWrapper>
+                        />
                       </div>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="field" className="text-sm font-medium">专业领域</Label>
-                      <InputWrapper
+                      <Input
+                          id="field"
                           name="field"
+                          value={editForm.field}
+                          onChange={(e) => setEditForm(prev => ({
+                            ...prev,
+                            field: e.target.value
+                          }))}
+                          className="focus:ring-2 focus:ring-blue-200"
+                          maxLength={200}
+                          placeholder="请输入专业领域"
                           validationType="custom"
-                          customValidator={() => {
-                            if (editForm.field.trim().length > 200) return "专业领域不能超过200个字符";
+                          customValidation={(value) => {
+                            if (value.trim().length > 200) return "专业领域不能超过200个字符";
                             return true;
                           }}
-                      >
-                        <Input
-                            id="field"
-                            value={editForm.field}
-                            onChange={(e) => setEditForm(prev => ({
-                              ...prev,
-                              field: e.target.value
-                            }))}
-                            className="focus:ring-2 focus:ring-blue-200"
-                            maxLength={200}
-                            placeholder="请输入专业领域"
-                        />
-                      </InputWrapper>
+                      />
                     </div>
 
                     <div className="flex justify-end space-x-2 pt-4">
@@ -406,27 +409,27 @@ const ProfileInfo = ({ userProfile, institution, onUpdateProfile }: ProfileInfoP
                 <InfoItem
                     icon={Hash}
                     label="用户名"
-                    value={userProfile.username}
+                    value={userProfile.user.username}
                 />
                 <InfoItem
                     icon={User}
                     label="真实姓名"
-                    value={userProfile.realName}
+                    value={userProfile.user.realName}
                 />
                 <InfoItem
                     icon={Shield}
-                    label={userProfile.idType ? getIdTypeDisplayName(userProfile.idType) : "证件号码"}
-                    value={userProfile.idNumber ? maskIdNumber(userProfile.idType, userProfile.idNumber) : ""}
+                    label={userProfile.user.idType ? getIdTypeDisplayName(userProfile.user.idType) : "证件号码"}
+                    value={userProfile.user.idNumber ? maskIdNumber(userProfile.user.idType, userProfile.user.idNumber) : ""}
                 />
                 <InfoItem
                     icon={GraduationCap}
                     label="学历"
-                    value={getEducationDisplayName(userProfile.education)}
+                    value={getEducationDisplayName(userProfile.user.education)}
                 />
                 <InfoItem
                     icon={Briefcase}
                     label="职称"
-                    value={userProfile.title}
+                    value={userProfile.user.title}
                 />
               </div>
 
@@ -434,7 +437,7 @@ const ProfileInfo = ({ userProfile, institution, onUpdateProfile }: ProfileInfoP
                 <InfoItem
                     icon={Briefcase}
                     label="专业领域"
-                    value={userProfile.field}
+                    value={userProfile.user.field}
                 />
                 <InfoItem
                     icon={Building2}
@@ -444,17 +447,17 @@ const ProfileInfo = ({ userProfile, institution, onUpdateProfile }: ProfileInfoP
                 <InfoItem
                     icon={Phone}
                     label="联系电话"
-                    value={userProfile.phone}
+                    value={userProfile.user.phone}
                 />
                 <InfoItem
                     icon={Mail}
                     label="邮箱地址"
-                    value={userProfile.email}
+                    value={userProfile.user.email}
                 />
                 <InfoItem
                     icon={Calendar}
                     label="注册日期"
-                    value={userProfile.createdAt ? formatDate(userProfile.createdAt) : ""}
+                    value={userProfile.user.createdAt ? formatDate(userProfile.user.createdAt) : ""}
                 />
               </div>
             </div>

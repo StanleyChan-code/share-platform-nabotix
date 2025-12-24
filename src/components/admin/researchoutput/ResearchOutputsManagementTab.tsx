@@ -1,8 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { useToast } from "@/hooks/use-toast.ts";
-import { outputApi, ResearchOutput } from "@/integrations/api/outputApi.ts";
+import { ResearchOutput } from "@/integrations/api/outputApi.ts";
 import OutputDetailDialog from "@/components/outputs/OutputDetailDialog.tsx";
 import { AdminInstitutionSelector } from "@/components/admin/institution/AdminInstitutionSelector.tsx";
 import { api } from "@/integrations/api/client.ts";
@@ -10,9 +9,8 @@ import { CheckCircle, XCircle, Clock, Eye, ChevronLeftIcon, ChevronRightIcon, Se
 import { formatDate } from "@/lib/utils.ts";
 import { getOutputTypeDisplayName, getOutputTypeIconComponent, getAllOutputTypes } from "@/lib/outputUtils.ts";
 import ReactPaginate from "react-paginate";
-import { getCurrentUserInfo } from "@/lib/authUtils.ts";
+import { getCurrentUserInfoFromSession } from "@/lib/authUtils.ts";
 import { hasPermissionRole, PermissionRoles } from "@/lib/permissionUtils.ts";
-import { Input } from "@/components/ui/input.tsx";
 import {
   Select,
   SelectContent,
@@ -21,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select.tsx";
 import { useDebounce } from "@/hooks/useDebounce";
+import {Input} from "@/components/ui/FormValidator.tsx";
 
 const ResearchOutputsManagementTab = () => {
   const [selectedInstitution, setSelectedInstitution] = useState<string | null>(null);
@@ -52,7 +51,7 @@ const ResearchOutputsManagementTab = () => {
 
   // 检查是否为平台管理员
   useEffect(() => {
-    const userInfo = getCurrentUserInfo();
+    const userInfo = getCurrentUserInfoFromSession();
     if (userInfo) {
       const isPlatformAdminUser = hasPermissionRole(PermissionRoles.PLATFORM_ADMIN);
       const canApprove = hasPermissionRole(PermissionRoles.RESEARCH_OUTPUT_APPROVER) ||
@@ -267,7 +266,7 @@ const ResearchOutputsManagementTab = () => {
             )}
 
             {/* 搜索和筛选控件 */}
-            <div className="flex flex-col md:flex-row gap-4">
+            <div className="mb-6 p-4 border rounded-lg bg-muted/50 flex flex-col md:flex-row gap-4">
               <div className="flex-1 flex flex-col sm:flex-row gap-4">
                 <div className="relative flex-1">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground"/>

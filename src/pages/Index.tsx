@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { getPlatformStatistics } from "@/integrations/api/statisticsApi";
 import { api } from "@/integrations/api/client";
 import { Dataset, datasetApi } from "@/integrations/api/datasetApi.ts";
-import { getCurrentUser } from "@/lib/authUtils";
+import { getCurrentUserFromSession } from "@/lib/authUtils";
 import { RecommendedDatasetsSection} from "@/components/home/RecommendedDatasetsSection.tsx";
 import { RecentDatasetsSection} from "@/components/home/RecentDatasetsSection.tsx";
 import { RecentOutputsSection } from "@/components/home/RecentOutputsSection";
@@ -133,7 +133,7 @@ const Index = () => {
     };
 
     const fetchCurrentUser = async () => {
-        const user = getCurrentUser();
+        const user = getCurrentUserFromSession();
         setCurrentUser(user);
     };
 
@@ -188,12 +188,13 @@ const Index = () => {
 
                 {/* Statistics Overview */}
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+
                     <StatsCard
                         title="数据集总数"
                         value={statsLoading ? "..." : (stats?.approvedDatasetCount || 0).toString()}
                         description="已发布的数据集"
                         icon={Database}
-                        gradient="from-blue-500 to-blue-600"
+                        gradient="from-blue-400 to-blue-500"
                         loading={statsLoading}
                     />
                     <StatsCard
@@ -201,7 +202,7 @@ const Index = () => {
                         value={statsLoading ? "..." : (stats?.registeredUserCount || 0).toLocaleString()}
                         description="平台注册用户数"
                         icon={Users}
-                        gradient="from-green-500 to-green-600"
+                        gradient="from-green-400 to-green-500"
                         loading={statsLoading}
                     />
                     <StatsCard
@@ -209,7 +210,7 @@ const Index = () => {
                         value={statsLoading ? "..." : (stats?.approvedResearchOutputCount || 0).toString()}
                         description="基于平台数据发表的成果"
                         icon={FileText}
-                        gradient="from-purple-500 to-purple-600"
+                        gradient="from-purple-400 to-purple-500"
                         loading={statsLoading}
                     />
                     <StatsCard
@@ -217,7 +218,7 @@ const Index = () => {
                         value={statsLoading ? "..." : (stats?.recentApplicationCount || 0).toString()}
                         description="近30天的数据申请数量"
                         icon={TrendingUp}
-                        gradient="from-orange-500 to-orange-600"
+                        gradient="from-orange-400 to-orange-500"
                         loading={statsLoading}
                     />
                 </div>
@@ -269,13 +270,9 @@ const Index = () => {
                                 <p className="text-muted-foreground">基于平台数据产出的高质量学术成果</p>
                             </div>
                         </div>
-                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                            <Star className="h-3 w-3 mr-1" />
-                            高价值成果
-                        </Badge>
                     </div>
 
-                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {highValueOutputsLoading ? (
                             Array.from({ length: 3 }).map((_, index) => (
                                 <Card key={index} className="animate-pulse">
@@ -308,12 +305,10 @@ const Index = () => {
                         datasets={recommendedDatasets}
                         loading={recommendedLoading}
                         recommendationReason={currentUser?.institutionId ? '基于您的机构推荐' : '热门数据集'}
-                        currentUser={currentUser}
                     />
                 )}
 
-                {/* Recent Activities */}
-                <div className="grid gap-8 lg:grid-cols-2">
+                <div className="grid gap-6 lg:gap-8 lg:grid-cols-2">
                     {/* 最新数据集 */}
                     <RecentDatasetsSection
                         datasets={recentDatasets}

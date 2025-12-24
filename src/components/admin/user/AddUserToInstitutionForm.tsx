@@ -1,18 +1,17 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button.tsx";
-import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { useToast } from "@/hooks/use-toast.ts";
 import { PermissionRoles, getPermissionRoleDisplayName } from "@/lib/permissionUtils.ts";
 import { userApi } from "@/integrations/api/userApi.ts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { AdminInstitutionSelector } from "@/components/admin/institution/AdminInstitutionSelector.tsx";
-import { getCurrentUserInfo } from "@/lib/authUtils.ts";
+import { getCurrentUserInfoFromSession } from "@/lib/authUtils.ts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
 import { Asterisk, User, Mail, Phone, IdCard, GraduationCap, Briefcase, Target, Shield, Key, Info, AlertCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip.tsx";
-import { FormValidator, InputWrapper } from "@/components/ui/FormValidator";
+import {FormValidator, Input, ValidatedSelect} from "@/components/ui/FormValidator";
 
 interface AddUserToInstitutionFormProps {
   institutionId?: string;
@@ -40,7 +39,7 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
 
   // 检查用户是否为平台管理员
   useEffect(() => {
-    const userInfo = getCurrentUserInfo();
+    const userInfo = getCurrentUserInfoFromSession();
     if (userInfo) {
       setIsPlatformAdmin(userInfo.roles.includes('PLATFORM_ADMIN'));
       if (!userInfo.roles.includes('PLATFORM_ADMIN') && propInstitutionId) {
@@ -131,7 +130,6 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
     setLoading(true);
 
     try {
@@ -342,23 +340,21 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
               添加用户到机构
             </CardTitle>
             <CardDescription>
-              <div className="space-y-2">
-                <p>请输入用户信息，创建新的机构用户账户</p>
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Asterisk className="h-3 w-3 text-red-500" />
-                    <span>标记的字段为必填项</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Info className="h-3 w-3 text-blue-500" />
-                    <span>初始密码默认为：123456</span>
-                  </div>
+              请输入用户信息，创建新的机构用户账户
+              <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
+                <div className="flex items-center gap-1">
+                  <Asterisk className="h-3 w-3 text-red-500" />
+                  <span>标记的字段为必填项</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Info className="h-3 w-3 text-blue-500" />
+                  <span>初始密码默认为：123456</span>
                 </div>
               </div>
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <FormValidator onSubmit={handleSubmit} className="space-y-6" showAllErrorsOnSubmit={true}>
+            <FormValidator onSubmit={handleSubmit} className="space-y-6">
               {fieldGroups.map((group, groupIndex) => (
                   <div key={group.title} className="space-y-4">
                     <div className={`p-4 rounded-lg border-l-4 ${group.required ? 'border-l-red-500 bg-red-50' : 'border-l-blue-500 bg-blue-50'}`}>
@@ -384,14 +380,14 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
                               </Label>
 
                               {field.type === "select" ? (
-                                  <Select
+                                  <ValidatedSelect
+                                      id={field.name}
+                                      placeholder={`请选择${field.label}`}
+                                      errorMessage={`请选择${field.label}`}
                                       name={field.name}
                                       value={formData[field.name as keyof typeof formData] as string}
                                       onValueChange={(value) => handleSelectChange(field.name, value)}
                                   >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder={`请选择${field.label}`} />
-                                    </SelectTrigger>
                                     <SelectContent>
                                       {field.options?.map(option => (
                                           <SelectItem key={option.value} value={option.value}>
@@ -399,9 +395,24 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
                                           </SelectItem>
                                       ))}
                                     </SelectContent>
-                                  </Select>
+                                  </ValidatedSelect>
                               ) : (
-                                  <InputWrapper
+                                  <Input
+                                      id={field.name}
+                                      name={field.name}
+                                      type={field.type}
+                                      value={formData[field.name as keyof typeof formData] as string}
+                                      onChange={handleChange}
+                                      placeholder={field.required ? `请输入${field.label}` : `可选项，请输入${field.label}`}
+                                      maxLength={
+                                        field.name === 'realName' ? 100 :
+                                            field.name === 'phone' ? 20 :
+                                                field.name === 'username' ? 100 :
+                                                    field.name === 'email' ? 200 :
+                                                        field.name === 'idNumber' ? 50 :
+                                                            field.name === 'title' ? 100 :
+                                                                field.name === 'field' ? 200 : 100
+                                      }
                                       required={field.required}
                                       validationType={
                                         field.name === 'phone' ? 'phone' :
@@ -409,25 +420,7 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
                                                 field.name === 'idNumber' ? 'idNumber' : undefined
                                       }
                                       idType={field.name === 'idNumber' ? formData.idType : undefined}
-                                  >
-                                    <Input
-                                        id={field.name}
-                                        name={field.name}
-                                        type={field.type}
-                                        value={formData[field.name as keyof typeof formData] as string}
-                                        onChange={handleChange}
-                                        placeholder={field.required ? `请输入${field.label}` : `可选项，请输入${field.label}`}
-                                        maxLength={
-                                          field.name === 'realName' ? 100 :
-                                              field.name === 'phone' ? 20 :
-                                                  field.name === 'username' ? 100 :
-                                                      field.name === 'email' ? 200 :
-                                                          field.name === 'idNumber' ? 50 :
-                                                              field.name === 'title' ? 100 :
-                                                                  field.name === 'field' ? 200 : 100
-                                        }
-                                    />
-                                  </InputWrapper>
+                                  />
                               )}
                             </div>
                         ))}

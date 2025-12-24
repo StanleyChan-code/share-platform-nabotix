@@ -10,18 +10,17 @@ import {
   FileText,
   Filter
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import ApplicationDetailDialog from './ApplicationDetailDialog';
 import { useToast } from '@/components/ui/use-toast';
 import { DatasetDetailModal } from '@/components/dataset/DatasetDetailModal';
 import { hasPermissionRole, PermissionRoles } from "@/lib/permissionUtils.ts";
 import { AdminInstitutionSelector } from "@/components/admin/institution/AdminInstitutionSelector.tsx";
-import { Input } from "@/components/ui/input.tsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import ApplicationItem from "./ApplicationItem";
 import { useDebounce } from "@/hooks/useDebounce";
+import {Input} from "@/components/ui/FormValidator.tsx";
 
 const ApplicationReviewTab: React.FC = () => {
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
@@ -160,15 +159,16 @@ const ApplicationReviewTab: React.FC = () => {
             {/* 筛选区域 */}
             {showFilters && (
               <div className="mb-6 p-4 border rounded-lg bg-muted/50 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                   {/* 搜索框 */}
-                  <div className="flex items-center gap-2">
+                  <div className="grid grid-cols-[auto,1fr] items-center gap-2 col-span-2">
                     <FileText className="h-4 w-4 text-muted-foreground"/>
                     <Input
-                      placeholder="搜索项目标题..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      maxLength={100}
+                        placeholder="搜索项目标题..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        maxLength={100}
+                        className="w-full"
                     />
                   </div>
 
@@ -188,17 +188,6 @@ const ApplicationReviewTab: React.FC = () => {
                       </SelectContent>
                     </Select>
                   </div>
-
-                  {/* 机构筛选 */}
-                  {hasPermissionRole(PermissionRoles.PLATFORM_ADMIN) && (
-                    <div>
-                      <AdminInstitutionSelector
-                        value={institutionId}
-                        onChange={setInstitutionId}
-                        placeholder="选择机构"
-                      />
-                    </div>
-                  )}
                 </div>
               </div>
             )}

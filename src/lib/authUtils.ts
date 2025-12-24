@@ -2,6 +2,8 @@
  * 用户认证工具类
  * 提供读取已加载的用户信息、所属机构信息和权限列表的方法
  */
+import {institutionApi} from "@/integrations/api/institutionApi.ts";
+import {getCurrentUser, getCurrentUserRoles} from "@/integrations/api/authApi.ts";
 
 export interface UserInfo {
   user: {
@@ -29,7 +31,7 @@ export interface UserInfo {
  * 从 sessionStorage 中获取当前用户信息
  * @returns 用户信息对象，如果未登录则返回 null
  */
-export function getCurrentUserInfo(): UserInfo | null {
+export function getCurrentUserInfoFromSession(): UserInfo | null {
   try {
     const token = localStorage.getItem('authToken');
     const userInfoStr = sessionStorage.getItem('userInfo');
@@ -50,8 +52,8 @@ export function getCurrentUserInfo(): UserInfo | null {
  * 获取当前用户基本信息
  * @returns 用户基本信息对象，如果未登录则返回 null
  */
-export function getCurrentUser(){
-  const userInfo = getCurrentUserInfo();
+export function getCurrentUserFromSession(){
+  const userInfo = getCurrentUserInfoFromSession();
   return userInfo ? userInfo.user : null;
 }
 
@@ -59,43 +61,48 @@ export function getCurrentUser(){
  * 获取当前用户的角色权限列表
  * @returns 用户角色数组，如果未登录则返回空数组
  */
-export function getCurrentUserRoles() {
-  const userInfo = getCurrentUserInfo();
+export function getCurrentUserRolesFromSession() {
+  const userInfo = getCurrentUserInfoFromSession();
   return userInfo ? userInfo.roles : [];
 }
 
 /**
- * 获取当前用户所属机构信息
- * @returns 机构信息对象，如果未登录或用户无机构则返回 null
+ * 刷新用户信息
  */
-export function getCurrentUserInstitution() {
-  const userInfo = getCurrentUserInfo();
-  return userInfo ? userInfo.institution : null;
-}
+export async function refreshUserInfo() {
+  // 并行获取用户信息和角色
+  const [userResponse, rolesResponse] = await Promise.all([
+    getCurrentUser(),
+    getCurrentUserRoles()
+  ]);
 
-/**
- * 检查用户是否具有指定角色
- * @param role 要检查的角色
- * @returns 如果用户具有指定角色则返回 true，否则返回 false
- */
-export function hasRole(role: string): boolean {
-  const roles = getCurrentUserRoles();
-  return roles.includes(role);
-}
+  if (!userResponse.data.success || !rolesResponse.data.success) {
+    throw new Error("获取用户信息失败");
+  }
 
-/**
- * 检查用户是否已登录
- * @returns 如果用户已登录则返回 true，否则返回 false
- */
-export function isAuthenticated(): boolean {
-  return getCurrentUserInfo() !== null;
-}
+  const userProfile = userResponse.data.data;
+  const userRoles = rolesResponse.data.data;
 
-/**
- * 检查用户是否为管理员
- * @returns 如果用户是管理员则返回 true，否则返回 false
- */
-export function isAdmin(): boolean {
-  const roles = getCurrentUserRoles();
-  return roles.includes('PLATFORM_ADMIN') || roles.includes('INSTITUTION_SUPERVISOR');
+  // 获取机构信息（如果有）
+  let institution = null;
+  if (userProfile.institutionId) {
+    try {
+      const institutionResponse = await institutionApi.getInstitutionById(userProfile.institutionId);
+      if (institutionResponse.success) {
+        institution = institutionResponse.data;
+      }
+    } catch (error) {
+      console.warn("获取机构信息失败:", error);
+    }
+  }
+
+  // 存储用户信息
+  const userInfo = {
+    user: userProfile,
+    roles: userRoles,
+    institution: institution
+  };
+
+  sessionStorage.setItem('userInfo', JSON.stringify(userInfo));
+  return userInfo;
 }

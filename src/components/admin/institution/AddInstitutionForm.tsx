@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button.tsx";
-import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog.tsx";
 import { useToast } from "@/hooks/use-toast.ts";
 import { institutionApi } from "@/integrations/api/institutionApi.ts";
 import { ID_TYPES, InstitutionTypes } from "@/lib/enums.ts";
-import { FormValidator, InputWrapper } from "@/components/ui/FormValidator";
+import {FormValidator, Input, ValidatedSelect} from "@/components/ui/FormValidator";
 import { Asterisk, Building, User, Mail, Phone, IdCard, Briefcase, Info } from "lucide-react";
 import { Separator } from "@/components/ui/separator.tsx";
 
@@ -45,8 +44,17 @@ const AddInstitutionForm = ({ open, onOpenChange, onInstitutionAdded }: AddInsti
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
         setLoading(true);
+
+        // 检查机构类型
+        console.log(formData.type)
+        if (!InstitutionTypes[formData.type]) {
+            toast({
+                title: "机构类型错误",
+                description: "请选择正确的机构类型。",
+                variant: "destructive",
+            })
+        }
 
         try {
             // 构造机构数据对象
@@ -224,7 +232,7 @@ const AddInstitutionForm = ({ open, onOpenChange, onInstitutionAdded }: AddInsti
                     </DialogDescription>
                 </DialogHeader>
 
-                <FormValidator onSubmit={handleSubmit} className="space-y-6" showAllErrorsOnSubmit={true}>
+                <FormValidator onSubmit={handleSubmit} className="space-y-6">
                     {fieldGroups.map((group, groupIndex) => (
                         <div key={group.title} className="space-y-4">
                             <div className={`p-4 rounded-lg border-l-4 ${group.required ? 'border-l-red-500 bg-red-50' : 'border-l-blue-500 bg-blue-50'}`}>
@@ -250,13 +258,14 @@ const AddInstitutionForm = ({ open, onOpenChange, onInstitutionAdded }: AddInsti
                                             </Label>
 
                                             {field.type === "select" ? (
-                                                <Select
+                                                <ValidatedSelect required={field.required}
+                                                                 name={field.name}
+                                                                 id={field.name}
+                                                                  placeholder={`请选择${field.label}`}
+                                                                 errorMessage={`请选择${field.label}`}
                                                     value={formData[field.name as keyof typeof formData] as string}
                                                     onValueChange={(value) => handleSelectChange(field.name, value)}
                                                 >
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder={`请选择${field.label}`} />
-                                                    </SelectTrigger>
                                                     <SelectContent>
                                                         {field.options?.map(option => (
                                                             <SelectItem key={option.value} value={option.value}>
@@ -264,9 +273,17 @@ const AddInstitutionForm = ({ open, onOpenChange, onInstitutionAdded }: AddInsti
                                                             </SelectItem>
                                                         ))}
                                                     </SelectContent>
-                                                </Select>
+                                                </ValidatedSelect>
+
                                             ) : (
-                                                <InputWrapper
+                                                <Input
+                                                    id={field.name}
+                                                    name={field.name}
+                                                    type={field.type}
+                                                    value={formData[field.name as keyof typeof formData] as string}
+                                                    onChange={handleInputChange}
+                                                    placeholder={field.placeholder}
+                                                    maxLength={field.maxLength}
                                                     required={field.required}
                                                     validationType={
                                                         field.name === 'contact_phone' ? 'phone' :
@@ -274,17 +291,7 @@ const AddInstitutionForm = ({ open, onOpenChange, onInstitutionAdded }: AddInsti
                                                                 field.name === 'contact_id_number' ? 'idNumber' : undefined
                                                     }
                                                     idType={field.name === 'contact_id_number' ? formData.contact_id_type : undefined}
-                                                >
-                                                    <Input
-                                                        id={field.name}
-                                                        name={field.name}
-                                                        type={field.type}
-                                                        value={formData[field.name as keyof typeof formData] as string}
-                                                        onChange={handleInputChange}
-                                                        placeholder={field.placeholder}
-                                                        maxLength={field.maxLength}
-                                                    />
-                                                </InputWrapper>
+                                                />
                                             )}
                                         </div>
                                     ))}

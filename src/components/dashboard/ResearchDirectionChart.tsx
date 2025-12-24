@@ -1,7 +1,6 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useEffect, useState } from "react";
-import {getPopularSubjects, getSubjectPopularity} from "@/integrations/api/statisticsApi.ts";
+import {getPopularSubjects} from "@/integrations/api/statisticsApi.ts";
 import {ResearchSubject} from "@/integrations/api/datasetApi.ts";
 
 
@@ -70,11 +69,11 @@ export function ResearchDirectionChart() {
   return (
     <div className="col-span-2">
         {loading ? (
-          <div className="flex items-center justify-center h-[300px]">
+          <div className="flex items-center justify-center h-[350px]">
             <p>加载中...</p>
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={350}>
             <BarChart maxBarSize={75} data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis 

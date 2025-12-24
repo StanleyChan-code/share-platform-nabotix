@@ -1,26 +1,25 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Label } from "@/components/ui/label.tsx";
-import { Input } from "@/components/ui/input.tsx";
-import { Textarea } from "@/components/ui/textarea.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Checkbox } from "@/components/ui/checkbox.tsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
-import { Upload, Loader2, Plus, X, FileText, Info, Asterisk, Building, User, Mail, Phone, Calendar, Tag, Shield, File, CheckCircle, AlertCircle } from "lucide-react";
+import { Upload, Loader2, Plus, X, FileText, Info, Asterisk, Building, Tag, Shield, File, CheckCircle, AlertCircle } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
-import FileUploader, { FileUploaderHandles } from "@/components/fileuploader/FileUploader.tsx";
+import FileUploader from "@/components/fileuploader/FileUploader.tsx";
+import { FileUploaderHandles } from "@/components/fileuploader/types";
 import { formatFileSize } from "@/lib/utils.ts";
 import { BaselineDatasetSelector } from "@/components/upload/BaselineDatasetSelector.tsx";
 import { InstitutionSelector } from "@/components/dataset/InstitutionSelector";
 import { AdminInstitutionSelector } from "@/components/admin/institution/AdminInstitutionSelector.tsx";
 import { datasetApi } from "@/integrations/api/datasetApi.ts";
 import { institutionApi } from "@/integrations/api/institutionApi.ts";
-import { getCurrentUserRoles } from "@/lib/authUtils";
+import { getCurrentUserRolesFromSession } from "@/lib/authUtils";
 import { PermissionRoles } from "@/lib/permissionUtils";
 import { FileInfo } from "@/integrations/api/fileApi";
 import { toast } from "sonner";
 import { useDebounce } from "@/hooks/useDebounce";
-import { FormValidator, InputWrapper } from "@/components/ui/FormValidator";
+import { FormValidator, Input, Textarea } from "@/components/ui/FormValidator";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -138,7 +137,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
 
   // 检查用户权限
   useEffect(() => {
-    const roles = getCurrentUserRoles();
+    const roles = getCurrentUserRolesFromSession();
     setUserRoles(roles);
   }, []);
 
@@ -277,8 +276,6 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
     // 基本验证
     if (!formData.titleCn.trim()) {
       toast.error('请填写数据集标题');
@@ -494,10 +491,10 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
     });
 
     // 重置文件上传
-    dataFileRef.current?.handleReset(false);
-    dictFileRef.current?.handleReset(false);
-    termsFileRef.current?.handleReset(false);
-    sharingFileRef.current?.handleReset(false);
+    dataFileRef.current?.acceptedAndReset();
+    dictFileRef.current?.acceptedAndReset();
+    termsFileRef.current?.acceptedAndReset();
+    sharingFileRef.current?.acceptedAndReset();
 
     setDataFileInfo(null);
     setDictFileInfo(null);
@@ -547,7 +544,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <FormValidator onSubmit={handleSubmit} className="space-y-6" showAllErrorsOnSubmit={true}>
+            <FormValidator onSubmit={handleSubmit} className="space-y-6">
               {/* 基本信息 */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -562,16 +559,22 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                       <Label htmlFor="titleCn" className="flex items-center gap-1">
                         数据集标题 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
-                      <InputWrapper required validationType="custom">
-                        <Input
-                            id="titleCn"
-                            name="titleCn"
-                            value={formData.titleCn}
-                            onChange={handleInputChange}
-                            placeholder="请输入数据集标题"
-                            maxLength={200}
-                        />
-                      </InputWrapper>
+                      <Input
+                          id="titleCn"
+                          name="titleCn"
+                          value={formData.titleCn}
+                          onChange={handleInputChange}
+                          placeholder="请输入数据集标题"
+                          maxLength={200}
+                          required
+                          validationType="custom"
+                          customValidation={(value) => {
+                            if (!value.trim()) return "数据集标题不能为空";
+                            if (value.trim().length < 2) return "数据集标题至少需要2个字符";
+                            if (value.trim().length > 200) return "数据集标题不能超过200个字符";
+                            return true;
+                          }}
+                      />
                       <p className="text-xs text-muted-foreground">请输入数据集的完整标题，最多200个字符</p>
                     </div>
 
@@ -601,16 +604,22 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                       <Label htmlFor="principalInvestigator" className="flex items-center gap-1">
                         首席研究员（PI） <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
-                      <InputWrapper required>
-                        <Input
-                            id="principalInvestigator"
-                            name="principalInvestigator"
-                            value={formData.principalInvestigator}
-                            onChange={handleInputChange}
-                            placeholder="请输入首席研究员姓名"
-                            maxLength={100}
-                        />
-                      </InputWrapper>
+                      <Input
+                          id="principalInvestigator"
+                          name="principalInvestigator"
+                          value={formData.principalInvestigator}
+                          onChange={handleInputChange}
+                          placeholder="请输入首席研究员姓名"
+                          maxLength={100}
+                          required
+                          validationType="custom"
+                          customValidation={(value) => {
+                            if (!value.trim()) return "首席研究员姓名不能为空";
+                            if (value.trim().length < 2) return "姓名至少需要2个字符";
+                            if (value.trim().length > 100) return "姓名不能超过100个字符";
+                            return true;
+                          }}
+                      />
                       <p className="text-xs text-muted-foreground">项目或研究的首席研究员姓名</p>
                     </div>
 
@@ -618,16 +627,22 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                       <Label htmlFor="datasetLeader" className="flex items-center gap-1">
                         数据集负责人 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
-                      <InputWrapper required>
-                        <Input
-                            id="datasetLeader"
-                            name="datasetLeader"
-                            value={formData.datasetLeader}
-                            onChange={handleInputChange}
-                            placeholder="数据集负责人姓名"
-                            maxLength={100}
-                        />
-                      </InputWrapper>
+                      <Input
+                          id="datasetLeader"
+                          name="datasetLeader"
+                          value={formData.datasetLeader}
+                          onChange={handleInputChange}
+                          placeholder="数据集负责人姓名"
+                          maxLength={100}
+                          required
+                          validationType="custom"
+                          customValidation={(value) => {
+                            if (!value.trim()) return "数据集负责人不能为空";
+                            if (value.trim().length < 2) return "负责人姓名至少需要2个字符";
+                            if (value.trim().length > 100) return "负责人姓名不能超过100个字符";
+                            return true;
+                          }}
+                      />
                       <p className="text-xs text-muted-foreground">负责此数据集的主要人员姓名</p>
                     </div>
 
@@ -635,16 +650,22 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                       <Label htmlFor="contactPerson" className="flex items-center gap-1">
                         联系人 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
-                      <InputWrapper required>
-                        <Input
-                            id="contactPerson"
-                            name="contactPerson"
-                            value={formData.contactPerson}
-                            onChange={handleInputChange}
-                            placeholder="联系人姓名"
-                            maxLength={100}
-                        />
-                      </InputWrapper>
+                      <Input
+                          id="contactPerson"
+                          name="contactPerson"
+                          value={formData.contactPerson}
+                          onChange={handleInputChange}
+                          placeholder="联系人姓名"
+                          maxLength={100}
+                          required
+                          validationType="custom"
+                          customValidation={(value) => {
+                            if (!value.trim()) return "联系人不能为空";
+                            if (value.trim().length < 2) return "联系人姓名至少需要2个字符";
+                            if (value.trim().length > 100) return "联系人姓名不能超过100个字符";
+                            return true;
+                          }}
+                      />
                       <p className="text-xs text-muted-foreground">负责数据申请和咨询的联系人</p>
                     </div>
 
@@ -659,6 +680,11 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                           value={formData.startDate}
                           onChange={handleInputChange}
                           required
+                          validationType="custom"
+                          customValidation={(value) => {
+                            if (!value.trim()) return "开始日期不能为空";
+                            return true;
+                          }}
                       />
                       {dateError && (
                           <p className="text-xs text-red-500 flex items-center gap-1">
@@ -672,16 +698,24 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                       <Label htmlFor="versionNumber" className="flex items-center gap-1">
                         版本号 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
-                      <InputWrapper required>
-                        <Input
-                            id="versionNumber"
-                            name="versionNumber"
-                            value={formData.versionNumber}
-                            onChange={handleInputChange}
-                            placeholder="如：1.0"
-                            maxLength={50}
-                        />
-                      </InputWrapper>
+                      <Input
+                          id="versionNumber"
+                          name="versionNumber"
+                          value={formData.versionNumber}
+                          onChange={handleInputChange}
+                          placeholder="如：1.0"
+                          maxLength={50}
+                          required
+                          validationType="custom"
+                          customValidation={(value) => {
+                            if (!value.trim()) return "版本号不能为空";
+                            if (!/^[0-9]+\.[0-9]+(\.[0-9]+)*$/.test(value.trim())) {
+                              return "版本号格式不正确，如：1.0、2.1.3";
+                            }
+                            if (value.trim().length > 50) return "版本号不能超过50个字符";
+                            return true;
+                          }}
+                      />
                       <p className="text-xs text-muted-foreground">数据集的版本标识，如1.0、2.1等</p>
                     </div>
                   </div>
@@ -692,17 +726,23 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                       <Label htmlFor="description" className="flex items-center gap-1">
                         数据集描述 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
-                      <InputWrapper required>
-                        <Textarea
-                            id="description"
-                            name="description"
-                            rows={4}
-                            value={formData.description}
-                            onChange={handleInputChange}
-                            placeholder="详细描述数据集内容、采集方法、质量控制等"
-                            maxLength={2000}
-                        />
-                      </InputWrapper>
+                      <Textarea
+                          id="description"
+                          name="description"
+                          rows={4}
+                          value={formData.description}
+                          onChange={handleInputChange}
+                          placeholder="详细描述数据集内容、采集方法、质量控制等"
+                          maxLength={2000}
+                          required
+                          validationType="custom"
+                          customValidation={(value) => {
+                            if (!value.trim()) return "数据集描述不能为空";
+                            if (value.trim().length < 10) return "描述至少需要10个字符";
+                            if (value.trim().length > 2000) return "描述不能超过2000个字符";
+                            return true;
+                          }}
+                      />
                       <p className="text-xs text-muted-foreground">详细描述数据集的内容、用途、采集方法等信息，最多2000字符</p>
                     </div>
 
@@ -714,6 +754,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                           value={formData.subjectAreaId}
                           onValueChange={(value) => handleSelectChange("subjectAreaId", value)}
                           onOpenChange={(open) => open && loadResearchSubjects()}
+                          required
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="选择学科领域" />
@@ -739,16 +780,22 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                       <Label htmlFor="dataCollectionUnit" className="flex items-center gap-1">
                         数据采集单位 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
-                      <InputWrapper required>
-                        <Input
-                            id="dataCollectionUnit"
-                            name="dataCollectionUnit"
-                            value={formData.dataCollectionUnit}
-                            onChange={handleInputChange}
-                            placeholder="如：某某医院"
-                            maxLength={200}
-                        />
-                      </InputWrapper>
+                      <Input
+                          id="dataCollectionUnit"
+                          name="dataCollectionUnit"
+                          value={formData.dataCollectionUnit}
+                          onChange={handleInputChange}
+                          placeholder="如：某某医院"
+                          maxLength={200}
+                          required
+                          validationType="custom"
+                          customValidation={(value) => {
+                            if (!value.trim()) return "数据采集单位不能为空";
+                            if (value.trim().length < 2) return "单位名称至少需要2个字符";
+                            if (value.trim().length > 200) return "单位名称不能超过200个字符";
+                            return true;
+                          }}
+                      />
                       <p className="text-xs text-muted-foreground">负责数据采集的具体单位名称</p>
                     </div>
 
@@ -756,16 +803,28 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                       <Label htmlFor="contactInfo" className="flex items-center gap-1">
                         联系方式 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
-                      <InputWrapper required validationType="custom">
-                        <Input
-                            id="contactInfo"
-                            name="contactInfo"
-                            value={formData.contactInfo}
-                            onChange={handleInputChange}
-                            placeholder="电话或邮箱"
-                            maxLength={200}
-                        />
-                      </InputWrapper>
+                      <Input
+                          id="contactInfo"
+                          name="contactInfo"
+                          value={formData.contactInfo}
+                          onChange={handleInputChange}
+                          placeholder="电话或邮箱"
+                          maxLength={200}
+                          required
+                          validationType="custom"
+                          customValidation={(value) => {
+                            if (!value.trim()) return "联系方式不能为空";
+                            if (value.trim().length < 5) return "联系方式至少需要5个字符";
+                            if (value.trim().length > 200) return "联系方式不能超过200个字符";
+                            // 邮箱或电话验证
+                            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                            const phoneRegex = /^1[3-9]\d{9}$/;
+                            if (!emailRegex.test(value.trim()) && !phoneRegex.test(value.trim())) {
+                              return "请输入有效的邮箱地址或手机号码";
+                            }
+                            return true;
+                          }}
+                      />
                       <p className="text-xs text-muted-foreground">联系人的电话或邮箱地址</p>
                     </div>
 
@@ -773,16 +832,22 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                       <Label htmlFor="samplingMethod" className="flex items-center gap-1">
                         抽样方法 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
-                      <InputWrapper required>
-                        <Input
-                            id="samplingMethod"
-                            name="samplingMethod"
-                            value={formData.samplingMethod}
-                            onChange={handleInputChange}
-                            placeholder="如：随机抽样、分层抽样等"
-                            maxLength={200}
-                        />
-                      </InputWrapper>
+                      <Input
+                          id="samplingMethod"
+                          name="samplingMethod"
+                          value={formData.samplingMethod}
+                          onChange={handleInputChange}
+                          placeholder="如：随机抽样、分层抽样等"
+                          maxLength={200}
+                          required
+                          validationType="custom"
+                          customValidation={(value) => {
+                            if (!value.trim()) return "抽样方法不能为空";
+                            if (value.trim().length < 2) return "抽样方法至少需要2个字符";
+                            if (value.trim().length > 200) return "抽样方法不能超过200个字符";
+                            return true;
+                          }}
+                      />
                       <p className="text-xs text-muted-foreground">描述数据采集时使用的抽样方法</p>
                     </div>
 
@@ -797,6 +862,11 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                           value={formData.endDate}
                           onChange={handleInputChange}
                           required
+                          validationType="custom"
+                          customValidation={(value) => {
+                            if (!value.trim()) return "结束日期不能为空";
+                            return true;
+                          }}
                       />
                       {dateError && (
                           <p className="text-xs text-red-500 flex items-center gap-1">
@@ -810,16 +880,22 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                       <Label htmlFor="versionDescription" className="flex items-center gap-1">
                         版本描述 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
-                      <InputWrapper required>
-                        <Input
-                            id="versionDescription"
-                            name="versionDescription"
-                            value={formData.versionDescription}
-                            onChange={handleInputChange}
-                            placeholder="如：初始版本"
-                            maxLength={500}
-                        />
-                      </InputWrapper>
+                      <Input
+                          id="versionDescription"
+                          name="versionDescription"
+                          value={formData.versionDescription}
+                          onChange={handleInputChange}
+                          placeholder="如：初始版本"
+                          maxLength={500}
+                          required
+                          validationType="custom"
+                          customValidation={(value) => {
+                            if (!value.trim()) return "版本描述不能为空";
+                            if (value.trim().length < 5) return "版本描述至少需要5个字符";
+                            if (value.trim().length > 500) return "版本描述不能超过500个字符";
+                            return true;
+                          }}
+                      />
                       <p className="text-xs text-muted-foreground">简要描述此版本的主要更新内容</p>
                     </div>
                   </div>
@@ -938,7 +1014,12 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                         value={newKeyword}
                         onChange={(e) => setNewKeyword(e.target.value)}
                         placeholder="输入关键词后按回车或点击添加"
-                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyword())}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addKeyword();
+                          }
+                        }}
                         maxLength={100}
                     />
                     <Button type="button" onClick={addKeyword} size="sm">
@@ -980,100 +1061,106 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                 </h3>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-1">
-                        完整数据集文件 <Asterisk className="h-3 w-3 text-red-500" />
-                      </Label>
-                      <FileUploader
-                          ref={dataFileRef}
-                          onUploadComplete={handleDataFileUpload}
-                          onResetComplete={handleDataFileReset}
-                          maxSize={10 * 1024 * 1024 * 1024}
-                          acceptedFileTypes={['.csv', '.xlsx', '.xls']}
-                      />
-                      {dataFileInfo ? (
-                          <div className="flex items-center gap-2 text-sm text-green-600">
-                            <CheckCircle className="h-4 w-4" />
-                            {dataFileInfo.fileName} ({formatFileSize(dataFileInfo.fileSize)})
-                          </div>
-                      ) : (
-                          <p className="text-xs text-muted-foreground">
-                            支持 CSV、Excel 格式，最大 10GB。包含完整的数据集内容。
-                          </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-1">
-                        数据分享文件 <Asterisk className="h-3 w-3 text-red-500" />
-                      </Label>
-                      <FileUploader
-                          ref={sharingFileRef}
-                          onUploadComplete={handleSharingFileUpload}
-                          onResetComplete={handleSharingFileReset}
-                          maxSize={500 * 1024 * 1024}
-                          acceptedFileTypes={['.csv', '.xlsx', '.xls']}
-                      />
-                      {sharingFileInfo ? (
-                          <div className="flex items-center gap-2 text-sm text-green-600">
-                            <CheckCircle className="h-4 w-4" />
-                            {sharingFileInfo.fileName} ({formatFileSize(sharingFileInfo.fileSize)})
-                          </div>
-                      ) : (
-                          <p className="text-xs text-muted-foreground">
-                            支持 CSV、Excel 格式，最大 500MB。用户申请后可下载的文件。
-                          </p>
-                      )}
-                    </div>
+                  <div className="space-y-2 pt-2 border-t">
+                    <Label className="flex items-center gap-1">
+                      完整数据集文件 <Asterisk className="h-3 w-3 text-red-500" />
+                    </Label>
+                    <FileUploader
+                        ref={dataFileRef}
+                        onUploadComplete={handleDataFileUpload}
+                        onResetComplete={handleDataFileReset}
+                        maxSize={10 * 1024 * 1024 * 1024}
+                        acceptedFileTypes={['.csv', '.xlsx', '.xls']}
+                        templateFile="dataset.xlsx"
+                        templateLabel="数据集模板"
+                        required
+                    />
+                    {dataFileInfo ? (
+                        <div className="flex items-center gap-2 text-sm text-green-600">
+                          <CheckCircle className="h-4 w-4" />
+                          {dataFileInfo.fileName} ({formatFileSize(dataFileInfo.fileSize)})
+                        </div>
+                    ) : (
+                        <p className="text-xs text-muted-foreground">
+                          支持 CSV、Excel 格式，最大 10GB。包含完整的数据集内容。
+                        </p>
+                    )}
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-1">
-                        数据字典文件 <Asterisk className="h-3 w-3 text-red-500" />
-                      </Label>
-                      <FileUploader
-                          ref={dictFileRef}
-                          onUploadComplete={handleDictFileUpload}
-                          onResetComplete={handleDictFileReset}
-                          maxSize={100 * 1024 * 1024}
-                          acceptedFileTypes={['.csv', '.xlsx', '.xls']}
-                      />
-                      {dictFileInfo ? (
-                          <div className="flex items-center gap-2 text-sm text-green-600">
-                            <CheckCircle className="h-4 w-4" />
-                            {dictFileInfo.fileName} ({formatFileSize(dictFileInfo.fileSize)})
-                          </div>
-                      ) : (
-                          <p className="text-xs text-muted-foreground">
-                            支持 CSV、Excel 格式，最大 100MB。描述数据字段含义和结构的文件。
-                          </p>
-                      )}
-                    </div>
+                  <div className="space-y-2 pt-2 border-t">
+                    <Label className="flex items-center gap-1">
+                      数据分享文件 <Asterisk className="h-3 w-3 text-red-500" />
+                    </Label>
+                    <FileUploader
+                        ref={sharingFileRef}
+                        onUploadComplete={handleSharingFileUpload}
+                        onResetComplete={handleSharingFileReset}
+                        maxSize={500 * 1024 * 1024}
+                        acceptedFileTypes={['.csv', '.xlsx', '.xls']}
+                        required
+                    />
+                    {sharingFileInfo ? (
+                        <div className="flex items-center gap-2 text-sm text-green-600">
+                          <CheckCircle className="h-4 w-4" />
+                          {sharingFileInfo.fileName} ({formatFileSize(sharingFileInfo.fileSize)})
+                        </div>
+                    ) : (
+                        <p className="text-xs text-muted-foreground">
+                          支持 CSV、Excel 格式，最大 500MB。用户申请后可下载的文件。
+                        </p>
+                    )}
+                  </div>
 
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-1">
-                        数据使用协议 <Asterisk className="h-3 w-3 text-red-500" />
-                      </Label>
-                      <FileUploader
-                          ref={termsFileRef}
-                          onUploadComplete={handleTermsFileUpload}
-                          onResetComplete={handleTermsFileReset}
-                          maxSize={20 * 1024 * 1024}
-                          acceptedFileTypes={['.pdf', '.doc', '.docx']}
-                      />
-                      {termsFileInfo ? (
-                          <div className="flex items-center gap-2 text-sm text-green-600">
-                            <CheckCircle className="h-4 w-4" />
-                            {termsFileInfo.fileName} ({formatFileSize(termsFileInfo.fileSize)})
-                          </div>
-                      ) : (
-                          <p className="text-xs text-muted-foreground">
-                            支持 PDF、Word 格式，最大 20MB。数据使用的条款和协议文档。
-                          </p>
-                      )}
-                    </div>
+                  <div className="space-y-2 pt-2 border-t">
+                    <Label className="flex items-center gap-1">
+                      数据字典文件 <Asterisk className="h-3 w-3 text-red-500" />
+                    </Label>
+                    <FileUploader
+                        ref={dictFileRef}
+                        onUploadComplete={handleDictFileUpload}
+                        onResetComplete={handleDictFileReset}
+                        maxSize={100 * 1024 * 1024}
+                        acceptedFileTypes={['.csv', '.xlsx', '.xls']}
+                        templateFile="data_dictionary.xlsx"
+                        templateLabel="数据字典模板"
+                        required
+                    />
+                    {dictFileInfo ? (
+                        <div className="flex items-center gap-2 text-sm text-green-600">
+                          <CheckCircle className="h-4 w-4" />
+                          {dictFileInfo.fileName} ({formatFileSize(dictFileInfo.fileSize)})
+                        </div>
+                    ) : (
+                        <p className="text-xs text-muted-foreground">
+                          支持 CSV、Excel 格式，最大 100MB。描述数据字段含义和结构的文件。
+                        </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2 pt-2 border-t">
+                    <Label className="flex items-center gap-1">
+                      数据使用协议 <Asterisk className="h-3 w-3 text-red-500" />
+                    </Label>
+                    <FileUploader
+                        ref={termsFileRef}
+                        onUploadComplete={handleTermsFileUpload}
+                        onResetComplete={handleTermsFileReset}
+                        maxSize={20 * 1024 * 1024}
+                        acceptedFileTypes={['.pdf']}
+                        templateFile="data_usage_license.docx"
+                        templateLabel="数据使用协议模板"
+                        required
+                    />
+                    {termsFileInfo ? (
+                        <div className="flex items-center gap-2 text-sm text-green-600">
+                          <CheckCircle className="h-4 w-4" />
+                          {termsFileInfo.fileName} ({formatFileSize(termsFileInfo.fileSize)})
+                        </div>
+                    ) : (
+                        <p className="text-xs text-muted-foreground">
+                          支持 PDF、Word 格式，最大 20MB。数据使用的条款和协议文档。
+                        </p>
+                    )}
                   </div>
                 </div>
               </div>

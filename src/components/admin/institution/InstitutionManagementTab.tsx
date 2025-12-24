@@ -2,7 +2,6 @@ import {useState, useEffect, useCallback} from "react";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card.tsx";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table.tsx";
 import {Button} from "@/components/ui/button.tsx";
-import {Input} from "@/components/ui/input.tsx";
 import {useToast} from "@/hooks/use-toast.ts";
 import {CheckCircle, Clock, Plus, Loader2, Search, ChevronRightIcon, ChevronLeftIcon} from "lucide-react";
 import AddInstitutionForm from "@/components/admin/institution/AddInstitutionForm.tsx";
@@ -13,6 +12,7 @@ import ReactPaginate from "react-paginate";
 import {InstitutionTypes} from "@/lib/enums.ts";
 import { ApiResponse, Page } from "@/integrations/api/client";
 import { useDebounce } from "@/hooks/useDebounce";
+import {Input} from "@/components/ui/FormValidator.tsx";
 
 const InstitutionManagementTab = () => {
     const [showAddInstitutionForm, setShowAddInstitutionForm] = useState(false);
@@ -94,47 +94,36 @@ const InstitutionManagementTab = () => {
 
     return (
         <div className="space-y-6">
-            <Card>
-                <CardHeader>
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                        <div>
-                            <CardTitle>机构管理</CardTitle>
-                            <CardDescription>
-                                验证和管理机构
-                            </CardDescription>
-                        </div>
-                        <Button
-                            onClick={() => setShowAddInstitutionForm(true)}
-                            className="gap-2 ml-auto"
-                        >
-                            <Plus className="h-4 w-4"/>
-                            添加机构
-                        </Button>
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
                         <AddInstitutionForm
                             open={showAddInstitutionForm}
                             onOpenChange={setShowAddInstitutionForm}
                             onInstitutionAdded={handleInstitutionAdded}
                         />
-
-                        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
-                            <div className="relative flex-1 max-w-md">
-                                <Search
-                                    className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"/>
-                                <Input
-                                    placeholder="搜索机构名称..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-10"
-                                    maxLength={100}
-                                />
-                            </div>
-                            <Button type="submit" className="w-full sm:w-auto">
-                                搜索
-                            </Button>
-                        </form>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
+                    <div className="relative flex-1 max-w-md min-w-72">
+                        <Search
+                            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"/>
+                        <Input
+                            placeholder="搜索机构名称..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10"
+                            maxLength={100}
+                        />
+                    </div>
+                    <Button type="submit" className="w-full sm:w-auto">
+                        搜索
+                    </Button>
+                </form>
+                <Button
+                    onClick={() => setShowAddInstitutionForm(true)}
+                    className="gap-2 ml-auto"
+                >
+                    <Plus className="h-4 w-4"/>
+                    添加机构
+                </Button>
+            </div>
 
                     {loading ? (
                         <div className="flex items-center justify-center py-8">
@@ -210,8 +199,6 @@ const InstitutionManagementTab = () => {
                             )}
                         </>
                     )}
-                </CardContent>
-            </Card>
 
             <InstitutionProfileTab institutionId={selectedInstitutionId}/>
         </div>

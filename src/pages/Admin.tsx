@@ -25,7 +25,7 @@ import InstitutionManagementTab from "@/components/admin/institution/Institution
 import InstitutionProfileTab from "@/components/admin/institution/InstitutionProfileTab.tsx";
 import ResearchSubjectManagementTab from "@/components/admin/researchsubject/ResearchSubjectManagementTab.tsx";
 import { institutionApi } from "@/integrations/api/institutionApi";
-import { getCurrentUserInfo } from "@/lib/authUtils.ts";
+import { getCurrentUserInfoFromSession } from "@/lib/authUtils.ts";
 import { getPermissionRoleDisplayName, hasPermissionRole, PermissionRoles } from "@/lib/permissionUtils.ts";
 import DatasetsTab from "@/components/admin/dataset/DatasetsTab.tsx";
 import ResearchOutputsManagementTab from "@/components/admin/researchoutput/ResearchOutputsManagementTab.tsx";
@@ -106,13 +106,39 @@ const UnifiedDashboard = () => {
         },
     ];
 
+    const getActiveClass = (color: string) => {
+        const colorMap = {
+            blue: 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg',
+            green: 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg',
+            purple: 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg',
+            orange: 'bg-gradient-to-r from-orange-600 to-orange-700 text-white shadow-lg',
+            indigo: 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg',
+            red: 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg',
+            amber: 'bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-lg',
+        };
+        return colorMap[color] || colorMap.blue;
+    };
+
+    const getHoverClass = (color: string) => {
+        const colorMap = {
+            blue: 'hover:bg-blue-100',
+            green: 'hover:bg-green-100',
+            purple: 'hover:bg-purple-100',
+            orange: 'hover:bg-orange-100',
+            indigo: 'hover:bg-indigo-100',
+            red: 'hover:bg-red-100',
+            amber: 'hover:bg-amber-100',
+        };
+        return colorMap[color] || colorMap.blue;
+    };
+
     useEffect(() => {
         const checkAuthorization = async () => {
             try {
                 setIsCheckingAuth(true);
 
                 // 获取当前用户信息
-                const user = getCurrentUserInfo();
+                const user = getCurrentUserInfoFromSession();
 
                 if (!user) {
                     navigate("/auth");
@@ -203,7 +229,7 @@ const UnifiedDashboard = () => {
         return null;
     }
 
-    const userInfo = getCurrentUserInfo();
+    const userInfo = getCurrentUserInfoFromSession();
     const availableTabs = allTabs.filter(tab =>
         tab.allowRoles.some(role => hasPermissionRole(role))
     );
@@ -212,8 +238,8 @@ const UnifiedDashboard = () => {
         <div className="min-h-screen bg-gradient-to-br from-gray-50/30 to-blue-50/10">
             <Navigation/>
 
-            <main className="container mx-auto px-4 py-8 space-y-8 max-w-7xl">
-                {/* Header Section */}
+            <main className="container mx-auto px-4 py-8 space-y-6 max-w-7xl">
+                {/* Header Section - 保持不变 */}
                 <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
                     <div className="space-y-3">
                         <div className="flex items-center gap-3">
@@ -221,7 +247,7 @@ const UnifiedDashboard = () => {
                                 <Shield className="h-8 w-8 text-white" />
                             </div>
                             <div>
-                                <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-blue-800 bg-clip-text text-transparent">
+                                <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-blue-800 bg-clip-text text-transparent">
                                     {isPlatformAdmin ? "平台管理面板" : "机构管理面板"}
                                 </h1>
                                 <p className="text-lg text-muted-foreground mt-1">
@@ -252,64 +278,86 @@ const UnifiedDashboard = () => {
                     </Card>
                 </div>
 
-                {/* Management Tabs */}
+                {/* Management Tabs - 美化后的部分 */}
                 <Card className="bg-white/80 backdrop-blur-sm border-blue-200/50 shadow-xl overflow-hidden">
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        {/* Tabs Header */}
-                        <div className="border-b border-blue-200/30">
-                            <div className="px-6 pt-6">
-                                <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-blue-800 bg-clip-text text-transparent mb-2">
-                                    管理功能
-                                </h2>
-                                <p className="text-muted-foreground">
-                                    选择以下功能模块进行系统管理
-                                </p>
+                        {/* 美化后的 Tabs Header */}
+                        <div className="relative">
+                            {/* 背景装饰 */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-blue-50/20 to-indigo-50/20"></div>
+
+                            <div className="relative px-8 pt-6 pb-0">
+
+                                {/* 美化后的 Tab 列表 - 占满整行 */}
+                                <div className="relative">
+                                    {/* 底部边框装饰 */}
+                                    <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-200/50 to-transparent"></div>
+
+                                    <TabsList className="flex w-full h-auto bg-transparent p-0 overflow-hidden rounded-none">
+                                        {availableTabs.map((tab, index) => {
+                                            const IconComponent = tab.icon;
+                                            const isActive = activeTab === tab.value;
+                                            const isFirst = index === 0;
+                                            const isLast = index === availableTabs.length - 1;
+
+                                            return (
+                                                <TabsTrigger
+                                                    key={tab.value}
+                                                    value={tab.value}
+                                                    className={`
+        relative flex-1 flex items-center justify-center gap-3 py-5 px-3 font-medium 
+        transition-all duration-300 border-b-2 border-transparent
+        group hover:shadow-inner
+        ${isActive
+                                                        ? `${getActiveClass(tab.color)} border-current shadow-inner transform scale-[1.02] text-white`
+                                                        : `text-gray-600 hover:text-gray-900 bg-white/30 hover:bg-white/60 backdrop-blur-sm border-blue-100`
+                                                    }
+        ${isFirst ? 'rounded-tl-xl' : ''}
+        ${isLast ? 'rounded-tr-xl' : ''}
+        min-w-0 flex-shrink-0
+    `}
+                                                    style={{ flexBasis: `${100 / availableTabs.length}%` }}
+                                                >
+                                                    {/* 激活状态指示器 */}
+                                                    {isActive && (
+                                                        <div className={`absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full animate-pulse`}></div>
+                                                    )}
+
+                                                    <IconComponent className={`h-5 w-5 flex-shrink-0 transition-transform duration-300 ${
+                                                        isActive ? 'scale-110 text-white' : 'group-hover:scale-110 text-current'
+                                                    }`} />
+
+                                                    <span className={`font-semibold text-base whitespace-nowrap truncate text-center ${
+                                                        isActive ? 'text-white' : 'text-current'
+                                                    }`}>
+        {tab.label}
+    </span>
+
+                                                    {/* 悬停效果装饰 */}
+                                                    <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-b from-white/20 to-transparent ${
+                                                        isActive ? 'opacity-100' : ''
+                                                    }`}></div>
+
+                                                    {/* 分隔线（除了最后一个） */}
+                                                    {!isLast && !isActive && (
+                                                        <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-px h-7 bg-gray-200/60"></div>
+                                                    )}
+                                                </TabsTrigger>
+                                            );
+                                        })}
+                                    </TabsList>
+                                </div>
                             </div>
-
-                            <TabsList className="grid w-full h-full px-6 pb-0 mt-2" style={{ gridTemplateColumns: `repeat(${availableTabs.length}, 1fr)` }}>
-                                {availableTabs.map(tab => {
-                                    const IconComponent = tab.icon;
-                                    const isActive = activeTab === tab.value;
-
-                                    return (
-                                        <TabsTrigger
-                                            key={tab.value}
-                                            value={tab.value}
-                                            className={`flex items-center gap-3 py-4 px-4 font-medium transition-all duration-200 ${
-                                                isActive
-                                                    ? `bg-gradient-to-r from-${tab.color}-600 to-${tab.color}-700 text-white shadow-lg`
-                                                    : "text-muted-foreground hover:text-gray-900 hover:bg-gray-50/50"
-                                            }`}
-                                        >
-                                            <IconComponent className="h-5 w-5" />
-                                            {tab.label}
-                                        </TabsTrigger>
-                                    );
-                                })}
-                            </TabsList>
                         </div>
 
                         {/* Tabs Content */}
-                        <div className="p-6">
+                        <div className="p-8">
                             {availableTabs.map(tab => {
-                                const currentTab = allTabs.find(t => t.value === tab.value);
                                 return (
                                     <TabsContent key={tab.value} value={tab.value} className="space-y-6 m-0">
-                                        {/* Tab Header */}
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className={`p-2 bg-${currentTab?.color}-100 rounded-lg`}>
-                                                    <currentTab.icon className={`h-6 w-6 text-${currentTab?.color}-600`} />
-                                                </div>
-                                                <div>
-                                                    <h3 className="text-xl font-bold text-gray-900">{currentTab?.label}</h3>
-                                                    <p className="text-muted-foreground">{currentTab?.description}</p>
-                                                </div>
-                                            </div>
-                                        </div>
 
                                         {/* Tab Content */}
-                                        <div className="min-h-[400px]">
+                                        <div className="min-h-[500px] rounded-2xl bg-white/50 p-6 shadow-sm border border-blue-100/50">
                                             {tab.content}
                                         </div>
                                     </TabsContent>
@@ -318,7 +366,6 @@ const UnifiedDashboard = () => {
                         </div>
                     </Tabs>
                 </Card>
-
             </main>
         </div>
     );

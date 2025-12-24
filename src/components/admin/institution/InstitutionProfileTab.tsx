@@ -1,16 +1,14 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button.tsx";
-import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
 import { useToast } from "@/hooks/use-toast.ts";
 import { institutionApi, Institution } from "@/integrations/api/institutionApi.ts";
 import { Loader2, Building, User, Mail, Phone, IdCard, Briefcase, Shield, Asterisk, Info } from "lucide-react";
 import { InstitutionTypes, ID_TYPES } from "@/lib/enums.ts";
-import { getCurrentUserRoles } from "@/lib/authUtils.ts";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card.tsx";
+import { getCurrentUserRolesFromSession } from "@/lib/authUtils.ts";
 import { Separator } from "@/components/ui/separator.tsx";
-import { FormValidator, InputWrapper } from "@/components/ui/FormValidator";
+import {FormValidator, Input, ValidatedSelect} from "@/components/ui/FormValidator";
 
 interface InstitutionProfileTabProps {
   institutionId: string;
@@ -27,7 +25,7 @@ const InstitutionProfileTab = ({ institutionId }: InstitutionProfileTabProps) =>
   useEffect(() => {
     const checkUserRole = async () => {
       try {
-        const roles = getCurrentUserRoles();
+        const roles = getCurrentUserRolesFromSession();
         setIsPlatformAdmin(roles.includes('PLATFORM_ADMIN'));
       } catch (error) {
         console.error("检查用户角色失败:", error);
@@ -74,8 +72,6 @@ const InstitutionProfileTab = ({ institutionId }: InstitutionProfileTabProps) =>
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
     if (!institution) return;
 
     try {
@@ -260,7 +256,7 @@ const InstitutionProfileTab = ({ institutionId }: InstitutionProfileTabProps) =>
 
   return (
       <div className="space-y-6">
-            <FormValidator onSubmit={handleSubmit} className="space-y-6" showAllErrorsOnSubmit={true}>
+            <FormValidator onSubmit={handleSubmit} className="space-y-6">
               {fieldGroups.map((group, groupIndex) => (
                   <div key={group.title} className="space-y-4">
                     <div className={`p-4 rounded-lg border-l-4 ${group.required ? 'border-l-red-500 bg-red-50' : 'border-l-blue-500 bg-blue-50'}`}>
@@ -289,14 +285,16 @@ const InstitutionProfileTab = ({ institutionId }: InstitutionProfileTabProps) =>
                                 </Label>
 
                                 {field.type === "select" ? (
-                                    <Select
+                                    <ValidatedSelect
+                                        id={field.name}
+                                        name={field.name}
+                                        placeholder={`请选择${field.label}`}
+                                        errorMessage={`请选择${field.label}`}
+                                        className={!isEditable ? "bg-gray-100 opacity-50" : ""}
                                         value={formData[field.name as keyof typeof formData] as string || ""}
                                         onValueChange={(value) => handleSelectChange(field.name, value)}
                                         disabled={!isEditable}
                                     >
-                                      <SelectTrigger className={!isEditable ? "bg-gray-100 opacity-50" : ""}>
-                                        <SelectValue placeholder={`请选择${field.label}`} />
-                                      </SelectTrigger>
                                       <SelectContent>
                                         {field.options?.map(option => (
                                             <SelectItem key={option.value} value={option.value}>
@@ -304,9 +302,18 @@ const InstitutionProfileTab = ({ institutionId }: InstitutionProfileTabProps) =>
                                             </SelectItem>
                                         ))}
                                       </SelectContent>
-                                    </Select>
+                                    </ValidatedSelect>
                                 ) : (
-                                    <InputWrapper
+                                    <Input
+                                        id={field.name}
+                                        name={field.name}
+                                        type={field.type}
+                                        value={formData[field.name as keyof typeof formData] as string || ""}
+                                        onChange={handleInputChange}
+                                        placeholder={field.placeholder}
+                                        maxLength={field.maxLength}
+                                        readOnly={!isEditable}
+                                        className={!isEditable ? "bg-gray-100 cursor-not-allowed" : ""}
                                         required={field.required}
                                         validationType={
                                           field.name === 'contactPhone' ? 'phone' :
@@ -314,19 +321,7 @@ const InstitutionProfileTab = ({ institutionId }: InstitutionProfileTabProps) =>
                                                   field.name === 'contactIdNumber' ? 'idNumber' : undefined
                                         }
                                         idType={field.name === 'contactIdNumber' ? formData.contactIdType as 'NATIONAL_ID' | 'PASSPORT' | 'OTHER' : undefined}
-                                    >
-                                      <Input
-                                          id={field.name}
-                                          name={field.name}
-                                          type={field.type}
-                                          value={formData[field.name as keyof typeof formData] as string || ""}
-                                          onChange={handleInputChange}
-                                          placeholder={field.placeholder}
-                                          maxLength={field.maxLength}
-                                          readOnly={!isEditable}
-                                          className={!isEditable ? "bg-gray-100 cursor-not-allowed" : ""}
-                                      />
-                                    </InputWrapper>
+                                    />
                                 )}
 
                                 {!isEditable && field.description && (

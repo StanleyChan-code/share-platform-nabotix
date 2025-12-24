@@ -3,7 +3,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { datasetApi } from '@/integrations/api/datasetApi';
-import {getCurrentUser} from "@/lib/authUtils";
+import {getCurrentUserFromSession} from "@/lib/authUtils";
 
 interface BaselineDatasetSelectorProps {
   value: string;
@@ -18,7 +18,7 @@ export function BaselineDatasetSelector({ value, onChange }: BaselineDatasetSele
     const fetchBaselineDatasets = async () => {
       setLoading(true);
       try {
-        const user = getCurrentUser();
+        const user = getCurrentUserFromSession();
 
 
         const response = await datasetApi.advancedSearchDatasets({

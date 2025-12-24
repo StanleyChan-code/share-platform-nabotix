@@ -183,13 +183,13 @@ export function DatasetTreeView({datasets, onDatasetClick}: DatasetTreeViewProps
                                     className="shrink-0 mt-0.5 p-1 rounded-full hover:bg-black/5 transition-colors"
                                 >
                                     {isExpanded ? (
-                                        <ChevronDown className="h-4 w-4 text-muted-foreground"/>
+                                        <ChevronDown className="h-10 w-10 text-muted-foreground"/>
                                     ) : (
-                                        <ChevronRight className="h-4 w-4 text-muted-foreground"/>
+                                        <ChevronRight className="h-10 w-10 text-muted-foreground"/>
                                     )}
                                 </button>
                             )}
-                            {!hasChildren && <div className="w-6"/>}
+                            {!hasChildren && <div className="w-10"/>}
 
                             {/* 数据集图标 */}
                             <div className="shrink-0 mt-0.5">
@@ -341,12 +341,6 @@ export function DatasetTreeView({datasets, onDatasetClick}: DatasetTreeViewProps
                                             <div className="flex items-center gap-1">
                                                 <Eye className="h-3 w-3"/>
                                                 <span>近期访问 {dataset.searchCount} 次</span>
-                                            </div>
-                                        )}
-                                        {dataset.versions && dataset.versions.length > 1 && (
-                                            <div className="flex items-center gap-1">
-                                                <Layers className="h-3 w-3"/>
-                                                <span>{dataset.versions.length} 个版本</span>
                                             </div>
                                         )}
                                     </div>

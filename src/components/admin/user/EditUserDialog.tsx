@@ -6,7 +6,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { UpdateUserRequest, userApi } from "@/integrations/api/userApi";
 import { ID_TYPES, EDUCATION_LEVELS } from "@/lib/enums";
@@ -20,7 +19,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Loader2, User, Mail, Phone, IdCard, GraduationCap, Briefcase, Target, Asterisk } from "lucide-react";
-import { FormValidator, InputWrapper } from "@/components/ui/FormValidator";
+import {FormValidator, Input, ValidatedSelect} from "@/components/ui/FormValidator";
 import { z } from "zod";
 
 // 修正表单验证规则 - 只有真实姓名、手机号、证件类型、证件号码是必填
@@ -102,7 +101,6 @@ const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: EditUserDia
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
         setIsLoading(true);
 
         try {
@@ -151,7 +149,7 @@ const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: EditUserDia
             console.error("更新用户信息失败:", error);
             toast({
                 title: "错误",
-                description: error.message || "更新用户信息失败",
+                description: error.response.data.message || "更新用户信息失败",
                 variant: "destructive",
             });
         } finally {
@@ -282,13 +280,12 @@ const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: EditUserDia
                                                 )}
                                             </div>
                                             {field.type === "select" ? (
-                                                <Select
-                                                    value={formData[field.name as keyof typeof formData] as string || ""}
-                                                    onValueChange={(value) => handleInputChange(field.name, value)}
-                                                >
-                                                    <SelectTrigger className="w-full">
-                                                        <SelectValue placeholder={field.placeholder || (field.required ? `请选择${field.label}` : `可选项，请选择${field.label}`)} />
-                                                    </SelectTrigger>
+                                                <ValidatedSelect required={field.required}
+                                                                 name={field.name}
+                                                                 placeholder={field.placeholder || (field.required ? `请选择${field.label}` : `可选项，请选择${field.label}`)}
+                                                                 errorMessage={`请选择${field.label}`}
+                                                                 value={formData[field.name as keyof typeof formData] as string}
+                                                                 onValueChange={(value) => handleInputChange(field.name, value)}>
                                                     <SelectContent>
                                                         {Object.entries(field.options!).map(([key, value]) => (
                                                             <SelectItem key={key} value={key}>
@@ -296,28 +293,24 @@ const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: EditUserDia
                                                             </SelectItem>
                                                         ))}
                                                     </SelectContent>
-                                                </Select>
+                                                </ValidatedSelect>
                                             ) : (
-                                                <InputWrapper
+                                                <Input
+                                                    value={formData[field.name as keyof typeof formData] as string}
+                                                    onChange={(e) => handleInputChange(field.name, e.target.value)}
+                                                    disabled={field.disabled}
+                                                    type={field.type || "text"}
+                                                    placeholder={field.required ? `请输入${field.label}` : `可选项，请输入${field.label}`}
+                                                    className="transition-colors focus:border-primary"
+                                                    idType={field.name === 'idNumber' ? idTypeValue : undefined}
                                                     required={field.required}
                                                     validationType={
                                                         field.name === 'phone' ? 'phone' :
                                                             field.name === 'email' ? 'email' :
                                                                 field.name === 'idNumber' ? 'idNumber' : undefined
                                                     }
-                                                    validateOnSubmit={field.required} // 只有必填字段在提交时验证
-                                                >
-                                                    <Input
-                                                        value={formData[field.name as keyof typeof formData] as string}
-                                                        onChange={(e) => handleInputChange(field.name, e.target.value)}
-                                                        disabled={field.disabled}
-                                                        type={field.type || "text"}
-                                                        placeholder={field.required ? `请输入${field.label}` : `可选项，请输入${field.label}`}
-                                                        className="transition-colors focus:border-primary"
-                                                        idType={field.name === 'idNumber' ? idTypeValue : undefined}
-                                                        required={field.required}
-                                                    />
-                                                </InputWrapper>
+                                                    validateOnSubmit={field.required}
+                                                />
                                             )}
                                         </div>
                                     ))}

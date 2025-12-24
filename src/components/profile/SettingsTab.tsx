@@ -1,12 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { Shield, Key } from "lucide-react";
-import { useState } from "react";
+import { Shield, Key, Loader2, Asterisk } from "lucide-react";
+import { useState, useRef } from "react"; // 添加 useRef
 import { useToast } from "@/hooks/use-toast";
-import { Input } from "@/components/ui/input";
 import { sendVerificationCode } from "@/integrations/api/authApi";
-import {api, ApiError} from "@/integrations/api/client";
+import { api } from "@/integrations/api/client";
+import { FormValidator, Input } from "@/components/ui/FormValidator.tsx";
+import { Label } from "@/components/ui/label.tsx";
 
 interface SettingsTabProps {
   user: any;
@@ -21,6 +22,9 @@ const SettingsTab = ({ user }: SettingsTabProps) => {
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const { toast } = useToast();
+
+  // 添加缺失的 ref
+  const newPasswordRef = useRef<any>(null);
 
   const handleSendVerificationCode = async () => {
     if (!user?.phone) {
@@ -127,142 +131,171 @@ const SettingsTab = ({ user }: SettingsTabProps) => {
     }
   };
 
+  // 自定义密码验证函数
+  const validatePasswordStrength = (password: string) => {
+    if (!password) return "密码不能为空";
+    if (password.length < 6) return "密码长度至少为6位";
+    if (!/[a-zA-Z]/.test(password)) return "密码必须包含字母";
+    if (!/\d/.test(password)) return "密码必须包含数字";
+    return true;
+  };
+
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            账户安全
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-            <div>
-              <h4 className="font-medium">修改密码</h4>
-              <p className="text-sm text-muted-foreground">
-                通过手机验证码修改密码
-              </p>
-            </div>
-            <Dialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2" onClick={() => setIsResetPasswordDialogOpen(true)}>
-                  <Key className="h-4 w-4" />
-                  修改密码
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>修改密码</DialogTitle>
-                  <DialogDescription>
-                    通过手机验证码修改您的登录密码
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <label htmlFor="phone" className="text-right">
-                      手机号
-                    </label>
-                    <div className="col-span-3 flex gap-2">
-                      <Input
-                        id="phone"
-                        value={user?.phone || ""}
-                        disabled
-                        className="flex-1"
-                      />
-                      <Button 
-                        onClick={handleSendVerificationCode} 
-                        disabled={isSendingCode || !user?.phone}
-                        variant="outline"
+      <>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              账户安全
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div>
+                <h4 className="font-medium">修改密码</h4>
+                <p className="text-sm text-muted-foreground">
+                  通过手机验证码修改密码
+                </p>
+              </div>
+              <Dialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="gap-2" onClick={() => setIsResetPasswordDialogOpen(true)}>
+                    <Key className="h-4 w-4" />
+                    修改密码
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>修改密码</DialogTitle>
+                    <DialogDescription>
+                      通过手机验证码修改您的登录密码
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <FormValidator
+                      onSubmit={handleResetPassword}
+                      className="space-y-4"
+                      showAllErrorsOnSubmit={true}
+                  >
+                    <div className="grid gap-4 py-4">
+                      {/* 手机号 */}
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="phone" className="text-right">
+                          手机号
+                        </Label>
+                        <div className="col-span-3 flex gap-2">
+                          <Input
+                              id="phone"
+                              name="phone"
+                              value={user?.phone || ""}
+                              disabled
+                              className="flex-1"
+                          />
+                          <Button
+                              type="button"
+                              onClick={handleSendVerificationCode}
+                              disabled={isSendingCode || !user?.phone}
+                              variant="outline"
+                          >
+                            {isSendingCode ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                                  发送中...
+                                </>
+                            ) : (
+                                "发送验证码"
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* 验证码 */}
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="code" className="text-right flex items-center gap-1">
+                          验证码 <Asterisk className="h-3 w-3 text-red-500" />
+                        </Label>
+                        <Input
+                            id="code"
+                            name="verificationCode"
+                            value={verificationCode}
+                            onChange={(e) => setVerificationCode(e.target.value)}
+                            placeholder="请输入6位验证码"
+                            className="col-span-3 min-w-64"
+                            required
+                            validationType="verificationCode"
+                            maxLength={6}
+                        />
+                      </div>
+
+                      {/* 新密码 */}
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="new-password" className="text-right flex items-center gap-1">
+                          新密码 <Asterisk className="h-3 w-3 text-red-500" />
+                        </Label>
+                        <Input
+                            id="new-password"
+                            name="newPassword"
+                            type="password"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            placeholder="至少6位，包含字母和数字"
+                            className="col-span-3 min-w-64"
+                            required
+                            validationType="custom"
+                            customValidation={validatePasswordStrength}
+                            ref={newPasswordRef}
+                        />
+                      </div>
+
+                      {/* 确认密码 */}
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="confirm-password" className="text-right flex items-center gap-1">
+                          确认密码 <Asterisk className="h-3 w-3 text-red-500" />
+                        </Label>
+                        <Input
+                            id="confirm-password"
+                            name="confirmPassword"
+                            type="password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="请再次输入新密码"
+                            className="col-span-3 min-w-64"
+                            required
+                            isPasswordConfirm={true}
+                            passwordRef={newPasswordRef}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end space-x-2">
+                      <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setIsResetPasswordDialogOpen(false)}
                       >
-                        {isSendingCode ? "发送中..." : "发送验证码"}
+                        取消
+                      </Button>
+                      <Button
+                          type="submit"
+                          disabled={isResettingPassword}
+                      >
+                        {isResettingPassword ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                              提交中...
+                            </>
+                        ) : (
+                            "确认修改"
+                        )}
                       </Button>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <label htmlFor="code" className="text-right">
-                      验证码
-                    </label>
-                    <Input
-                      id="code"
-                      value={verificationCode}
-                      onChange={(e) => setVerificationCode(e.target.value)}
-                      placeholder="请输入验证码"
-                      className="col-span-3"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <label htmlFor="new-password" className="text-right">
-                      新密码
-                    </label>
-                    <Input
-                      id="new-password"
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="请输入新密码"
-                      className="col-span-3"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <label htmlFor="confirm-password" className="text-right">
-                      确认密码
-                    </label>
-                    <Input
-                      id="confirm-password"
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="请再次输入新密码"
-                      className="col-span-3"
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-end space-x-2">
-                  <Button variant="outline" onClick={() => setIsResetPasswordDialogOpen(false)}>
-                    取消
-                  </Button>
-                  <Button onClick={handleResetPassword} disabled={isResettingPassword}>
-                    {isResettingPassword ? "提交中..." : "确认修改"}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/*<Card>*/}
-      {/*  <CardHeader>*/}
-      {/*    <CardTitle>通知设置</CardTitle>*/}
-      {/*  </CardHeader>*/}
-      {/*  <CardContent className="space-y-4">*/}
-      {/*    <div className="flex items-center justify-between">*/}
-      {/*      <div>*/}
-      {/*        <h4 className="font-medium">申请状态更新</h4>*/}
-      {/*        <p className="text-sm text-muted-foreground">*/}
-      {/*          当数据申请状态发生变化时通知我*/}
-      {/*        </p>*/}
-      {/*      </div>*/}
-      {/*      <Button variant="outline" size="sm">*/}
-      {/*        已开启*/}
-      {/*      </Button>*/}
-      {/*    </div>*/}
-
-      {/*    <div className="flex items-center justify-between">*/}
-      {/*      <div>*/}
-      {/*        <h4 className="font-medium">新数据集发布</h4>*/}
-      {/*        <p className="text-sm text-muted-foreground">*/}
-      {/*          有新的数据集发布时通知我*/}
-      {/*        </p>*/}
-      {/*      </div>*/}
-      {/*      <Button variant="outline" size="sm">*/}
-      {/*        已开启*/}
-      {/*      </Button>*/}
-      {/*    </div>*/}
-      {/*  </CardContent>*/}
-      {/*</Card>*/}
-    </>
+                  </FormValidator>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </CardContent>
+        </Card>
+      </>
   );
 };
 

@@ -9,7 +9,7 @@ import {userApi} from "@/integrations/api/userApi.ts";
 import {Button} from "@/components/ui/button.tsx";
 import {PlusCircle, Eye, Pencil, ChevronRightIcon, ChevronLeftIcon, Phone, Shield, Search} from "lucide-react";
 import {AdminInstitutionSelector} from "@/components/admin/institution/AdminInstitutionSelector.tsx";
-import {getCurrentUserInfo} from "@/lib/authUtils.ts";
+import {getCurrentUserInfoFromSession} from "@/lib/authUtils.ts";
 import {
     Dialog,
     DialogContent,
@@ -31,15 +31,14 @@ import EditUserDialog from "@/components/admin/user/EditUserDialog.tsx";
 import EditPhoneDialog from "@/components/admin/user/EditPhoneDialog.tsx";
 import EditUserAuthoritiesDialog from "@/components/admin/user/EditUserAuthoritiesDialog.tsx";
 import {ScrollArea} from "@radix-ui/react-scroll-area";
-import {Input} from "@/components/ui/input.tsx";
 import {institutionApi} from "@/integrations/api/institutionApi.ts";
 import {useDebounce} from "@/hooks/useDebounce";
+import {Input} from "@/components/ui/FormValidator.tsx";
 
 const UserManagementTab = () => {
     const [users, setUsers] = useState<any[]>([]);
     const [userRoles, setUserRoles] = useState<Record<string, string[]>>({});
     const [loading, setLoading] = useState(false);
-    const [showCreateForm, setShowCreateForm] = useState(false);
     const [showAddUserDialog, setShowAddUserDialog] = useState(false);
     const [selectedInstitutionId, setSelectedInstitutionId] = useState<string | null>(null);
     const [isPlatformAdmin, setIsPlatformAdmin] = useState<boolean>(false);
@@ -63,7 +62,7 @@ const UserManagementTab = () => {
 
     // 检查用户是否为平台管理员并获取用户所属机构，同时初始化用户列表
     useEffect(() => {
-        const userInfo = getCurrentUserInfo();
+        const userInfo = getCurrentUserInfoFromSession();
         if (userInfo) {
             const isPlatformAdminUser = userInfo.roles.includes(PermissionRoles.PLATFORM_ADMIN);
             setIsPlatformAdmin(isPlatformAdminUser);
@@ -388,9 +387,9 @@ const UserManagementTab = () => {
                             />
                         </div>
                     )}
-                    <div className="mb-4 flex justify-between items-center">
+                    <div className="mb-6 p-4 border rounded-lg bg-muted/50  flex justify-between items-center">
                         {/* 添加手机号搜索框 */}
-                        <div className="mb-4 flex gap-2 max-w-lg">
+                        <div className="flex gap-2 max-w-lg">
                             <div className="relative flex-1">
                                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground"/>
                                 <Input
@@ -403,10 +402,10 @@ const UserManagementTab = () => {
                                             handleClearSearch();
                                         }
                                     }}
-                                    className="pl-8"
-                                    onKeyDown={(e) => {
+                                    className="pl-8 w-72"
+                                    onKeyDown={async (e) => {
                                         if (e.key === 'Enter') {
-                                            handleSearchByPhone();
+                                            await handleSearchByPhone();
                                         }
                                     }}
                                     maxLength={20}

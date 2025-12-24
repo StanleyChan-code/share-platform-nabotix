@@ -10,7 +10,7 @@ import {Badge} from "@/components/ui/badge";
 import {getJournalPartitionName, getOutputTypeDisplayName, getOutputTypeIconComponent} from "@/lib/outputUtils";
 import {formatDate, formatDateTime, formatFileSize} from "@/lib/utils";
 import {ResearchOutput, outputApi} from "@/integrations/api/outputApi";
-import {getCurrentUser} from "@/lib/authUtils";
+import {getCurrentUserFromSession} from "@/lib/authUtils";
 import React, {useEffect, useState} from "react";
 import {fileApi, FileInfo} from "@/integrations/api/fileApi";
 import {Download, ExternalLink, User, Calendar, FileText, Award, BookOpen} from "lucide-react";
@@ -38,7 +38,7 @@ const OutputDetailDialog = ({open, onOpenChange, output, canApprove = false, onA
     useEffect(() => {
         const fetchCurrentUser = async () => {
             try {
-                const currentUser = getCurrentUser();
+                const currentUser = getCurrentUserFromSession();
                 setCurrentUserId(currentUser ? currentUser.id : null);
                 // 获取用户角色逻辑...
             } catch (error) {

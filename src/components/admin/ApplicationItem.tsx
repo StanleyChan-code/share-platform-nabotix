@@ -37,7 +37,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {getCurrentUser} from "@/lib/authUtils.ts";
+import {getCurrentUserFromSession} from "@/lib/authUtils.ts";
 
 interface ApplicationItemProps {
     application: Application;
@@ -51,7 +51,7 @@ interface ApplicationItemProps {
 
 const hasDeletionPermission = (application: Application) => {
     // 只有申请人本人可以删除申请记录
-    return application.applicantId === getCurrentUser().id || hasPermissionRole(PermissionRoles.PLATFORM_ADMIN);
+    return application.applicantId === getCurrentUserFromSession().id || hasPermissionRole(PermissionRoles.PLATFORM_ADMIN);
 };
 
 const getStatusBadgeVariant = (status: Application['status']) => {
@@ -196,13 +196,13 @@ const canApproveApplication = (application: Application, role: 'provider' | 'ins
         return true;
     }
 
-    if (role === 'provider' && application.providerId === getCurrentUser().id) {
+    if (role === 'provider' && application.providerId === getCurrentUserFromSession().id) {
         return true;
     }
 
     if (role === 'institution' &&
         (hasPermissionRole(PermissionRoles.INSTITUTION_SUPERVISOR) || hasPermissionRole(PermissionRoles.DATASET_APPROVER)) &&
-        application.datasetInstitutionId === getCurrentUser().institutionId) {
+        application.datasetInstitutionId === getCurrentUserFromSession().institutionId) {
         return true;
     }
 

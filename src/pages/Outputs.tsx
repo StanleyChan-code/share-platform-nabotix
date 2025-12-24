@@ -2,7 +2,6 @@ import { Navigation } from "@/components/Navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
     FileText,
@@ -30,6 +29,7 @@ import { formatDate } from "@/lib/utils";
 import PaginatedList from "@/components/ui/PaginatedList";
 import { useNavigate } from "react-router-dom";
 import { useDebounce } from "@/hooks/useDebounce";
+import {Input} from "@/components/ui/FormValidator.tsx";
 
 const Outputs = () => {
     const [searchTerm, setSearchTerm] = useState("");

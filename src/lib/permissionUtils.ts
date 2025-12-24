@@ -1,5 +1,5 @@
 // 权限角色枚举
-import {getCurrentUserInfo, getCurrentUserRoles} from "@/lib/authUtils.ts";
+import {getCurrentUserInfoFromSession, getCurrentUserRolesFromSession} from "@/lib/authUtils.ts";
 import {useCallback} from "react";
 import {Dataset} from "@/integrations/api/datasetApi.ts";
 import {Application} from "@/integrations/api/applicationApi.ts";
@@ -43,8 +43,8 @@ export function getUserPermissionRoleDisplayNames(roles: string[]): string[] {
 }
 
 export function hasPermissionRole(checkRole: string): boolean {
-    const roles = getCurrentUserRoles();
-    const user = getCurrentUserInfo().user;
+    const roles = getCurrentUserRolesFromSession();
+    const user = getCurrentUserInfoFromSession().user;
     if (!user || !roles) return false;
     // 检查权限
     return roles.includes(checkRole);
@@ -59,7 +59,7 @@ export function canUploadDataset(): boolean {
 export function canMangageApplication(application: Application): boolean {
     if (hasPermissionRole(PermissionRoles.PLATFORM_ADMIN)) return true;
 
-    const user = getCurrentUserInfo().user;
+    const user = getCurrentUserInfoFromSession().user;
 
     // 机构的数据集管理员
     if (application.datasetInstitutionId === user.institutionId &&

@@ -1,18 +1,26 @@
-# 忽略不必要的文件
-.git
-.gitignore
-README.md
-Dockerfile
-docker-compose.yml
-deploy.ps1
-manage.ps1
-node_modules
-npm-debug.log
-yarn-error.log
-.env
+# 忽略环境配置文件
 .env.local
-.vscode
-.idea
+.env
+.env.*
+
+# 忽略开发和测试文件
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 忽略git相关文件
+.git/
+.gitignore
+
+# 忽略IDE文件
+.vscode/
+.idea/
+
+# 忽略操作系统文件
+.DS_Store
+Thumbs.db
+
+# 忽略构建过程中的临时文件
 *.log
-*.tmp
-*.temp
+npm_cache/

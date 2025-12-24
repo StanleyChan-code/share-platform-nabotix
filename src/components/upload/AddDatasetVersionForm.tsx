@@ -1,14 +1,13 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { File, Loader2, Asterisk, CheckCircle, AlertCircle } from 'lucide-react';
+import { File, Loader2, Asterisk, CheckCircle, AlertCircle, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { datasetApi, AddDatasetVersionRequest } from '@/integrations/api/datasetApi';
 import { FileInfo } from '@/integrations/api/fileApi';
-import FileUploader, { FileUploaderHandles } from '../fileuploader/FileUploader.tsx';
-import { FormValidator, InputWrapper } from '@/components/ui/FormValidator';
+import FileUploader from '../fileuploader/FileUploader.tsx';
+import { FileUploaderHandles } from "@/components/fileuploader/types.ts";
+import { FormValidator, Input, Textarea } from '@/components/ui/FormValidator';
 import { formatFileSize } from '@/lib/utils.ts';
 import {
   AlertDialog,
@@ -92,20 +91,25 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
     setSharingFileInfo(null);
   };
 
+  // 验证函数
+  const validateVersionNumber = (value: string) => {
+    if (!value.trim()) return "版本号不能为空";
+    if (value.trim().length < 1) return "版本号不能为空";
+    if (value.trim().length > 50) return "版本号不能超过50个字符";
+    if (!/^[0-9]+\.[0-9]+(\.[0-9]+)*$/.test(value.trim())) {
+      return "版本号格式不正确，如：1.0、2.1.3";
+    }
+    return true;
+  };
+
+  const validateVersionDescription = (value: string) => {
+    if (!value.trim()) return "版本描述不能为空";
+    if (value.trim().length < 10) return "版本描述至少需要10个字符";
+    if (value.trim().length > 500) return "版本描述不能超过500个字符";
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // 检查必要字段是否已填写
-    if (!formData.versionNumber.trim()) {
-      toast.error('请填写版本号');
-      return;
-    }
-
-    if (!formData.versionDescription.trim()) {
-      toast.error('请填写版本描述');
-      return;
-    }
-
     // 检查必要文件是否已上传
     if (!dataFileInfo) {
       toast.error('请上传数据文件');
@@ -168,10 +172,10 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
     });
 
     // 重置文件上传
-    dataFileRef.current?.handleReset(false);
-    dictFileRef.current?.handleReset(false);
-    termsFileRef.current?.handleReset(false);
-    sharingFileRef.current?.handleReset(false);
+    dataFileRef.current?.acceptedAndReset();
+    dictFileRef.current?.acceptedAndReset();
+    termsFileRef.current?.acceptedAndReset();
+    sharingFileRef.current?.acceptedAndReset();
 
     setDataFileInfo(null);
     setDictFileInfo(null);
@@ -200,7 +204,7 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
   return (
       <>
         <div className="space-y-6">
-          <FormValidator onSubmit={handleSubmit} className="space-y-6" showAllErrorsOnSubmit={true}>
+          <FormValidator onSubmit={handleSubmit} className="space-y-6">
             {/* 版本信息 */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -212,16 +216,17 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                 <Label htmlFor="versionNumber" className="flex items-center gap-1">
                   版本号 <Asterisk className="h-3 w-3 text-red-500" />
                 </Label>
-                <InputWrapper required validationType="custom">
-                  <Input
-                      id="versionNumber"
-                      name="versionNumber"
-                      value={formData.versionNumber}
-                      onChange={handleInputChange}
-                      placeholder="如：2.0"
-                      maxLength={50}
-                  />
-                </InputWrapper>
+                <Input
+                    id="versionNumber"
+                    name="versionNumber"
+                    value={formData.versionNumber}
+                    onChange={handleInputChange}
+                    placeholder="如：2.0"
+                    maxLength={50}
+                    required
+                    validationType="custom"
+                    customValidation={validateVersionNumber}
+                />
                 <p className="text-xs text-muted-foreground">数据集的版本标识，如2.0、2.1等</p>
               </div>
 
@@ -229,17 +234,18 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                 <Label htmlFor="versionDescription" className="flex items-center gap-1">
                   版本描述 <Asterisk className="h-3 w-3 text-red-500" />
                 </Label>
-                <InputWrapper required>
-                  <Textarea
-                      id="versionDescription"
-                      name="versionDescription"
-                      rows={3}
-                      value={formData.versionDescription}
-                      onChange={handleInputChange}
-                      placeholder="描述此版本的主要变更内容"
-                      maxLength={500}
-                  />
-                </InputWrapper>
+                <Textarea
+                    id="versionDescription"
+                    name="versionDescription"
+                    rows={3}
+                    value={formData.versionDescription}
+                    onChange={handleInputChange}
+                    placeholder="描述此版本的主要变更内容"
+                    maxLength={500}
+                    required
+                    validationType="custom"
+                    customValidation={validateVersionDescription}
+                />
                 <p className="text-xs text-muted-foreground">简要描述此版本的主要更新内容</p>
               </div>
             </div>
@@ -251,7 +257,7 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                 文件上传
               </h3>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label className="flex items-center gap-1">
@@ -263,6 +269,9 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                         onResetComplete={handleDataFileReset}
                         maxSize={10 * 1024 * 1024 * 1024}
                         acceptedFileTypes={['.csv', '.xlsx', '.xls']}
+                        templateFile="dataset.xlsx"
+                        templateLabel="数据集模板"
+                        required
                     />
                     {dataFileInfo ? (
                         <div className="flex items-center gap-2 text-sm text-green-600">
@@ -286,6 +295,7 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                         onResetComplete={handleSharingFileReset}
                         maxSize={500 * 1024 * 1024}
                         acceptedFileTypes={['.csv', '.xlsx', '.xls']}
+                        required
                     />
                     {sharingFileInfo ? (
                         <div className="flex items-center gap-2 text-sm text-green-600">
@@ -311,6 +321,9 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                         onResetComplete={handleDictFileReset}
                         maxSize={100 * 1024 * 1024}
                         acceptedFileTypes={['.csv', '.xlsx', '.xls']}
+                        templateFile="data_dictionary.xlsx"
+                        templateLabel="数据字典模板"
+                        required
                     />
                     {dictFileInfo ? (
                         <div className="flex items-center gap-2 text-sm text-green-600">
@@ -333,7 +346,10 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                         onUploadComplete={handleTermsFileUpload}
                         onResetComplete={handleTermsFileReset}
                         maxSize={20 * 1024 * 1024}
-                        acceptedFileTypes={['.pdf', '.doc', '.docx']}
+                        acceptedFileTypes={['.pdf']}
+                        templateFile="data_usage_license.docx"
+                        templateLabel="数据使用协议模板"
+                        required
                     />
                     {termsFileInfo ? (
                         <div className="flex items-center gap-2 text-sm text-green-600">
@@ -388,7 +404,10 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>取消</AlertDialogCancel>
-              <AlertDialogAction onClick={resetForm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              <AlertDialogAction
+                  onClick={resetForm}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
                 确认重置
               </AlertDialogAction>
             </AlertDialogFooter>

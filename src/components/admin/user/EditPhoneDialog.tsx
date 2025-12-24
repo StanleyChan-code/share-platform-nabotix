@@ -14,12 +14,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { userApi } from "@/integrations/api/userApi";
+import {Input} from "@/components/ui/FormValidator.tsx";
 
 const formSchema = z.object({
   newPhone: z
@@ -82,7 +82,7 @@ const EditPhoneDialog = ({
       console.error("更新手机号失败:", error);
       toast({
         title: "错误",
-        description: error.message || "更新手机号失败",
+        description: error.response.data.message || "更新手机号失败",
         variant: "destructive",
       });
     }

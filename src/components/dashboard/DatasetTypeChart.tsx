@@ -71,7 +71,7 @@ export function DatasetTypeChart({ data }: DatasetTypeChartProps) {
 
   return (
     <div>
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={350}>
           <PieChart>
             <Pie
               data={chartData}
@@ -88,7 +88,7 @@ export function DatasetTypeChart({ data }: DatasetTypeChartProps) {
             </Pie>
             <Tooltip content={<CustomTooltip />} />
             <Legend 
-              wrapperStyle={{ fontSize: "12px" }}
+              wrapperStyle={{ fontSize: "16px", paddingTop: "10px" }}
               formatter={(value) => renderLegendText(value)}
             />
           </PieChart>

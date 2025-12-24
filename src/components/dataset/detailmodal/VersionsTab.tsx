@@ -25,7 +25,7 @@ import {canUploadDataset, hasPermissionRole, PermissionRoles} from "@/lib/permis
 import ApprovalActions from "@/components/ui/ApprovalActions.tsx";
 import {Dataset, datasetApi} from "@/integrations/api/datasetApi.ts";
 import {toast} from "@/hooks/use-toast.ts";
-import {getCurrentUser} from "@/lib/authUtils.ts";
+import {getCurrentUserFromSession} from "@/lib/authUtils.ts";
 
 interface VersionsTabProps {
     versions: any[];
@@ -51,7 +51,7 @@ export function VersionsTab({
     // 检查用户是否有审核权限
     const canApproveDataset = useAdvancedQuery && dataset && (
         hasPermissionRole(PermissionRoles.PLATFORM_ADMIN) ||
-        dataset.institutionId === getCurrentUser()?.institutionId && (hasPermissionRole(PermissionRoles.INSTITUTION_SUPERVISOR) || hasPermissionRole(PermissionRoles.DATASET_APPROVER))
+        dataset.institutionId === getCurrentUserFromSession()?.institutionId && (hasPermissionRole(PermissionRoles.INSTITUTION_SUPERVISOR) || hasPermissionRole(PermissionRoles.DATASET_APPROVER))
     );
 
     // 获取版本状态显示信息

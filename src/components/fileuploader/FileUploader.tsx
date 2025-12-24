@@ -1,13 +1,21 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { fileApi, FileInfo } from "@/integrations/api/fileApi";
-import { X, RotateCcw, Pause, Play, Info, Clock } from 'lucide-react';
+import React, {forwardRef, useEffect, useImperativeHandle, useRef, useState} from 'react';
+import {Button} from "@/components/ui/button";
+import {Progress} from "@/components/ui/progress";
+import {Alert, AlertDescription} from "@/components/ui/alert";
+import {fileApi} from "@/integrations/api/fileApi";
+import {Clock, Download, Info, Pause, Play, RotateCcw, X} from 'lucide-react';
 
-import { FileUploaderProps, FileUploaderHandles, UploadState, ChunkTask } from './types';
-import { FileValidator, UploadQueue, ProgressCalculator, ErrorClassifier, SpeedCalculator } from './uploadUtils';
-import { formatFileSize } from "@/lib/utils.ts";
+import {ChunkTask, FileUploaderHandles, FileUploaderProps, UploadState} from './types';
+import {ErrorClassifier, FileValidator, ProgressCalculator, SpeedCalculator, UploadQueue} from './uploadUtils';
+import {formatFileSize} from "@/lib/utils.ts";
+
+// 清理状态类型
+interface CleanupState {
+    isCleaning: boolean;
+    lastCleanupTime: number;
+    pendingCleanups: Array<{ uploadId: string; timestamp: number }>;
+    deletedFileIds: string[];
+}
 
 const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
                                                                              onUploadComplete,
@@ -17,10 +25,16 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
                                                                              acceptedFileTypes = [],
                                                                              allowAllFileTypes = false,
                                                                              maxConcurrentUploads = 3,
+                                                                             templateFile,
+                                                                             templateLabel,
+                                                                             required = false,
+                                                                             onValidityChange,
+                                                                             validateOnSubmit = true
                                                                          }, ref) => {
     const [file, setFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
+    const [isMerging, setIsMerging] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState('');
@@ -29,6 +43,9 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
     const [uploadSpeed, setUploadSpeed] = useState('0 KB/s');
     const [estimatedTime, setEstimatedTime] = useState('--:--');
     const [totalUploadedBytes, setTotalUploadedBytes] = useState(0);
+
+    const [validationError, setValidationError] = useState<string | null>(null);
+    const [isTouched, setIsTouched] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
@@ -42,16 +59,272 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
         chunkProgress: {}
     });
 
+    // 清理状态管理
+    const cleanupStateRef = useRef<CleanupState>({
+        isCleaning: false,
+        lastCleanupTime: 0,
+        pendingCleanups: [],
+        deletedFileIds: []
+    });
+
     const isCancelledRef = useRef(false);
     const isPausedRef = useRef(false);
     const shouldStopOnFailureRef = useRef(false);
 
-    // 检查是否需要显示速度信息（速度大于0时才显示）
+    // 清理临时文件的函数（带重试机制）
+    const cleanupTemporaryFiles = async (uploadId?: string, maxRetries: number = 3): Promise<boolean> => {
+        const targetUploadId = uploadId || uploadStateRef.current.uploadId;
+        if (!targetUploadId) return true;
+
+        // 防止重复清理
+        if (cleanupStateRef.current.isCleaning) {
+            cleanupStateRef.current.pendingCleanups.push({
+                uploadId: targetUploadId,
+                timestamp: Date.now()
+            });
+            return false;
+        }
+
+        cleanupStateRef.current.isCleaning = true;
+
+        try {
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    if (cleanupStateRef.current.deletedFileIds.includes(targetUploadId)) {
+                        return true;
+                    }
+
+                    console.log(`清理临时文件 ${targetUploadId}, 尝试 ${attempt}/${maxRetries}`);
+
+                    await fileApi.cancelUpload(targetUploadId);
+
+                    console.log(`临时文件 ${targetUploadId} 清理成功`);
+                    cleanupStateRef.current.deletedFileIds.push(targetUploadId);
+                    cleanupStateRef.current.lastCleanupTime = Date.now();
+
+                    // 清理成功后更新状态
+                    if (uploadStateRef.current.uploadedFileId === targetUploadId) {
+                        uploadStateRef.current.uploadedFileId = undefined;
+                    }
+
+                    return true;
+                } catch (error) {
+                    console.warn(`清理临时文件 ${targetUploadId} 失败 (尝试 ${attempt}/${maxRetries}):`, error);
+
+                    if (attempt < maxRetries) {
+                        // 指数退避重试
+                        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)));
+                    } else {
+                        console.error(`清理临时文件 ${targetUploadId} 最终失败`);
+                        return false;
+                    }
+                }
+            }
+        } finally {
+            cleanupStateRef.current.isCleaning = false;
+
+            // 处理等待中的清理任务
+            if (cleanupStateRef.current.pendingCleanups.length > 0) {
+                const nextCleanup = cleanupStateRef.current.pendingCleanups.shift();
+                if (nextCleanup) {
+                    // 延迟执行下一个清理任务，避免堆栈溢出
+                    setTimeout(() => {
+                        cleanupTemporaryFiles(nextCleanup.uploadId, maxRetries);
+                    }, 100);
+                }
+            }
+        }
+
+        return false;
+    };
+
+    // 确保清理的函数（在组件卸载时也会调用）
+    const ensureCleanup = async (uploadedFileId?: string): Promise<void> => {
+        const targetUploadId = uploadedFileId || uploadStateRef.current.uploadedFileId;
+        if (!targetUploadId) return;
+
+        // 在后台进行清理，不阻塞主流程
+        cleanupTemporaryFiles(targetUploadId);
+    };
+
+    // 组件卸载时的清理
+    useEffect(() => {
+        return () => {
+            // 停止所有定时器
+            stopSpeedUpdateInterval();
+
+            // 取消进行中的上传
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+
+            // 清理临时文件
+            ensureCleanup();
+        };
+    }, []);
+
+    // 验证函数
+    const validateInput = (forceValidation = false): boolean => {
+        const hasFile = !!file;
+
+        if (!forceValidation && !isTouched && !hasFile) {
+            setValidationError(null);
+            onValidityChange?.(!required);
+            return !required;
+        }
+
+        if (required && !hasFile) {
+            const errorMsg = '请选择要上传的文件';
+            setValidationError(errorMsg);
+            onValidityChange?.(false);
+            return false;
+        }
+
+        if (!required && !hasFile) {
+            setValidationError(null);
+            onValidityChange?.(true);
+            return true;
+        }
+
+        setValidationError(null);
+        onValidityChange?.(true);
+        return true;
+    };
+
+    const checkValidity = (): boolean => {
+        return validateInput(true);
+    };
+
+    // 文件选择处理 - 在选择新文件前清理旧文件
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFile = event.target.files?.[0];
+        if (!selectedFile) return;
+
+        const validation = FileValidator.validateFile(
+            selectedFile,
+            acceptedFileTypes,
+            allowAllFileTypes,
+            maxSize
+        );
+
+        if (!validation.isValid) {
+            setErrorMessage(validation.error!);
+            resetFileInput();
+            validateInput(true);
+            return;
+        }
+
+        setFile(selectedFile);
+        setErrorMessage('');
+        setIsRetryNeeded(false);
+        isCancelledRef.current = false;
+        isPausedRef.current = false;
+        shouldStopOnFailureRef.current = false;
+        speedCalculatorRef.current.reset();
+        setUploadSpeed('0 KB/s');
+        setEstimatedTime('--:--');
+        setUploadedBytes(0);
+
+        setValidationError(null);
+        onValidityChange?.(true);
+
+        // 如果已有文件在上传，先取消并清理
+        if (isUploading && uploadStateRef.current.uploadId) {
+            await handleCancel(true); // 强制清理临时文件
+        }
+
+        startAutoUpload(selectedFile);
+    };
+
+    // 重置处理 - 增强清理逻辑
+    const handleReset = async (cleanTmpFile: boolean = true) => {
+        if (isUploading) {
+            await handleCancel(cleanTmpFile);
+        } else {
+            if (cleanTmpFile && uploadStateRef.current.uploadedFileId) {
+                await ensureCleanup(); // 使用确保清理的函数
+            }
+
+            setFile(null);
+            resetUploadState();
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+
+            validateInput(true);
+            onResetComplete?.();
+        }
+    };
+
+    // 清除文件处理 - 增强清理逻辑
+    const handleClearFile = async () => {
+        if (isUploading) {
+            await handleCancel(true); // 取消并清理
+        } else {
+            await handleReset(true);
+        }
+
+        validateInput(true);
+    };
+
+    const markAsTouched = () => {
+        setIsTouched(true);
+        validateInput(true);
+    };
+
+    const clearError = () => {
+        setValidationError(null);
+    };
+
+    const reset = async () => {
+        // 清理临时文件
+        if (uploadStateRef.current.uploadedFileId) {
+            await ensureCleanup();
+        }
+
+        setFile(null);
+        setValidationError(null);
+        setIsTouched(false);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+        resetUploadState();
+    };
+
+    const setCustomValidity = (message: string) => {
+        setValidationError(message);
+        onValidityChange?.(false);
+    };
+
+    const getValidationError = (): string => {
+        return validationError || '';
+    };
+
+    // 暴露方法给 FormValidator
+    useImperativeHandle(ref, () => ({
+        handleReset: (cleanTmpFile = true) => handleReset(cleanTmpFile),
+        validate: () => validateInput(true),
+        checkValidity: () => checkValidity(),
+        getValidationError: () => getValidationError(),
+        setCustomValidity: (message: string) => setCustomValidity(message),
+        markAsTouched: () => markAsTouched(),
+        clearError: () => clearError(),
+        reset: () => reset(),
+        acceptedAndReset: () => acceptedAndReset(),
+    }));
+
+    // 当文件变化时触发验证
+    useEffect(() => {
+        if (isTouched || validationError) {
+            validateInput();
+        }
+    }, [file, isTouched]);
+
+    // 检查是否需要显示速度信息
     const shouldShowSpeedInfo = () => {
         return uploadSpeed !== '0 B/s' && uploadSpeed !== '0 KB/s' && uploadSpeed !== '0 MB/s';
     };
 
-    // 文件要求提示文本
     const getFileRequirementsText = (): string => {
         const requirements = [];
 
@@ -61,6 +334,10 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
 
         if (maxSize < Infinity) {
             requirements.push(`最大文件大小: ${formatFileSize(maxSize)}`);
+        }
+
+        if (required) {
+            requirements.push('必填');
         }
 
         return requirements.join(' | ');
@@ -105,7 +382,6 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
     const addUploadedBytes = (bytes: number) => {
         setTotalUploadedBytes(prev => {
             const newTotal = prev + bytes;
-            // 防止溢出
             if (newTotal > Number.MAX_SAFE_INTEGER || newTotal < 0) {
                 console.warn('Upload bytes counter overflow, resetting');
                 speedCalculatorRef.current.setTotalUploadedBytes(bytes);
@@ -123,44 +399,24 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
         speedCalculatorRef.current.setTotalUploadedBytes(safeBytes);
     };
 
-    useEffect(() => {
-        return () => {
-            stopSpeedUpdateInterval();
-        };
-    }, []);
-
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const selectedFile = event.target.files?.[0];
-        if (!selectedFile) return;
-
-        const validation = FileValidator.validateFile(
-            selectedFile,
-            acceptedFileTypes,
-            allowAllFileTypes,
-            maxSize
-        );
-
-        if (!validation.isValid) {
-            setErrorMessage(validation.error!);
-            resetFileInput();
-            return;
-        }
-
-        setFile(selectedFile);
-        setErrorMessage('');
-        setIsRetryNeeded(false);
-        isCancelledRef.current = false;
-        isPausedRef.current = false;
-        shouldStopOnFailureRef.current = false;
-        speedCalculatorRef.current.reset();
+    // 上传成功后的清理处理
+    const handleUploadSuccess = () => {
+        setUploadStatus('success');
+        setIsUploading(false);
+        setUploadProgress(100);
+        stopSpeedUpdateInterval();
         setUploadSpeed('0 KB/s');
-        setEstimatedTime('--:--');
-        setUploadedBytes(0);
+        setEstimatedTime('完成');
 
-        startAutoUpload(selectedFile);
+        // 上传成功后清理旧的临时文件（如果还有的话）
+        if (uploadStateRef.current.uploadedFileId) {
+            ensureCleanup();
+        }
+        uploadStateRef.current.uploadedFileId = uploadStateRef.current.uploadId;
     };
 
     const startAutoUpload = async (fileToUpload: File) => {
+
         resetUploadState();
         setIsUploading(true);
         setUploadStatus('uploading');
@@ -185,13 +441,7 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
             }
 
             if (!isCancelledRef.current) {
-                setUploadStatus('success');
-                setIsUploading(false);
-                setUploadProgress(100); // 确保进度显示100%
-                stopSpeedUpdateInterval();
-                // 上传完成时强制更新一次速度显示
-                setUploadSpeed('0 KB/s');
-                setEstimatedTime('完成');
+                handleUploadSuccess();
             }
         } catch (error: any) {
             handleUploadError(error);
@@ -210,9 +460,8 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
                 if (isPausedRef.current) return;
 
                 const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total!);
-                setUploadProgress(Math.min(progress, 100)); // 确保不超过100%
+                setUploadProgress(Math.min(progress, 100));
                 setUploadedBytes(progressEvent.loaded);
-                // 直接调用速度更新，确保实时性
                 updateSpeedDisplay();
             }
         );
@@ -222,7 +471,7 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
         }
 
         if (response.success) {
-            uploadStateRef.current.uploadedFileId = response.data.id;
+            uploadStateRef.current.uploadId = response.data.id;
             onUploadComplete?.(response.data);
         } else {
             throw new Error(response.message || '上传失败');
@@ -242,7 +491,7 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
             );
 
             if (isCancelledRef.current) {
-                await cleanupUpload();
+                await ensureCleanup(uploadId);
                 throw new Error('Upload cancelled');
             }
 
@@ -265,20 +514,22 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
         await startSmartParallelUploads(uploadId, file.name, totalChunks, file.size);
 
         if (isCancelledRef.current) {
-            await cleanupUpload();
+            await ensureCleanup(uploadId);
             throw new Error('Upload cancelled');
         }
 
         // 合并分片
+        setIsMerging(true)
         const mergeResponse = await fileApi.mergeChunks(uploadId);
+        setIsMerging(false)
 
         if (isCancelledRef.current) {
-            await cleanupUpload();
+            await ensureCleanup(uploadId);
             throw new Error('Upload cancelled');
         }
 
         if (mergeResponse.success) {
-            uploadStateRef.current.uploadedFileId = mergeResponse.data.id;
+            uploadStateRef.current.uploadId = mergeResponse.data.id;
             onUploadComplete?.(mergeResponse.data);
         } else {
             throw new Error(mergeResponse.message || '合并文件失败');
@@ -375,13 +626,12 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
                             const chunkSizeBytes = Math.min(chunkSize, totalFileSize - task.chunkIndex * chunkSize);
                             addUploadedBytes(chunkSizeBytes);
 
-                            // 使用修复后的进度计算方法
                             const progress = ProgressCalculator.calculateProgressSafe(
                                 totalChunks,
                                 completedCount,
                                 uploadStateRef.current.chunkProgress
                             );
-                            setUploadProgress(Math.min(progress, 100)); // 确保不超过100%
+                            setUploadProgress(Math.min(progress, 100));
 
                             if (completedCount >= totalChunks && activeTaskCount === 0) {
                                 isProcessing = false;
@@ -457,7 +707,8 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
             };
 
             Promise.race([
-                new Promise<void>((res) => { /* 等待正常完成 */ }),
+                new Promise<void>((res) => { /* 等待正常完成 */
+                }),
                 new Promise<void>((_, rej) => setTimeout(() => rej(new Error('上传超时')), 5 * 60 * 1000))
             ]).catch(error => {
                 cleanup();
@@ -557,16 +808,15 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
                     const chunkProgress = (progressEvent.loaded * 100) / progressEvent.total!;
                     uploadStateRef.current.chunkProgress = {
                         ...uploadStateRef.current.chunkProgress,
-                        [chunkIndex]: Math.min(chunkProgress, 100) // 确保分片进度不超过100%
+                        [chunkIndex]: Math.min(chunkProgress, 100)
                     };
 
                     const chunkUploadedBytes = Math.round(
-                        (Math.min(chunkProgress, 100) / 100) * chunk.size // 使用限制后的进度
+                        (Math.min(chunkProgress, 100) / 100) * chunk.size
                     );
 
                     const completedChunksSize = uploadQueueRef.current.completedCount * chunkSize;
-                    const currentChunkSize = chunkUploadedBytes;
-                    const totalBytes = completedChunksSize + currentChunkSize;
+                    const totalBytes = completedChunksSize + chunkUploadedBytes;
 
                     setUploadedBytes(totalBytes);
 
@@ -576,7 +826,7 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
                         currentCompletedCount,
                         uploadStateRef.current.chunkProgress
                     );
-                    setUploadProgress(Math.min(overallProgress, 100)); // 确保总进度不超过100%
+                    setUploadProgress(Math.min(overallProgress, 100));
                 }
             );
         } catch (error: any) {
@@ -659,6 +909,7 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
         }
     };
 
+    // 重试处理 - 先清理再重试
     const handleRetry = async () => {
         if (!file) return;
 
@@ -681,6 +932,7 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
         startAutoUpload(file);
     };
 
+    // 取消上传处理 - 增强清理逻辑
     const handleCancel = async (cleanTmpFile: boolean = true) => {
         if (isCancelledRef.current) return;
 
@@ -696,7 +948,7 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
         }
 
         if (cleanTmpFile) {
-            await cleanupUpload();
+            await ensureCleanup();
         }
 
         setIsUploading(false);
@@ -710,34 +962,7 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
         }
     };
 
-    const handleReset = async (cleanTmpFile: boolean = true) => {
-        if (isUploading) {
-            await handleCancel(cleanTmpFile);
-        } else {
-            if (cleanTmpFile && uploadStateRef.current.uploadId) {
-                await cleanupUpload();
-            }
-
-            setFile(null);
-            resetUploadState();
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
-            onResetComplete?.();
-        }
-    };
-
-    const cleanupUpload = async (): Promise<void> => {
-        try {
-            if (uploadStateRef.current.uploadId) {
-                await fileApi.cancelUpload(uploadStateRef.current.uploadId);
-                uploadStateRef.current.uploadId = undefined;
-            }
-        } catch (error) {
-            console.error('清理上传文件失败:', error);
-        }
-    };
-
+    // 重置上传状态
     const resetUploadState = () => {
         setUploadProgress(0);
         setUploadStatus('idle');
@@ -754,12 +979,14 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
         speedCalculatorRef.current.reset();
         uploadQueueRef.current.clear();
 
+        // 保留uploadId用于后续清理，但清空其他状态
         const currentUploadId = uploadStateRef.current.uploadId;
         uploadStateRef.current = {
             uploadedChunks: [],
             failedChunks: [],
             chunkProgress: {},
-            uploadId: currentUploadId
+            uploadId: null,
+            uploadedFileId: currentUploadId,
         };
         stopSpeedUpdateInterval();
     };
@@ -771,22 +998,43 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
         }
     };
 
-    const handleClearFile = async () => {
-        if (isUploading) {
-            await handleCancel(true);
-        } else {
-            await handleReset(true);
+    const handleDownloadTemplate = async () => {
+        if (!templateFile) return;
+
+        try {
+            const fileExtension = templateFile.split('.').pop() || '';
+            const downloadFileName = `${templateLabel || 'template'}.${fileExtension}`;
+
+            const response = await fetch(`/template/${templateFile}`);
+            if (!response.ok) {
+                throw new Error(`下载模板失败: ${response.status} ${response.statusText}`);
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = downloadFileName;
+            document.body.appendChild(link);
+            link.click();
+
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('下载模板失败:', error);
         }
     };
 
-    useImperativeHandle(ref, () => ({
-        handleReset: (cleanTmpFile = true) => handleReset(cleanTmpFile)
-    }));
+    const acceptedAndReset = () => {
+        cleanupStateRef.current.deletedFileIds.push(uploadStateRef.current.uploadedFileId)
+        uploadStateRef.current.uploadedFileId = undefined;
+        reset();
+    };
 
     const hasFileRequirements = !allowAllFileTypes && (acceptedFileTypes.length > 0 || maxSize < Infinity);
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 min-w-min">
             {/* 文件要求提示 */}
             {hasFileRequirements && (
                 <div className="flex items-center text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-md">
@@ -796,26 +1044,26 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
             )}
 
             <div className="flex items-center space-x-2">
-                <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    disabled={isUploading && !isPaused && !isRetryNeeded}
-                    accept={FileValidator.getAcceptString(acceptedFileTypes, allowAllFileTypes)}
-                    className="flex-1 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                />
-
-                {file && !isUploading && !isPaused && !errorMessage && (
-                    <Button
-                        type="button"
-                        onClick={handleClearFile}
-                        variant="outline"
-                        size="icon"
-                        title="清除文件"
-                    >
-                        <X className="h-4 w-4"/>
-                    </Button>
-                )}
+                <label className="flex-1 cursor-pointer">
+                    <span className={`mr-4 py-2 px-4 rounded border-0 text-sm font-semibold inline-block ${
+                        isUploading
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : validationError
+                                ? 'bg-red-50 text-red-700 hover:bg-red-100 cursor-pointer'
+                                : 'bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer'
+                    }`}>
+                        {file && !isUploading && !isPaused && !errorMessage ? '重新选择文件' : '选择上传文件'}
+                    </span>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        disabled={isUploading && !isPaused && !isRetryNeeded}
+                        accept={FileValidator.getAcceptString(acceptedFileTypes, allowAllFileTypes)}
+                        className="hidden"
+                        onBlur={() => markAsTouched()}
+                    />
+                </label>
 
                 {isRetryNeeded && (
                     <Button
@@ -827,6 +1075,18 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
                         重试
                     </Button>
                 )}
+
+                {templateFile && (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleDownloadTemplate}
+                    >
+                        <Download className="h-4 w-4"/>
+                        {templateLabel || '模板'}
+                    </Button>
+                )}
             </div>
 
             {file && (
@@ -836,12 +1096,17 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
                 </div>
             )}
 
+            {validationError && (
+                <div className="mt-1 text-xs text-red-500 bg-red-50 px-2 py-1 rounded-md border border-red-200">
+                    {validationError}
+                </div>
+            )}
+
             {(isUploading || isPaused) && (
                 <div className="space-y-2">
-                    <Progress value={Math.min(uploadProgress, 100)} className="w-full"/> {/* 确保进度条不超过100% */}
-                    <p className="text-center text-sm text-gray-500">{Math.min(uploadProgress, 100)}%</p> {/* 显示限制后的进度 */}
+                    <Progress value={Math.min(uploadProgress, 100)} className="w-full"/>
+                    <p className="text-center text-sm text-gray-500">{Math.min(uploadProgress, 100)}%</p>
 
-                    {/* 上传速度和剩余时间显示 - 只在有速度时显示 */}
                     {shouldShowSpeedInfo() && (
                         <div className="grid grid-cols-2 gap-4 text-xs text-gray-500">
                             <div className="flex items-center space-x-1">
@@ -856,9 +1121,8 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
                         </div>
                     )}
 
-                    {/* 状态信息 */}
                     <div className="flex justify-between text-xs text-gray-500">
-                        <span>状态: {isPaused ? '已暂停' : '上传中'}</span>
+                        <span>状态: {isPaused ? '已暂停' : isMerging ? '正在合并' : '上传中'}</span>
                     </div>
 
                     <div className="flex justify-center space-x-2">
@@ -884,11 +1148,25 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
             )}
 
             {uploadStatus === 'success' && (
-                <Alert className="bg-green-50 border-green-200">
-                    <AlertDescription className="text-green-800">
-                        文件上传成功！
-                    </AlertDescription>
-                </Alert>
+                <div className="flex items-center gap-2">
+                    <Alert className="bg-green-50 border-green-200 flex-1">
+                        <AlertDescription className="text-green-800">
+                            文件上传成功！
+                        </AlertDescription>
+                    </Alert>
+
+                    {!isUploading && !isPaused && (
+                        <Button
+                            type="button"
+                            onClick={handleClearFile}
+                            variant="outline"
+                            size="icon"
+                            title="清除文件"
+                        >
+                            <X className="h-4 w-4"/>
+                        </Button>
+                    )}
+                </div>
             )}
 
             {errorMessage && (

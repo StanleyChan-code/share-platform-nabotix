@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
-import {getCurrentUserRoles} from "@/lib/authUtils.ts";
+import {getCurrentUserRolesFromSession} from "@/lib/authUtils.ts";
 import { Label } from "@/components/ui/label.tsx";
 
 interface EditUserAuthoritiesDialogProps {
@@ -178,7 +178,7 @@ const EditUserAuthoritiesDialog = ({ open, onOpenChange, user, onAuthoritiesUpda
     ];
 
     // 如果是平台管理员，添加平台管理员选项到最前面
-    if (getCurrentUserRoles().includes(PermissionRoles.PLATFORM_ADMIN)) {
+    if (getCurrentUserRolesFromSession().includes(PermissionRoles.PLATFORM_ADMIN)) {
         roleOptions.unshift({
             id: PermissionRoles.PLATFORM_ADMIN,
             name: getPermissionRoleDisplayName(PermissionRoles.PLATFORM_ADMIN),

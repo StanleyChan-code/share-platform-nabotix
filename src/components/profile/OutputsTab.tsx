@@ -37,7 +37,7 @@ import {formatDateTime} from "@/lib/utils";
 import PaginatedList from "@/components/ui/PaginatedList";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import {Dataset} from "@/integrations/api/datasetApi.ts";
-import {getCurrentUserInfo} from "@/lib/authUtils.ts";
+import {getCurrentUserInfoFromSession} from "@/lib/authUtils.ts";
 import {hasPermissionRole, PermissionRoles} from "@/lib/permissionUtils.ts";
 
 const OutputsTab = () => {
@@ -191,7 +191,7 @@ const OutputsTab = () => {
 
     const hasDeletionPermission = (output: ResearchOutput) => {
         // 只有成果创建者或平台管理员可以删除成果
-        return output.submitter?.id === getCurrentUserInfo().user.id || hasPermissionRole(PermissionRoles.PLATFORM_ADMIN);
+        return output.submitter?.id === getCurrentUserInfoFromSession().user.id || hasPermissionRole(PermissionRoles.PLATFORM_ADMIN);
     };
 
     const renderOutputItem = (output: ResearchOutput) => (
