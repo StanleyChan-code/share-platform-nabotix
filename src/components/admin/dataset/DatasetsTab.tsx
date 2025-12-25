@@ -37,7 +37,7 @@ import {
 import {getCurrentUserInfoFromSession, getCurrentUserRolesFromSession} from '@/lib/authUtils.ts';
 import {canUploadDataset, hasPermissionRole, PermissionRoles} from '@/lib/permissionUtils.ts';
 import {DatasetTypes} from "@/lib/enums.ts";
-import {DatasetUploadForm} from "@/components/upload/DatasetUploadForm.tsx";
+import {DatasetUploadForm} from "@/components/admin/dataset/DatasetUploadForm.tsx";
 import ReactPaginate from "react-paginate";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
 import {AdminInstitutionSelector} from "@/components/admin/institution/AdminInstitutionSelector.tsx";
@@ -191,6 +191,9 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
 
     const hasDeletionPermission = (dataset: Dataset) => {
         // 只有数据集创建者或平台管理员可以删除数据集
+        if (!getCurrentUserInfoFromSession()) {
+            return false;
+        }
         return dataset.provider?.id === getCurrentUserInfoFromSession().user.id || hasPermissionRole(PermissionRoles.PLATFORM_ADMIN);
     };
 

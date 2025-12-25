@@ -135,18 +135,18 @@ export const FormValidator: React.FC<FormValidatorProps> = ({
                 const firstError = errors[0];
 
                 // 根据错误类型显示不同的提示
-                let title = "表单验证失败";
-                let description = firstError.message || "请检查表单中的错误";
+                let title = "填写验证错误";
+                let description = firstError.message || "请检查填写的内容";
 
                 // 根据错误类型定制提示
                 if (errors.length > 1) {
-                    title = `表单验证失败 (${errors.length} 个错误)`;
-                    description = `${firstError.message} 等 ${errors.length} 个错误，请检查表单`;
+                    title = `填写验证错误 (${errors.length} 处错误)`;
+                    description = `${firstError.message} 等 ${errors.length} 处错误，请检查填写内容`;
                 }
 
                 // 特殊字段的错误提示优化
                 if (firstError.fieldName.includes('password') || firstError.fieldName.includes('Password')) {
-                    description = "密码相关字段填写有误，请检查";
+                    description = "密码相关内容填写有误，请检查";
                 } else if (firstError.fieldName.includes('phone') || firstError.fieldName.includes('Phone')) {
                     description = "手机号格式不正确";
                 } else if (firstError.fieldName.includes('email') || firstError.fieldName.includes('Email')) {
@@ -174,8 +174,8 @@ export const FormValidator: React.FC<FormValidatorProps> = ({
             } else {
                 // 理论上不会进入这里，但作为保护
                 toast({
-                    title: "表单验证失败",
-                    description: "未知错误，请检查表单",
+                    title: "填写验证错误",
+                    description: "未知错误，请检查填写内容",
                     variant: "destructive",
                 });
             }

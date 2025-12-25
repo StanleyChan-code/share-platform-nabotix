@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import {useState} from "react";
 import {Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger} from "@/components/ui/dialog.tsx";
-import {AddDatasetVersionForm} from "@/components/upload/AddDatasetVersionForm.tsx";
+import {AddDatasetVersionForm} from "@/components/admin/dataset/AddDatasetVersionForm.tsx";
 import {ScrollArea} from "@/components/ui/scroll-area.tsx";
 import {formatDate} from "@/lib/utils.ts";
 import {canUploadDataset, hasPermissionRole, PermissionRoles} from "@/lib/permissionUtils.ts";

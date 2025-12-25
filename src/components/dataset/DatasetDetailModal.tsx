@@ -1,4 +1,4 @@
-import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from "@/components/ui/dialog";
+import {Dialog, DialogContent, DialogHeader, DialogTitle} from "@/components/ui/dialog";
 import {Button} from "@/components/ui/button";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import {Info, TrendingUp, FileText, Shield, Clock, Link2, ArrowRight} from "lucide-react";
@@ -8,7 +8,7 @@ import {VersionsTab} from "./detailmodal/VersionsTab.tsx";
 import {TermsAndFilesTab} from "./detailmodal/TermsAndFilesTab.tsx";
 import {ResearchOutputsTab} from "./detailmodal/ResearchOutputsTab.tsx";
 import {useEffect, useState} from "react";
-import {api} from "@/integrations/api/client";
+import {api, ApiResponse} from "@/integrations/api/client";
 import {ScrollArea} from "@radix-ui/react-scroll-area";
 import {Dataset, datasetApi, DatasetVersion} from "@/integrations/api/datasetApi.ts";
 import {getLatestApprovedVersion} from "@/lib/datasetUtils.ts";
@@ -17,11 +17,17 @@ interface DatasetDetailModalProps {
     dataset: any;
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    useAdvancedQuery?: boolean; // 新增属性，控制是否使用高级查询
-    onDatasetUpdated?: () => void; // 新增属性，数据集更新后的回调函数
+    useAdvancedQuery?: boolean; // 控制是否使用高级查询
+    onDatasetUpdated?: () => void; // 数据集更新后的回调函数
 }
 
-export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuery = false, onDatasetUpdated}: DatasetDetailModalProps) {
+export function DatasetDetailModal({
+                                       dataset,
+                                       open,
+                                       onOpenChange,
+                                       useAdvancedQuery = false,
+                                       onDatasetUpdated
+                                   }: DatasetDetailModalProps) {
     const [detailDataset, setDetailDataset] = useState<any>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -29,7 +35,6 @@ export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuer
     const [versions, setVersions] = useState<any[]>([]);
     const [parentDataset, setParentDataset] = useState<Dataset>(null);
     const [followUpModals, setFollowUpModals] = useState<{ [key: string]: boolean }>({}); // 管理随访数据集对话框
-    const [selectedStatVersion, setSelectedStatVersion] = useState<DatasetVersion | null>(null); // 新增状态用于跟踪选中的统计数据版本
 
     // Fetch detailed dataset with timeline when modal opens
     useEffect(() => {
@@ -40,7 +45,7 @@ export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuer
                 setLoading(true);
                 setError(null);
 
-                let datasetResponse;
+                let datasetResponse: ApiResponse<Dataset>;
                 if (useAdvancedQuery) {
                     // 使用高级查询接口获取数据集详情
                     datasetResponse = await datasetApi.getManageableDatasetById(dataset.id);
@@ -64,8 +69,8 @@ export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuer
                 }
 
                 // 加载基线数据集
-                if ((datasetResponse?.data || datasetResponse)?.parentDatasetId) {
-                    const parentId = (datasetResponse?.data || datasetResponse)?.parentDatasetId;
+                if (datasetResponse?.data?.parentDatasetId) {
+                    const parentId = datasetResponse?.data?.parentDatasetId;
                     try {
                         // 如果是高级查询模式，使用管理API查询基线数据集
                         if (useAdvancedQuery) {
@@ -102,7 +107,6 @@ export function DatasetDetailModal({dataset, open, onOpenChange, useAdvancedQuer
             setParentDataset(null);
             setError(null);
             setLoading(true);
-            setSelectedStatVersion(null); // 重置选中的统计数据版本
         }
     }, [open]);
 

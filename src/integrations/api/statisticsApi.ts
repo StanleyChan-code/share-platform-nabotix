@@ -45,7 +45,7 @@ export const getPlatformStatistics = async () => {
 
 // 获取热门研究主题
 export const getPopularSubjects = async () => {
-  return api.get<Page<ResearchSubject>>('/popularity/subjects/popular');
+  return api.get<ResearchSubject[]>('/popularity/subjects/popular');
 };
 
 // 获取年度数据集统计

@@ -3,7 +3,7 @@ import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/compo
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import {useToast} from "@/hooks/use-toast.ts";
-import {CheckCircle, Clock, Plus, Loader2, Search, ChevronRightIcon, ChevronLeftIcon} from "lucide-react";
+import {CheckCircle, Clock, Plus, Loader2, Search, ChevronRightIcon, ChevronLeftIcon, X} from "lucide-react";
 import AddInstitutionForm from "@/components/admin/institution/AddInstitutionForm.tsx";
 import {formatDate} from "@/lib/utils.ts";
 import InstitutionProfileTab from "@/components/admin/institution/InstitutionProfileTab.tsx";
@@ -16,7 +16,7 @@ import {Input} from "@/components/ui/FormValidator.tsx";
 
 const InstitutionManagementTab = () => {
     const [showAddInstitutionForm, setShowAddInstitutionForm] = useState(false);
-    const [selectedInstitutionId, setSelectedInstitutionId] = useState<string | null>(null);
+    const [selectedInstitution, setSelectedInstitution] = useState<Institution | null>(null);
     const [institutions, setInstitutions] = useState<Institution[]>([]);
     const [loading, setLoading] = useState(false);
     const {toast} = useToast();
@@ -146,7 +146,7 @@ const InstitutionManagementTab = () => {
                                         <TableRow
                                             key={institution.id}
                                             className="cursor-pointer hover:bg-muted/50"
-                                            onClick={() => setSelectedInstitutionId(institution.id)}
+                                            onClick={() => setSelectedInstitution(institution)}
                                         >
                                             <TableCell className="font-medium">{institution.fullName}</TableCell>
                                             <TableCell>{institution.shortName}</TableCell>
@@ -200,7 +200,22 @@ const InstitutionManagementTab = () => {
                         </>
                     )}
 
-            <InstitutionProfileTab institutionId={selectedInstitutionId}/>
+            {selectedInstitution && (
+                <div className="mt-6 border rounded-lg p-4 bg-card">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-lg font-semibold">机构详情 - {selectedInstitution.fullName}</h2>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedInstitution(null)}
+                            className="h-8 w-8 p-0"
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    <InstitutionProfileTab institutionId={selectedInstitution.id} />
+                </div>
+            )}
         </div>
     );
 };

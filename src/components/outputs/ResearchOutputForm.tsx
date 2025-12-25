@@ -215,7 +215,7 @@ const ResearchOutputForm = ({
         return (
             <div className="space-y-2">
                 <Label htmlFor="pubmedId" className="flex items-center gap-1">
-                    PubMed ID {formData.pubmedId && <Asterisk className="h-3 w-3 text-red-500" />}
+                    PubMed ID
                 </Label>
                 <div className="flex gap-2">
                     <Input
@@ -764,13 +764,15 @@ const ResearchOutputForm = ({
                     </div>
                 )}
 
-                <FileUploader
-                    ref={fileUploaderRef}
-                    onResetComplete={onFileResetComplete}
-                    onUploadComplete={onFileUploadComplete}
-                    maxSize={maxSize}
-                    acceptedFileTypes={acceptedFileTypes}
-                />
+                <div className={uploadedFile && "hidden"}>
+                    <FileUploader
+                        ref={fileUploaderRef}
+                        onResetComplete={onFileResetComplete}
+                        onUploadComplete={onFileUploadComplete}
+                        maxSize={maxSize}
+                        acceptedFileTypes={acceptedFileTypes}
+                    />
+                </div>
             </div>
         );
     };

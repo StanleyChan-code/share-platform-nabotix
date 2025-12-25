@@ -1,13 +1,13 @@
 import { useState, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button.tsx';
+import { Label } from '@/components/ui/label.tsx';
 import { File, Loader2, Asterisk, CheckCircle, AlertCircle, Download } from 'lucide-react';
 import { toast } from 'sonner';
-import { datasetApi, AddDatasetVersionRequest } from '@/integrations/api/datasetApi';
-import { FileInfo } from '@/integrations/api/fileApi';
-import FileUploader from '../fileuploader/FileUploader.tsx';
+import { datasetApi, AddDatasetVersionRequest } from '@/integrations/api/datasetApi.ts';
+import { FileInfo } from '@/integrations/api/fileApi.ts';
+import FileUploader from '../../fileuploader/FileUploader.tsx';
 import { FileUploaderHandles } from "@/components/fileuploader/types.ts";
-import { FormValidator, Input, Textarea } from '@/components/ui/FormValidator';
+import { FormValidator, Input, Textarea } from '@/components/ui/FormValidator.tsx';
 import { formatFileSize } from '@/lib/utils.ts';
 import {
   AlertDialog,
@@ -18,7 +18,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "@/components/ui/alert-dialog.tsx";
 
 interface AddDatasetVersionFormProps {
   datasetId: string;
@@ -397,9 +397,9 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
         <AlertDialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>确认重置表单</AlertDialogTitle>
+              <AlertDialogTitle>确认重置内容</AlertDialogTitle>
               <AlertDialogDescription>
-                此操作将清除所有已填写的内容和已上传的文件，且无法恢复。您确定要重置表单吗？
+                此操作将清除所有已填写的内容和已上传的文件，且无法恢复。您确定要重置吗？
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

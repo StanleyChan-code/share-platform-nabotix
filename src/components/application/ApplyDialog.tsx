@@ -62,7 +62,7 @@ const ApplyDialog = ({ open, onOpenChange, datasetId }: ApplyDialogProps) => {
         });
         setUploadedFile(null);
         setSelectedDataset(null);
-        fileUploaderRef.current?.handleReset(false);
+        fileUploaderRef.current?.handleReset(true);
     };
 
     // 当对话框关闭时重置表单
@@ -132,7 +132,7 @@ const ApplyDialog = ({ open, onOpenChange, datasetId }: ApplyDialogProps) => {
     };
 
     const isDatasetAvailableToUser = () => {
-        if (!selectedDataset) return false;
+        if (!selectedDataset || !getCurrentUserInfoFromSession()) return false;
 
         // 如果数据集没有设置申请机构限制，则所有人都可以申请
         if (!selectedDataset.applicationInstitutionIds) return true;
@@ -215,6 +215,8 @@ const ApplyDialog = ({ open, onOpenChange, datasetId }: ApplyDialogProps) => {
 
             // 提交申请
             await createApplication(requestData);
+
+            fileUploaderRef.current.acceptedAndReset();
 
             toast.success("申请提交成功");
 

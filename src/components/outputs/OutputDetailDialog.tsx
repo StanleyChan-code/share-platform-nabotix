@@ -28,7 +28,14 @@ interface OutputDetailDialogProps {
     managementMode?: boolean; // 管理模式，控制是否显示审核相关功能和文件信息
 }
 
-const OutputDetailDialog = ({open, onOpenChange, output, canApprove = false, onApprovalChange, managementMode = false}: OutputDetailDialogProps) => {
+const OutputDetailDialog = ({
+                                open,
+                                onOpenChange,
+                                output,
+                                canApprove = false,
+                                onApprovalChange,
+                                managementMode = false
+}: OutputDetailDialogProps) => {
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
     const [isDatasetModalOpen, setIsDatasetModalOpen] = useState(false);
@@ -231,10 +238,10 @@ const OutputDetailDialog = ({open, onOpenChange, output, canApprove = false, onA
                                     {output.outputNumber && (
                                         <InfoCard
                                             title={
-                                                output.type === 'project' ? '项目编号' :
-                                                    output.type === 'publication' ? '出版物编号' :
-                                                        (output.type === 'invention_patent' || output.type === 'utility_patent') ? '专利号' :
-                                                            output.type === 'software_copyright' ? '登记号' : '编号'
+                                                output.type === 'PROJECT' ? '项目编号/课题编号' :
+                                                    output.type === 'PUBLICATION' ? '出版物编号' :
+                                                        (output.type === 'INVENTION_PATENT' || output.type === 'UTILITY_PATENT') ? '专利识别号' :
+                                                            output.type === 'SOFTWARE_COPYRIGHT' ? '登记号' : '编号'
                                             }
                                             value={output.outputNumber}
                                         />
@@ -259,7 +266,7 @@ const OutputDetailDialog = ({open, onOpenChange, output, canApprove = false, onA
 
                             {/* 摘要 */}
                             {output.abstractText && (
-                                <DetailSection title={output.type === 'other_award' ? '简介' : '摘要'} icon={FileText}>
+                                <DetailSection title={output.type === 'OTHER_AWARD' ? '成果简介' : '摘要'} icon={FileText}>
                                     <div className="bg-muted/30 rounded-lg p-4">
                                         <p className="text-sm leading-relaxed whitespace-pre-wrap">
                                             {output.abstractText}
@@ -276,8 +283,9 @@ const OutputDetailDialog = ({open, onOpenChange, output, canApprove = false, onA
                                             title={
                                                 output.type === 'PAPER' ? '作者' :
                                                     output.type === 'PUBLICATION' ? '作者' :
-                                                        (output.type === 'INVENTION_PATENT' || output.type === 'UTILITY_PATENT' || output.type === 'PROJECT') ? '成员' :
-                                                            output.type === 'SOFTWARE_COPYRIGHT' ? '著作权人' : '相关人员'
+                                                        (output.type === 'PROJECT') ? '项目/课题成员' :
+                                                            (output.type === 'INVENTION_PATENT' || output.type === 'UTILITY_PATENT') ? '发明人' :
+                                                                output.type === 'SOFTWARE_COPYRIGHT' ? '著作权人' : '相关人员'
                                             }
                                             value={output.otherInfo.authors}
                                             className="col-span-2"
@@ -299,11 +307,11 @@ const OutputDetailDialog = ({open, onOpenChange, output, canApprove = false, onA
                                         )}
 
                                         {(output.type === 'INVENTION_PATENT' || output.type === 'UTILITY_PATENT') && output.otherInfo?.patentCountry && (
-                                            <InfoCard title="专利国别" value={output.otherInfo.patentCountry}/>
+                                            <InfoCard title="专利国别/地区" value={output.otherInfo.patentCountry}/>
                                         )}
 
                                         {output.type === 'SOFTWARE_COPYRIGHT' && output.otherInfo?.softwareName && (
-                                            <InfoCard title="软件名称" value={output.otherInfo.softwareName}/>
+                                            <InfoCard title="软件名称(全称)" value={output.otherInfo.softwareName}/>
                                         )}
 
                                         {output.type === 'SOFTWARE_COPYRIGHT' && output.otherInfo?.copyrightOwner && (
@@ -315,19 +323,19 @@ const OutputDetailDialog = ({open, onOpenChange, output, canApprove = false, onA
                                                       value={formatDate(output.otherInfo.registrationDate)}/>
                                         )}
 
-                                        {output.type === 'other_award' && output.otherInfo?.awardRecipient && (
+                                        {output.type === 'OTHER_AWARD' && output.otherInfo?.awardRecipient && (
                                             <InfoCard title="获奖人/单位" value={output.otherInfo.awardRecipient}/>
                                         )}
 
-                                        {output.type === 'other_award' && output.otherInfo?.awardIssuingAuthority && (
+                                        {output.type === 'OTHER_AWARD' && output.otherInfo?.awardIssuingAuthority && (
                                             <InfoCard title="颁发单位" value={output.otherInfo.awardIssuingAuthority}/>
                                         )}
 
-                                        {output.type === 'other_award' && output.otherInfo?.awardTime && (
+                                        {output.type === 'OTHER_AWARD' && output.otherInfo?.awardTime && (
                                             <InfoCard title="获奖时间" value={formatDate(output.otherInfo.awardTime)}/>
                                         )}
 
-                                        {output.type === 'other_award' && output.otherInfo?.competitionLevel && (
+                                        {output.type === 'OTHER_AWARD' && output.otherInfo?.competitionLevel && (
                                             <InfoCard
                                                 title="赛事层次"
                                                 value={
@@ -355,7 +363,7 @@ const OutputDetailDialog = ({open, onOpenChange, output, canApprove = false, onA
                                                     className="text-blue-600 hover:underline break-all flex items-center gap-1"
                                                 >
                                                     {output.publicationUrl}
-                                                    <ExternalLink className="h-3 w-3"/>
+                                                    <ExternalLink className="h3 w-3"/>
                                                 </a>
                                             }
                                             className="col-span-2"
@@ -385,7 +393,7 @@ const OutputDetailDialog = ({open, onOpenChange, output, canApprove = false, onA
                             </DetailSection>
 
                             {/* 文件信息 */}
-                            {canViewSensitiveInfo && fileInfo && (
+                            {managementMode && canViewSensitiveInfo && fileInfo && (
                                 <DetailSection title="说明文件" icon={FileText}>
                                     <div className="bg-muted/30 rounded-lg p-4">
                                         <div className="flex items-center justify-between">
@@ -415,7 +423,7 @@ const OutputDetailDialog = ({open, onOpenChange, output, canApprove = false, onA
                             )}
 
                             {/* 审核信息 */}
-                            {canViewSensitiveInfo && output.approved !== null && (
+                            {managementMode && canViewSensitiveInfo && output.approved !== null && (
                                 <DetailSection title="审核信息" icon={Award}>
                                     <div className="space-y-3">
                                         <InfoCard

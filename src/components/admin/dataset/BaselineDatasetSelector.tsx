@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label.tsx';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.tsx';
 import { Loader2 } from 'lucide-react';
-import { datasetApi } from '@/integrations/api/datasetApi';
-import {getCurrentUserFromSession} from "@/lib/authUtils";
+import { datasetApi } from '@/integrations/api/datasetApi.ts';
+import {getCurrentUserFromSession} from "@/lib/authUtils.ts";
 
 interface BaselineDatasetSelectorProps {
   value: string;

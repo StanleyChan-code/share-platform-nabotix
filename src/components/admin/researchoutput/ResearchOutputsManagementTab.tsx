@@ -308,7 +308,7 @@ const ResearchOutputsManagementTab = () => {
 
               <div className="flex gap-2">
                 <Button onClick={handleSearch}>搜索</Button>
-                <Button variant="outline" onClick={handleResetSearch}>重置</Button>
+                <Button variant="outline" onClick={handleResetSearch}>重置筛选</Button>
               </div>
             </div>
           </div>

@@ -83,22 +83,6 @@ const Outputs = () => {
         setIsDetailDialogOpen(true);
     };
 
-    useEffect(() => {
-        const refreshStatistics = async () => {
-            try {
-                await fetchStatistics();
-            } catch (error) {
-                console.error('Error refreshing statistics:', error);
-            }
-        };
-
-        const timeoutId = setTimeout(() => {
-            refreshStatistics();
-        }, 500);
-
-        return () => clearTimeout(timeoutId);
-    }, [debouncedSearchTerm, selectedType]);
-
     const renderOutputItem = (output: ResearchOutput) => {
         const isHighQuality = output.value > 2;
 
@@ -390,6 +374,7 @@ const Outputs = () => {
                     open={isDetailDialogOpen}
                     onOpenChange={setIsDetailDialogOpen}
                     output={selectedOutput}
+                    managementMode={false}
                 />
             </main>
         </div>

@@ -7,19 +7,19 @@ import { Badge } from "@/components/ui/badge.tsx";
 import { Upload, Loader2, Plus, X, FileText, Info, Asterisk, Building, Tag, Shield, File, CheckCircle, AlertCircle } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import FileUploader from "@/components/fileuploader/FileUploader.tsx";
-import { FileUploaderHandles } from "@/components/fileuploader/types";
+import { FileUploaderHandles } from "@/components/fileuploader/types.ts";
 import { formatFileSize } from "@/lib/utils.ts";
-import { BaselineDatasetSelector } from "@/components/upload/BaselineDatasetSelector.tsx";
-import { InstitutionSelector } from "@/components/dataset/InstitutionSelector";
+import { BaselineDatasetSelector } from "@/components/admin/dataset/BaselineDatasetSelector.tsx";
+import { InstitutionSelector } from "@/components/dataset/InstitutionSelector.tsx";
 import { AdminInstitutionSelector } from "@/components/admin/institution/AdminInstitutionSelector.tsx";
 import { datasetApi } from "@/integrations/api/datasetApi.ts";
 import { institutionApi } from "@/integrations/api/institutionApi.ts";
-import { getCurrentUserRolesFromSession } from "@/lib/authUtils";
-import { PermissionRoles } from "@/lib/permissionUtils";
-import { FileInfo } from "@/integrations/api/fileApi";
+import { getCurrentUserRolesFromSession } from "@/lib/authUtils.ts";
+import { PermissionRoles } from "@/lib/permissionUtils.ts";
+import { FileInfo } from "@/integrations/api/fileApi.ts";
 import { toast } from "sonner";
-import { useDebounce } from "@/hooks/useDebounce";
-import { FormValidator, Input, Textarea } from "@/components/ui/FormValidator";
+import { useDebounce } from "@/hooks/useDebounce.ts";
+import { FormValidator, Input, Textarea } from "@/components/ui/FormValidator.tsx";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,7 +29,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "@/components/ui/alert-dialog.tsx";
 
 interface DatasetUploadFormProps {
   onSuccess?: () => void;
@@ -1275,9 +1275,9 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
         <AlertDialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>确认重置表单</AlertDialogTitle>
+              <AlertDialogTitle>确认重置内容</AlertDialogTitle>
               <AlertDialogDescription>
-                此操作将清除所有已填写的内容和已上传的文件，且无法恢复。您确定要重置表单吗？
+                此操作将清除所有已填写的内容和已上传的文件，且无法恢复。您确定要重置吗？
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

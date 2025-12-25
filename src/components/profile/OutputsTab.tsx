@@ -191,6 +191,7 @@ const OutputsTab = () => {
 
     const hasDeletionPermission = (output: ResearchOutput) => {
         // 只有成果创建者或平台管理员可以删除成果
+        if (!getCurrentUserInfoFromSession()) return false;
         return output.submitter?.id === getCurrentUserInfoFromSession().user.id || hasPermissionRole(PermissionRoles.PLATFORM_ADMIN);
     };
 

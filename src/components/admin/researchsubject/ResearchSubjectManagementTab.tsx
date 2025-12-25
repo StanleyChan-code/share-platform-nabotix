@@ -108,7 +108,7 @@ const ResearchSubjectManagementTab = () => {
     const handleSubmit = async () => {
         if (!formData.name.trim()) {
             toast({
-                title: "表单验证失败",
+                title: "填写检查错误",
                 description: "请填写研究学科名称",
                 variant: "destructive"
             });

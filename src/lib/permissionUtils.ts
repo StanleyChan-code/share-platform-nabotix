@@ -44,6 +44,8 @@ export function getUserPermissionRoleDisplayNames(roles: string[]): string[] {
 
 export function hasPermissionRole(checkRole: string): boolean {
     const roles = getCurrentUserRolesFromSession();
+    if (!getCurrentUserInfoFromSession()) return false;
+
     const user = getCurrentUserInfoFromSession().user;
     if (!user || !roles) return false;
     // 检查权限
@@ -59,6 +61,7 @@ export function canUploadDataset(): boolean {
 export function canMangageApplication(application: Application): boolean {
     if (hasPermissionRole(PermissionRoles.PLATFORM_ADMIN)) return true;
 
+    if (!getCurrentUserInfoFromSession()) return false;
     const user = getCurrentUserInfoFromSession().user;
 
     // 机构的数据集管理员

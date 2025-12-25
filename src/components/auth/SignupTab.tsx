@@ -270,7 +270,7 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
     // 手动验证机构选择（因为不是标准 Input 组件）
     if (!institutionId) {
       toast({
-        title: "表单验证失败",
+        title: "提交失败",
         description: "请选择所属机构",
         variant: "destructive",
       });
@@ -280,7 +280,7 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
     // 手动验证证件类型选择
     if (!idType) {
       toast({
-        title: "表单验证失败",
+        title: "提交失败",
         description: "请选择证件类型",
         variant: "destructive",
       });
@@ -338,19 +338,6 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
           onSubmit={handleSubmit}
           className="space-y-4"
           showAllErrorsOnSubmit={true}
-          onInvalid={(errors) => {
-            console.log('表单验证失败，错误数量:', errors.length);
-            console.log('具体错误:', errors);
-
-            if (errors.length > 0) {
-              const firstError = errors[0];
-              toast({
-                title: `表单验证失败`,
-                description: firstError.message || "请检查表单中的错误",
-                variant: "destructive",
-              });
-            }
-          }}
       >
         {/* 手机号与验证码行 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">

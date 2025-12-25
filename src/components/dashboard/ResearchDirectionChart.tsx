@@ -20,7 +20,7 @@ export function ResearchDirectionChart() {
         if (response.data.success) {
           // 获取每个研究学科的具体热度值
           const subjectsWithPopularity = await Promise.all(
-            response.data.data.content.map(async (subject) => {
+            response.data.data.map(async (subject) => {
               try {
                 const searchCount = subject.searchCount || 0
                 return {
