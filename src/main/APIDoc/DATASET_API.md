@@ -32,8 +32,8 @@
 | providerId            | UUID    | 否  | -                   | 提供者ID                            |
 | institutionId         | UUID    | 否  | -                   | 机构ID                              |
 | isTopLevel            | Boolean | 否  | true                | 是否只显示顶级数据集                       |
-| currentVersionDateFrom| Instant | 否  | -                   | 当前版本日期起始时间                       |
-| currentVersionDateTo  | Instant | 否  | -                   | 当前版本日期结束时间                       |
+| startDate           | Instant | 否  | -                   | 数据集采集时间起始时间                       |
+| endDate             | Instant | 否  | -                   | 数据集采集时间结束时间                       |
 | loadTimeline          | Boolean | 否  | false               | 是否加载随访数据集信息                     |
 | type                  | string  | 否  | -                   | 数据集类型 (可选值: PROJECT, COHORT, CASE_CONTROL, CROSS_SECTIONAL, OTHER) |
 | onlyApproved          | Boolean | 否  | true                | 是否只显示有已审核通过版本的数据集              |
@@ -1031,8 +1031,8 @@
 | titleCnOrKey           | string  | 否  | -                  | 中文标题或关键词                                                           |
 | providerId             | UUID    | 否  | -                  | 提供者ID                                                              |
 | isTopLevel             | Boolean | 否  | -                  | 是否只显示基线数据集（没有父数据集的数据集）                                             |
-| currentVersionDateFrom | Instant | 否  | -                  | 当前版本日期起始时间                                                         |
-| currentVersionDateTo   | Instant | 否  | -                  | 当前版本日期结束时间                                                         |
+| startDate            | Instant | 否  | -                  | 数据集采集时间起始时间                                                         |
+| endDate              | Instant | 否  | -                  | 数据集采集时间结束时间                                                         |
 | type                   | string  | 否  | -                  | 数据集类型 (可选值: PROJECT, COHORT, CASE_CONTROL, CROSS_SECTIONAL, OTHER) |
 | published              | Boolean | 否  | -                  | 是否已发布                                                              |
 | hasPendingVersion      | Boolean | 否  | -                  | 是否有待审核版本（true表示只查询有待审核版本的数据集）                                      |

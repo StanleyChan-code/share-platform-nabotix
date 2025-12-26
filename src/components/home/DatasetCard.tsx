@@ -127,7 +127,7 @@ export const DatasetCard = ({ dataset, showRecommendationBadge = false }: Datase
               提供者: {dataset.provider?.realName || '未知'}
             </span>
             </div>
-            <span>{formatDate(dataset.currentVersionDate || dataset.updatedAt)}</span>
+            <span>{formatDate(dataset.firstPublishedDate || dataset.createdAt)}</span>
           </div>
         </div>
       </div>

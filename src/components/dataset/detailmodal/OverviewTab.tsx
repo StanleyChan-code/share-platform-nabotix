@@ -330,6 +330,13 @@ export function OverviewTab({
                                 value={dataset.contactInfo}
                             />
                         )}
+                        {dataset.provider && (
+                            <InfoItem
+                                icon={User}
+                                label="提供者"
+                                value={dataset.provider.realName}
+                            />
+                        )}
                       </>
                   )}
                 </div>
@@ -339,11 +346,23 @@ export function OverviewTab({
                 <h4 className="font-medium text-sm text-muted-foreground">机构信息</h4>
                 <div className="space-y-3">
                   {institution && (
-                      <InfoItem
-                          icon={Building}
-                          label="归属机构"
-                          value={institution.fullName}
-                      />
+                      <>
+                        <InfoItem
+                            icon={Building}
+                            label="归属机构"
+                            value={institution.fullName}
+                        />
+                        <InfoItem
+                            label={"机构联系人"}
+                            value={institution.contactPerson || "-"}
+                            icon={User}
+                        />
+                        <InfoItem
+                          label={"机构联系方式"}
+                          value={institution.contactPhone || "-"}
+                          icon={Mail}
+                        />
+                      </>
                   )}
 
                   {parentDataset && (

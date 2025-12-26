@@ -11,11 +11,11 @@ import {ScrollArea} from "@/components/ui/scroll-area";
 import {useToast} from "@/hooks/use-toast";
 import {outputApi, ResearchOutput} from "@/integrations/api/outputApi";
 import {Dataset} from "@/integrations/api/datasetApi";
-import {DatasetSelector} from "../dataset/DatasetSelector.tsx";
 import {fileApi, FileInfo} from "@/integrations/api/fileApi";
 import ResearchOutputForm from "@/components/outputs/ResearchOutputForm";
 import FileUploader from "@/components/fileuploader/FileUploader.tsx";
 import {getJournalPartitionValue} from "@/lib/outputUtils.ts";
+import {ApprovedDatasetSelector} from "@/components/outputs/ApprovedDatasetSelector.tsx";
 
 interface EditOutputDialogProps {
     open: boolean;
@@ -402,7 +402,7 @@ const EditOutputDialog = ({open, onOpenChange, output, onEdit}: EditOutputDialog
                                 onFormDataChange={setEditedOutput}
                                 selectedDataset={selectedDataset}
                                 onDatasetSelect={handleDatasetSelect}
-                                DatasetSelectorComponent={DatasetSelector}
+                                DatasetSelectorComponent={ApprovedDatasetSelector}
                                 FileUploaderComponent={FileUploader}
                                 maxSize={500 * 1024 * 1024} // 500MB
                                 acceptedFileTypes={['.zip', '.rar', '.7z', '.pdf', '.doc', '.docx', '.txt', '.ppt', '.pptx']} // 压缩包和文档格式

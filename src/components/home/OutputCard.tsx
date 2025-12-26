@@ -94,7 +94,7 @@ export const OutputCard = ({ output }: OutputCardProps) => {
           <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-sm text-gray-500 min-w-0 flex-1">
               <Users className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
-              <span className="font-medium flex-shrink-0">提交者:</span>
+              <span className="font-medium flex-shrink-0">提供者:</span>
               <span
                   className="truncate break-words min-w-0"
                   title={output.submitter?.realName || '未知'}

@@ -4,7 +4,7 @@ import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/compo
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import LoginTab from "@/components/auth/LoginTab";
 import SignupTab from "@/components/auth/SignupTab";
-import {Shield} from "lucide-react";
+import {Database, Shield} from "lucide-react";
 import {Navigation} from "@/components/Navigation.tsx";
 
 const Auth = () => {
@@ -30,11 +30,11 @@ const Auth = () => {
                 <Card className="w-full max-w-md">
                     <CardHeader className="text-center">
                         <div className="flex justify-center mb-4">
-                            <Shield className="h-12 w-12 text-primary"/>
+                            <Database className="h-12 w-12 text-primary"/>
                         </div>
-                        <CardTitle className="text-2xl">欢迎使用数据共享平台</CardTitle>
+                        <CardTitle className="text-2xl">临床研究数据共享平台</CardTitle>
                         <CardDescription>
-                            登录或注册以访问您的账户
+                            欢迎使用
                         </CardDescription>
                     </CardHeader>
                     <CardContent>

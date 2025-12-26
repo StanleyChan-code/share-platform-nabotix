@@ -18,7 +18,7 @@ import {
     ChevronDown,
     X,
     Building2,
-    Phone
+    Phone, ChevronRight
 } from "lucide-react";
 import {useToast} from "@/hooks/use-toast";
 import {logout, getCurrentUser, getCurrentUserRoles} from "@/integrations/api/authApi.ts";
@@ -258,19 +258,18 @@ export function Navigation() {
                             </DropdownMenu>
                         </div>
                     ) : (
-                        location.pathname !== '/auth' && (
                             <Button
                                 asChild
                                 variant="default"
                                 size="sm"
-                                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                                className="bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 active:scale-100 rounded-md relative overflow-hidden px-3 py-1.5"
                             >
-                                <Link to="/auth" className="flex items-center gap-2">
-                                    <User className="h-4 w-4"/>
-                                    <span>登录</span>
+                                <Link to="/auth" className="flex items-center gap-1.5 relative z-10">
+                                    <User className="h-3.5 w-3.5"/>
+                                    <span className="font-medium text-sm">登录 | 注册</span>
+                                    <ChevronRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5"/>
                                 </Link>
                             </Button>
-                        )
                     )}
 
                     {/* Mobile Navigation Trigger */}
@@ -356,17 +355,18 @@ export function Navigation() {
                                             </Button>
                                         </div>
                                     ) : (
-                                        location.pathname !== '/auth' && (
                                             <Button
                                                 asChild
-                                                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg"
+                                                variant="default"
+                                                size="sm"
+                                                className="bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 active:scale-100 rounded-md relative overflow-hidden px-3 py-1.5"
                                             >
-                                                <Link to="/auth" onClick={() => setIsOpen(false)}>
-                                                    <User className="h-4 w-4 mr-2"/>
-                                                    登录系统
+                                                <Link to="/auth" className="flex items-center gap-1.5 relative z-10">
+                                                    <User className="h-3.5 w-3.5"/>
+                                                    <span className="font-medium text-sm">登录 | 注册</span>
+                                                    <ChevronRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5"/>
                                                 </Link>
                                             </Button>
-                                        )
                                     )}
                                 </div>
                             </div>

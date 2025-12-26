@@ -130,7 +130,7 @@ export const DatasetGrid = ({ datasets, onDatasetClick }: DatasetGridProps) => {
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        <span>更新: {formatDate(dataset.currentVersionDate || dataset.updatedAt)}</span>
+                        <span>发布于: {formatDate(dataset.firstPublishedDate || dataset.createdAt)}</span>
                       </div>
                     </div>
 

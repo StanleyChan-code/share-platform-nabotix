@@ -159,86 +159,33 @@ export class UploadQueue {
 }
 
 export class ProgressCalculator {
-    static calculateOverallProgress(
+    // 新增方法：专门处理分片上传的进度计算
+    static calculateChunkedProgress(
         totalChunks: number,
-        completedChunks: number | number[], // 允许传入数字或数组
-        chunkProgress: { [key: number]: number } = {}
+        completedChunksCount: number,
+        activeChunksProgress: { [chunkIndex: number]: number }
     ): number {
         if (totalChunks === 0) return 0;
 
-        let totalProgress = 0;
-
-        // 处理 completedChunks 参数，确保是数组
-        const completedChunksArray = Array.isArray(completedChunks)
-            ? completedChunks
-            : [completedChunks];
-
         // 已完成的分片贡献100%
-        const completedCount = Array.isArray(completedChunks)
-            ? completedChunks.length
-            : completedChunks;
-        totalProgress += completedCount * 100;
+        const completedProgress = completedChunksCount * 100;
 
-        // 正在上传的分片贡献当前进度
-        for (const [chunkIndex, progress] of Object.entries(chunkProgress)) {
-            const index = parseInt(chunkIndex);
-            // 检查这个分片是否已经完成
-            if (!completedChunksArray.includes(index)) {
-                totalProgress += progress;
-            }
-        }
+        // 进行中的分片贡献当前进度
+        const activeProgress = Object.values(activeChunksProgress)
+            .filter(progress => progress > 0 && progress < 100) // 只计算0-100之间的进度
+            .reduce((sum, progress) => sum + progress, 0);
 
-        return Math.round(totalProgress / totalChunks);
+        const totalProgress = completedProgress + activeProgress;
+        return Math.min(Math.round(totalProgress / totalChunks), 100);
     }
 
-    // 更安全的版本，明确参数类型
+    // 原有的方法保持不变
     static calculateProgressSafe(
         totalChunks: number,
-        completedChunksCount: number, // 明确是完成的数量
+        completedChunksCount: number,
         chunkProgress: { [key: number]: number } = {}
     ): number {
-        if (totalChunks === 0) return 0;
-
-        let totalProgress = 0;
-
-        // 已完成的分片贡献100%
-        totalProgress += completedChunksCount * 100;
-
-        // 正在上传的分片贡献当前进度
-        for (const [chunkIndex, progress] of Object.entries(chunkProgress)) {
-            const index = parseInt(chunkIndex);
-            // 如果进度小于100，说明还在上传中
-            if (progress < 100) {
-                totalProgress += progress;
-            }
-        }
-
-        return Math.round(totalProgress / totalChunks);
-    }
-
-    // 基于任务队列计算进度
-    static calculateProgressFromQueue(
-        totalChunks: number,
-        completedTasks: Set<number>,
-        chunkProgress: { [key: number]: number } = {}
-    ): number {
-        if (totalChunks === 0) return 0;
-
-        let totalProgress = 0;
-
-        // 已完成的分片贡献100%
-        totalProgress += completedTasks.size * 100;
-
-        // 正在上传的分片贡献当前进度
-        for (const [chunkIndex, progress] of Object.entries(chunkProgress)) {
-            const index = parseInt(chunkIndex);
-            // 如果分片没有完成且进度有效，则计入进度
-            if (!completedTasks.has(index) && progress >= 0 && progress <= 100) {
-                totalProgress += progress;
-            }
-        }
-
-        return Math.round(totalProgress / totalChunks);
+        return this.calculateChunkedProgress(totalChunks, completedChunksCount, chunkProgress);
     }
 }
 

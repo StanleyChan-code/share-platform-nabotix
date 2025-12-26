@@ -84,14 +84,6 @@ export async function getMyApplications(page: number = 0, size: number = 10, sor
 }
 
 /**
- * 数据集提供者查看申请记录列表
- */
-export async function getProviderApplications(page: number = 0, size: number = 10, sortBy: string = 'submittedAt', sortDir: string = 'desc') {
-  const response = await api.get<Page<Application>>(`/applications/provider-applications?page=${page}&size=${size}&sortBy=${sortBy}&sortDir=${sortDir}`);
-  return response.data;
-}
-
-/**
  * 软删除申请记录
  */
 export async function deleteApplication(id: string) {

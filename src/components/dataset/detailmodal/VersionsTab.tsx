@@ -343,6 +343,19 @@ export function VersionsTab({
                                                 </div>
                                             )}
                                         </div>
+
+                                        {/* 高级查询时如果版本被拒绝则显示拒绝理由 */}
+                                        {version.approved === false && (
+                                            <div className="border-t pt-4">
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <XCircle className="h-4 w-4 text-destructive"/>
+                                                    <span className="font-medium text-sm text-destructive">拒绝理由</span>
+                                                </div>
+                                                <div className="text-sm text-muted-foreground">
+                                                    {version.rejectReason}
+                                                </div>
+                                            </div>
+                                        )}
                                     </CardContent>
                                 </Card>
                             );

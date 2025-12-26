@@ -21,7 +21,7 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
                                                                              onUploadComplete,
                                                                              onResetComplete,
                                                                              maxSize = 10 * 1024 * 1024 * 1024,
-                                                                             chunkSize = 5 * 1024 * 1024,
+                                                                             chunkSize = 20 * 1024 * 1024,
                                                                              acceptedFileTypes = [],
                                                                              allowAllFileTypes = false,
                                                                              maxConcurrentUploads = 3,
@@ -228,12 +228,11 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
         setValidationError(null);
         onValidityChange?.(true);
 
-        // 如果已有文件在上传，先取消并清理
-        if (isUploading && uploadStateRef.current.uploadId) {
-            await handleCancel(true); // 强制清理临时文件
-        }
+        // 清除已经上传的临时文件
+        await ensureCleanup();
+        onResetComplete();
 
-        startAutoUpload(selectedFile);
+        await startAutoUpload(selectedFile);
     };
 
     // 重置处理 - 增强清理逻辑
@@ -626,10 +625,14 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
                             const chunkSizeBytes = Math.min(chunkSize, totalFileSize - task.chunkIndex * chunkSize);
                             addUploadedBytes(chunkSizeBytes);
 
+                            // 关键修复：分片完成后清除该分片的进度记录
+                            delete uploadStateRef.current.chunkProgress[task.chunkIndex];
+
+                            // 使用更准确的进度计算
                             const progress = ProgressCalculator.calculateProgressSafe(
                                 totalChunks,
                                 completedCount,
-                                uploadStateRef.current.chunkProgress
+                                uploadStateRef.current.chunkProgress // 现在chunkProgress只包含进行中的分片
                             );
                             setUploadProgress(Math.min(progress, 100));
 
@@ -811,16 +814,8 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
                         [chunkIndex]: Math.min(chunkProgress, 100)
                     };
 
-                    const chunkUploadedBytes = Math.round(
-                        (Math.min(chunkProgress, 100) / 100) * chunk.size
-                    );
-
-                    const completedChunksSize = uploadQueueRef.current.completedCount * chunkSize;
-                    const totalBytes = completedChunksSize + chunkUploadedBytes;
-
-                    setUploadedBytes(totalBytes);
-
-                    const currentCompletedCount = uploadQueueRef.current.completedCount;
+                    // 只计算未完成分片的进度
+                    const currentCompletedCount = uploadQueueRef.current.getCompletedCount();
                     const overallProgress = ProgressCalculator.calculateProgressSafe(
                         totalChunks,
                         currentCompletedCount,
@@ -947,7 +942,10 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
             abortControllerRef.current.abort();
         }
 
-        if (cleanTmpFile) {
+        // 清除正在上传的临时文件
+        if (isUploading) {
+            await ensureCleanup(uploadStateRef.current.uploadId);
+        } else if (cleanTmpFile) {
             await ensureCleanup();
         }
 
@@ -1052,7 +1050,7 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
                                 ? 'bg-red-50 text-red-700 hover:bg-red-100 cursor-pointer'
                                 : 'bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer'
                     }`}>
-                        {file && !isUploading && !isPaused && !errorMessage ? '重新选择文件' : '选择上传文件'}
+                        {file && !isUploading && !isPaused && !errorMessage ? '清除并重新上传' : '上传文件'}
                     </span>
                     <input
                         type="file"

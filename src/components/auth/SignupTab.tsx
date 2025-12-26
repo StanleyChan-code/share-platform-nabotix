@@ -531,7 +531,6 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
               证件类型 <span className="text-red-500">*</span>
             </Label>
             <div className="relative">
-              <CreditCard className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10" />
               <ValidatedSelect
                   id="signup-id-type"
                   name="idType"

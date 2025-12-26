@@ -1,0 +1,172 @@
+/* styles/datepicker.css */
+@import "react-datepicker/dist/react-datepicker.css";
+
+.react-datepicker {
+    font-family: inherit;
+    border: 1px solid hsl(var(--border));
+    border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    background-color: hsl(var(--background));
+}
+
+.react-datepicker__header {
+    background-color: hsl(var(--card));
+    border-bottom: 1px solid hsl(var(--border));
+    padding: 0;
+}
+
+.react-datepicker__current-month {
+    color: hsl(var(--foreground));
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.react-datepicker__day-names {
+    display: flex;
+    margin: 0.5rem 0;
+    padding: 0 0.5rem;
+}
+
+.react-datepicker__day-name {
+    color: hsl(var(--muted-foreground));
+    font-weight: 500;
+    font-size: 0.75rem;
+    width: 2.25rem;
+    margin: 0.1rem;
+}
+
+.react-datepicker__month {
+    margin: 0.5rem;
+}
+
+.react-datepicker__week {
+    display: flex;
+}
+
+.react-datepicker__day {
+    color: hsl(var(--foreground));
+    border-radius: 6px;
+    width: 2.25rem;
+    height: 2.25rem;
+    line-height: 2.25rem;
+    margin: 0.1rem;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.react-datepicker__day:hover {
+    background-color: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
+}
+
+/* 修复选中日期的背景颜色 - 使用你的主题色 */
+.react-datepicker__day--selected {
+    background-color: hsl(var(--primary)) !important; /* 使用主题主色 */
+    color: hsl(var(--primary-foreground)) !important;
+    font-weight: 600;
+}
+
+.react-datepicker__day--selected:hover {
+    background-color: hsl(var(--primary) / 0.9) !important;
+    color: hsl(var(--primary-foreground)) !important;
+}
+
+/* 修复今天日期的样式 */
+.react-datepicker__day--today {
+    font-weight: 600;
+    background-color: hsl(var(--secondary)) !important; /* 使用主题次色 */
+    color: hsl(var(--secondary-foreground)) !important;
+    border: 1px solid hsl(var(--border));
+}
+
+.react-datepicker__day--today:hover {
+    background-color: hsl(var(--accent)) !important;
+    color: hsl(var(--accent-foreground)) !important;
+}
+
+/* 如果今天日期同时被选中 */
+.react-datepicker__day--today.react-datepicker__day--selected {
+    background-color: hsl(var(--primary)) !important;
+    color: hsl(var(--primary-foreground)) !important;
+    border: none;
+}
+
+.react-datepicker__day--keyboard-selected {
+    background-color: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
+}
+
+.react-datepicker__day--outside-month {
+    color: hsl(var(--muted-foreground));
+    opacity: 0.5;
+}
+
+/* 修复原始导航按钮（隐藏它们） */
+.react-datepicker__navigation {
+    display: none;
+}
+
+/* 下拉选择器样式 */
+.react-datepicker__month-dropdown,
+.react-datepicker__year-dropdown {
+    background-color: hsl(var(--background));
+    border: 1px solid hsl(var(--border));
+    border-radius: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.react-datepicker__month-option,
+.react-datepicker__year-option {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+    color: hsl(var(--foreground));
+    transition: background-color 0.2s;
+}
+
+.react-datepicker__month-option:hover,
+.react-datepicker__year-option:hover {
+    background-color: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
+}
+
+.react-datepicker__month-option--selected,
+.react-datepicker__year-option--selected {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+}
+
+/* 时间选择器样式 */
+.react-datepicker__time-container {
+    border-left: 1px solid hsl(var(--border));
+}
+
+.react-datepicker__time-box {
+    width: 100%;
+}
+
+.react-datepicker__time-list-item {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+    color: hsl(var(--foreground));
+    transition: background-color 0.2s;
+}
+
+.react-datepicker__time-list-item:hover {
+    background-color: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
+}
+
+.react-datepicker__time-list-item--selected {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+}
+
+/* 弹窗样式 */
+.react-datepicker-popper {
+    z-index: 50;
+}
+
+.custom-datepicker-spacing .react-datepicker__header {
+    padding: 4px;
+}

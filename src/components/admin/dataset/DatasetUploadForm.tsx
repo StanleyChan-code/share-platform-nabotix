@@ -8,7 +8,7 @@ import { Upload, Loader2, Plus, X, FileText, Info, Asterisk, Building, Tag, Shie
 import { useState, useEffect, useRef, useCallback } from "react";
 import FileUploader from "@/components/fileuploader/FileUploader.tsx";
 import { FileUploaderHandles } from "@/components/fileuploader/types.ts";
-import { formatFileSize } from "@/lib/utils.ts";
+import {formatFileSize, formatISOString} from "@/lib/utils.ts";
 import { BaselineDatasetSelector } from "@/components/admin/dataset/BaselineDatasetSelector.tsx";
 import { InstitutionSelector } from "@/components/dataset/InstitutionSelector.tsx";
 import { AdminInstitutionSelector } from "@/components/admin/institution/AdminInstitutionSelector.tsx";
@@ -416,8 +416,8 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
         datasetLeader: formData.datasetLeader.trim(),
         principalInvestigator: formData.principalInvestigator.trim(),
         dataCollectionUnit: formData.dataCollectionUnit.trim(),
-        startDate: new Date(formData.startDate).toISOString(),
-        endDate: new Date(formData.endDate).toISOString(),
+        startDate: formatISOString(formData.startDate),
+        endDate: formatISOString(formData.endDate),
         keywords: formData.keywords.length > 0 ? formData.keywords : null,
         subjectAreaId: formData.subjectAreaId,
         category: subjectArea?.name || null,
@@ -671,7 +671,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
 
                     <div className="space-y-2">
                       <Label htmlFor="startDate" className="flex items-center gap-1">
-                        开始日期 <Asterisk className="h-3 w-3 text-red-500" />
+                        采集开始日期 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
                       <Input
                           id="startDate"
@@ -682,7 +682,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                           required
                           validationType="custom"
                           customValidation={(value) => {
-                            if (!value.trim()) return "开始日期不能为空";
+                            if (!value.trim()) return "采集开始日期不能为空";
                             return true;
                           }}
                       />
@@ -853,7 +853,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
 
                     <div className="space-y-2">
                       <Label htmlFor="endDate" className="flex items-center gap-1">
-                        结束日期 <Asterisk className="h-3 w-3 text-red-500" />
+                        采集结束日期 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
                       <Input
                           id="endDate"
@@ -864,7 +864,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                           required
                           validationType="custom"
                           customValidation={(value) => {
-                            if (!value.trim()) return "结束日期不能为空";
+                            if (!value.trim()) return "采集结束日期不能为空";
                             return true;
                           }}
                       />
@@ -928,9 +928,6 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
 
                 {formData.isFollowup && (
                     <div className="space-y-2">
-                      <Label className="flex items-center gap-1">
-                        基线数据集 <Asterisk className="h-3 w-3 text-red-500" />
-                      </Label>
                       <BaselineDatasetSelector
                           value={formData.parentDatasetId}
                           onChange={(value) => setFormData(prev => ({ ...prev, parentDatasetId: value }))}

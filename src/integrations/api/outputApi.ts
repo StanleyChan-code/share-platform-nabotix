@@ -79,7 +79,7 @@ export const outputApi = {
     sortBy?: string;
     sortDir?: string;
     type?: string;
-    keyword?: string;
+    titleOrAbstract?: string;
   } = {}) {
     const queryParams = new URLSearchParams();
     queryParams.append('page', params.page?.toString() || '0');
@@ -87,7 +87,7 @@ export const outputApi = {
     if (params.sortBy) queryParams.append('sortBy', params.sortBy);
     if (params.sortDir) queryParams.append('sortDir', params.sortDir);
     if (params.type) queryParams.append('type', params.type.toUpperCase());
-    if (params.keyword) queryParams.append('keyword', params.keyword);
+    if (params.titleOrAbstract) queryParams.append('titleOrAbstract', params.titleOrAbstract);
 
     const response = await api.get<PaginatedOutputs>(`/research-outputs/public?${queryParams.toString()}`);
     return response.data.data;

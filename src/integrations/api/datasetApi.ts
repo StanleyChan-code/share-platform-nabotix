@@ -1,5 +1,6 @@
 import {api} from "@/integrations/api/client";
 import {Page} from "@/integrations/api/client";
+import {formatISOString} from "@/lib/utils.ts";
 
 interface UserDto {
     id: string;
@@ -110,8 +111,8 @@ export interface DatasetQueryParams {
     titleCnOrKey?: string;
     providerId?: string;
     isTopLevel?: boolean;
-    currentVersionDateFrom?: string;
-    currentVersionDateTo?: string;
+    startDate?: string;
+    endDate?: string;
     loadTimeline?: boolean;
 }
 
@@ -180,39 +181,8 @@ export interface UpdateDatasetVersionApprovalRequest {
 // 数据集API函数
 export const datasetApi = {
     // 获取数据集详情
-    async getDatasetById(id: string, loadTimeline: boolean = false) {
-        const response = await api.get<Dataset>(`/datasets/${id}?loadTimeline=${loadTimeline}`);
-        return response.data;
-    },
-
-    // 获取所有数据集
-    async getAllDatasets() {
-        const response = await api.get<Dataset[]>('/datasets');
-        return response.data;
-    },
-
-    // 根据条件搜索数据集
-    async searchDatasets(params: {
-        searchTerm?: string;
-        type?: string;
-        category?: string;
-        dateFrom?: string;
-        dateTo?: string;
-    }) {
-        const queryParams = new URLSearchParams();
-        if (params.searchTerm) queryParams.append('searchTerm', params.searchTerm);
-        if (params.type && params.type !== 'all') queryParams.append('type', params.type);
-        if (params.category && params.category !== 'all') queryParams.append('category', params.category);
-        if (params.dateFrom) queryParams.append('dateFrom', params.dateFrom);
-        if (params.dateTo) queryParams.append('dateTo', params.dateTo);
-
-        const response = await api.get<Dataset[]>(`/datasets/search?${queryParams.toString()}`);
-        return response.data;
-    },
-
-    // 获取数据集版本
-    async getDatasetVersions(datasetId: string) {
-        const response = await api.get<DatasetVersion[]>(`/datasets/${datasetId}/versions`);
+    async getDatasetById(id: string) {
+        const response = await api.get<Dataset>(`/datasets/${id}`);
         return response.data;
     },
 
@@ -228,6 +198,8 @@ export const datasetApi = {
         size?: number;
         searchTerm?: string;
         type?: string;
+        isTopLevel?: boolean;
+        providerId?: string;
         subjectAreaId?: string;
         institutionId?: string;
         dateFrom?: string;
@@ -242,17 +214,19 @@ export const datasetApi = {
         if (params.size !== undefined) queryParams.append('size', params.size.toString());
         if (params.searchTerm) queryParams.append('titleCnOrKey', params.searchTerm);
         if (params.type && params.type !== 'all') queryParams.append('type', params.type);
+        if (params.isTopLevel !== undefined) queryParams.append('isTopLevel', params.isTopLevel.toString());
+        if (params.providerId) queryParams.append('providerId', params.providerId);
         if (params.institutionId) queryParams.append('institutionId', params.institutionId);
         if (params.subjectAreaId) queryParams.append('subjectAreaId', params.subjectAreaId);
-        if (params.dateFrom) queryParams.append('currentVersionDateFrom', params.dateFrom);
-        if (params.dateTo) queryParams.append('currentVersionDateTo', params.dateTo);
+        if (params.dateFrom) queryParams.append('startDate', formatISOString(params.dateFrom));
+        if (params.dateTo) queryParams.append('endDate', formatISOString(params.dateTo));
         if (params.sortBy) {
             queryParams.append('sortBy', params.sortBy)
         } else {
-            queryParams.append('sortBy', 'currentVersionDate')
+            queryParams.append('sortBy', 'firstPublishedDate')
         }
 
-        const response = await api.get<Page<Dataset>>(`/datasets/query?${queryParams.toString()}`);
+        const response = await api.get<Page<Dataset>>(`/datasets/query?${queryParams}`);
         return response.data;
     },
 
@@ -301,8 +275,8 @@ export const datasetApi = {
         sortDir?: "asc" | "desc";
         subjectAreaId?: string;
         titleCnOrKey?: string;
-        currentVersionDateFrom?: string;
-        currentVersionDateTo?: string;
+        startDate?: string;
+        endDate?: string;
         type?: string;
         published?: boolean;
     }) {
@@ -313,8 +287,8 @@ export const datasetApi = {
         if (params.titleCnOrKey) queryParams.append('titleCnOrKey', params.titleCnOrKey);
         if (params.providerId) queryParams.append('providerId', params.providerId);
         if (params.isTopLevel !== undefined) queryParams.append('isTopLevel', String(params.isTopLevel));
-        if (params.currentVersionDateFrom) queryParams.append('currentVersionDateFrom', params.currentVersionDateFrom);
-        if (params.currentVersionDateTo) queryParams.append('currentVersionDateTo', params.currentVersionDateTo);
+        if (params.startDate) queryParams.append('startDate', params.startDate);
+        if (params.endDate) queryParams.append('endDate', params.endDate);
         if (params.type) queryParams.append('type', params.type);
         if (params.published !== undefined) queryParams.append('published', String(params.published));
         if (params.hasPendingVersion !== undefined) queryParams.append('hasPendingVersion', String(params.hasPendingVersion));
@@ -322,7 +296,7 @@ export const datasetApi = {
         // 分页参数
         queryParams.append('page', (params.page ?? 0).toString());
         queryParams.append('size', (params.size ?? 10).toString());
-        queryParams.append('sortBy', params.sortBy ?? 'currentVersionDate');
+        queryParams.append('sortBy', params.sortBy ?? 'firstPublishedDate');
         queryParams.append('sortDir', params.sortDir ?? 'desc');
 
         const response = await api.get<Page<Dataset>>(`/manage/datasets/advanced?${queryParams.toString()}`);

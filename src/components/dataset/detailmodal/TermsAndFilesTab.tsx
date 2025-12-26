@@ -40,63 +40,63 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
     const isAuthenticated = api.isAuthenticated();
 
     // 检查用户对该数据集的申请状态
-    useEffect(() => {
-        const checkApplicationStatus = async () => {
-            if (!isAuthenticated || !dataset.id) {
-                setLoadingApplication(false);
-                return;
-            }
+    const checkApplicationStatus = async () => {
+        if (!isAuthenticated || !dataset.id) {
+            setLoadingApplication(false);
+            return;
+        }
 
-            try {
-                const response = await api.get<Application[]>(`/applications/by-dataset/${dataset.id}`);
-                if (response.data.success && response.data.data.length > 0) {
-                    // 获取最新的审核状态为APPROVED的申请记录
-                    const applications = response.data.data;
-                    const approvedApplication = applications.find(app => app.status === "APPROVED");
-                    
-                    // 检查是否有待审核的申请
-                    const pendingApplication = applications.find(app => 
-                        app.status === "SUBMITTED" || 
-                        app.status === "PENDING_PROVIDER_REVIEW" || 
-                        app.status === "PENDING_INSTITUTION_REVIEW"
-                    );
-                    
-                    // 检查是否所有申请都被拒绝
-                    const allDenied = applications.every(app => app.status === "DENIED");
-                    
-                    if (approvedApplication) {
-                        setApplicationStatus(approvedApplication);
-                        setPendingApplication(null); // 有批准的申请时，不需要显示待审核的申请
-                    } else if (allDenied) {
-                        // 所有申请都被拒绝，允许重新申请
-                        setApplicationStatus(null);
-                        setPendingApplication(null); // 不显示待审核的申请
-                    } else if (pendingApplication) {
-                        // 有待审核的申请，不允许重新申请
-                        setApplicationStatus(null);
-                        setPendingApplication(pendingApplication);
-                    } else {
-                        // 没有批准的申请，也没有待审核的申请，但有被拒绝的申请
-                        setApplicationStatus(null);
-                        setPendingApplication(null);
-                    }
+        try {
+            const response = await api.get<Application[]>(`/applications/by-dataset/${dataset.id}`);
+            if (response.data.success && response.data.data.length > 0) {
+                // 获取最新的审核状态为APPROVED的申请记录
+                const applications = response.data.data;
+                const approvedApplication = applications.find(app => app.status === "APPROVED");
+                
+                // 检查是否有待审核的申请
+                const pendingApplication = applications.find(app => 
+                    app.status === "SUBMITTED" || 
+                    app.status === "PENDING_PROVIDER_REVIEW" || 
+                    app.status === "PENDING_INSTITUTION_REVIEW"
+                );
+                
+                // 检查是否所有申请都被拒绝
+                const allDenied = applications.every(app => app.status === "DENIED");
+                
+                if (approvedApplication) {
+                    setApplicationStatus(approvedApplication);
+                    setPendingApplication(null); // 有批准的申请时，不需要显示待审核的申请
+                } else if (allDenied) {
+                    // 所有申请都被拒绝，允许重新申请
+                    setApplicationStatus(null);
+                    setPendingApplication(null); // 不显示待审核的申请
+                } else if (pendingApplication) {
+                    // 有待审核的申请，不允许重新申请
+                    setApplicationStatus(null);
+                    setPendingApplication(pendingApplication);
                 } else {
-                    // 没有任何申请记录
+                    // 没有批准的申请，也没有待审核的申请，但有被拒绝的申请
                     setApplicationStatus(null);
                     setPendingApplication(null);
                 }
-            } catch (error) {
-                console.error("检查申请状态时出错:", error);
-                toast({
-                    title: "检查申请状态失败",
-                    description: "无法获取您的申请状态，请稍后重试",
-                    variant: "destructive",
-                });
-            } finally {
-                setLoadingApplication(false);
+            } else {
+                // 没有任何申请记录
+                setApplicationStatus(null);
+                setPendingApplication(null);
             }
-        };
+        } catch (error) {
+            console.error("检查申请状态时出错:", error);
+            toast({
+                title: "检查申请状态失败",
+                description: "无法获取您的申请状态，请稍后重试",
+                variant: "destructive",
+            });
+        } finally {
+            setLoadingApplication(false);
+        }
+    };
 
+    useEffect(() => {
         checkApplicationStatus();
     }, [dataset.id, isAuthenticated, toast]);
 
@@ -465,6 +465,11 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
                     open={applyDialogOpen}
                     onOpenChange={setApplyDialogOpen}
                     datasetId={dataset.id}
+                    onSubmitted={() => {
+                        // 重新检查申请状态
+                        setLoadingApplication(true);
+                        checkApplicationStatus();
+                    }}
                 />
                 
                 {/* 待审核申请详情对话框 */}

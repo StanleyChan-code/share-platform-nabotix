@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button.tsx";
 import { Label } from "@/components/ui/label.tsx";
-import { Dataset } from "@/integrations/api/datasetApi.ts";
+import { Dataset, datasetApi } from "@/integrations/api/datasetApi.ts";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command.tsx";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover.tsx";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils.ts";
-import { api } from "@/integrations/api/client.ts";
+import {Asterisk, Check, ChevronsUpDown, Loader2} from "lucide-react";
+import {cn, formatDate} from "@/lib/utils.ts";
 import { DatasetTypes } from "@/lib/enums.ts";
+import { useDebounce } from "@/hooks/useDebounce.ts";
 
 interface DatasetSelectorProps {
   selectedDataset: Dataset | null;
@@ -15,27 +15,27 @@ interface DatasetSelectorProps {
   label?: string;
   required?: boolean;
   datasetId?: string;
+  providerId?: string;
   disabled?: boolean;
   subjectAreaId?: string;
-  providerId?: string;
   isTopLevel?: boolean;
-  currentVersionDateFrom?: string;
-  currentVersionDateTo?: string;
+  startDate?: string;
+  endDate?: string;
   size?: number;
 }
 
 export function DatasetSelector({ 
   selectedDataset, 
   onDatasetSelect, 
-  label = "关联数据集", 
+  label = "关联数据集",
   required = true,
   datasetId,
+    providerId,
   disabled = false,
   subjectAreaId,
-  providerId,
   isTopLevel = false,
-  currentVersionDateFrom,
-  currentVersionDateTo,
+  startDate,
+  endDate,
   size = 5
 }: DatasetSelectorProps) {
   const [filteredDatasets, setFilteredDatasets] = useState<Dataset[]>([]);
@@ -44,16 +44,17 @@ export function DatasetSelector({
   const [datasetPopoverOpen, setDatasetPopoverOpen] = useState(false);
   const [initialDatasetLoaded, setInitialDatasetLoaded] = useState(false);
 
+  // 使用防抖Hook，延迟550ms
+  const debouncedSearchTerm = useDebounce(datasetSearchTerm, 550);
+
   // 加载初始数据集
   useEffect(() => {
     const loadInitialDataset = async () => {
       if (datasetId && !initialDatasetLoaded && !selectedDataset) {
         try {
-          const response = await api.get(`/datasets/${datasetId}`);
-          if (response.data.success) {
-            onDatasetSelect(response.data.data);
-            setInitialDatasetLoaded(true);
-          }
+          const datasetResponse = await datasetApi.getDatasetById(datasetId);
+          onDatasetSelect(datasetResponse.data);
+          setInitialDatasetLoaded(true);
         } catch (error) {
           console.error("加载初始数据集时出错:", error);
         }
@@ -66,30 +67,26 @@ export function DatasetSelector({
   // 搜索数据集
   useEffect(() => {
     const searchDatasets = async () => {
-      if (datasetSearchTerm.trim() === "" || disabled) {
+      if (debouncedSearchTerm.trim() === "" || disabled) {
         setFilteredDatasets([]);
         return;
       }
 
       setDatasetSearchLoading(true);
       try {
-        // 构建查询参数
-        const queryParams = new URLSearchParams();
-        queryParams.append('titleCnOrKey', encodeURIComponent(datasetSearchTerm));
-        queryParams.append('isTopLevel', String(isTopLevel));
-        queryParams.append('size', String(size));
-              
-        if (subjectAreaId) queryParams.append('subjectAreaId', subjectAreaId);
-        if (providerId) queryParams.append('providerId', providerId);
-        if (currentVersionDateFrom) queryParams.append('currentVersionDateFrom', currentVersionDateFrom);
-        if (currentVersionDateTo) queryParams.append('currentVersionDateTo', currentVersionDateTo);
-              
-        // 使用 /datasets/query API 端点进行搜索
-        const response = await api.get(`/datasets/query?${queryParams.toString()}`);
-        if (response.data.success) {
-          // 限制最多显示5个结果
-          setFilteredDatasets(response.data.data.content.slice(0, 5));
-        }
+        // 使用 datasetApi 进行数据集查询
+        const result = await datasetApi.queryDatasets({
+          searchTerm: debouncedSearchTerm,
+          isTopLevel,
+          size,
+          providerId,
+          subjectAreaId,
+          dateFrom: startDate,
+          dateTo: endDate
+        });
+        
+        // 限制最多显示5个结果
+        setFilteredDatasets(result.data.content);
       } catch (error) {
         console.error("搜索数据集时出错:", error);
         setFilteredDatasets([]);
@@ -98,12 +95,8 @@ export function DatasetSelector({
       }
     };
 
-    const delayDebounceFn = setTimeout(() => {
-      searchDatasets();
-    }, 300);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [datasetSearchTerm, disabled]);
+    searchDatasets();
+  }, [debouncedSearchTerm, disabled]);
 
   const handleDatasetSelect = (dataset: Dataset) => {
     if (disabled) return;
@@ -115,7 +108,7 @@ export function DatasetSelector({
   return (
     <div className="space-y-2">
       <Label htmlFor="dataset">
-        {label} {required && <span className="text-destructive">*</span>}
+        {label} {required && <Asterisk className="h-3 w-3 text-red-500" />}
       </Label>
       <Popover open={datasetPopoverOpen} onOpenChange={setDatasetPopoverOpen}>
         <PopoverTrigger asChild>
@@ -135,7 +128,7 @@ export function DatasetSelector({
         <PopoverContent className="p-0 w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height]" align="start">
           <Command shouldFilter={false}>
             <CommandInput 
-              placeholder="搜索数据集..." 
+              placeholder="搜索数据集标题或关键词..."
               value={datasetSearchTerm}
               onValueChange={setDatasetSearchTerm}
               disabled={disabled}
@@ -176,10 +169,11 @@ export function DatasetSelector({
                           </span>
                         )}
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 mt-1">
-                        <span className="truncate">发布时间: {(dataset.firstPublishedDate)}</span>
-                        <span className="truncate">提供者: {dataset.datasetLeader}</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-1 mt-1">
+                        <span className="truncate">数据集负责人: {dataset.datasetLeader}</span>
                         <span className="truncate">采集单位: {dataset.dataCollectionUnit}</span>
+                        <span className="truncate">发布时间: {formatDate(dataset.firstPublishedDate)}</span>
+                        <span className="truncate">数据提供者: {dataset.provider.realName}</span>
                       </div>
                     </div>
                   </div>

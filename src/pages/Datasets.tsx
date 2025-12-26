@@ -101,8 +101,8 @@ const Datasets = () => {
             searchTerm: debouncedSearchTerm || undefined,
             type: typeEnumValue,
             subjectAreaId: subject?.id,
-            dateFrom: dateFrom?.toISOString(),
-            dateTo: dateTo?.toISOString(),
+            dateFrom: dateFrom,
+            dateTo: dateTo,
             loadTimeline: true
         });
 
@@ -206,7 +206,7 @@ const Datasets = () => {
                                     onClick={resetFilters}
                                 >
                                     <RotateCcw className="h-4 w-4" />
-                                    重置筛选
+                                    重置
                                 </Button>
                             </div>
                         </div>

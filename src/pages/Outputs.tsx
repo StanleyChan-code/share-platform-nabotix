@@ -54,7 +54,7 @@ const Outputs = () => {
             sortBy: 'createdAt',
             sortDir: 'desc',
             type: selectedType !== "all" ? selectedType : undefined,
-            keyword: debouncedSearchTerm || undefined
+            titleOrAbstract: debouncedSearchTerm || undefined
         });
     }, [selectedType, debouncedSearchTerm]);
 
@@ -215,7 +215,7 @@ const Outputs = () => {
                                 <div className="flex flex-col sm:flex-row gap-2 text-xs">
                                     <div className="flex items-center gap-2 bg-white/80 rounded-xl px-3 py-1.5 border shadow-sm">
                                         <User className="h-4 w-4 text-green-600" />
-                                        <span className="font-medium text-gray-700 whitespace-nowrap">提交者: {output.submitter?.realName || '未知用户'}</span>
+                                        <span className="font-medium text-gray-700 whitespace-nowrap">提供者: {output.submitter?.realName || '未知用户'}</span>
                                     </div>
                                     <div className="flex items-center gap-2 bg-white/80 rounded-xl px-3 py-1.5 border shadow-sm">
                                         <Calendar className="h-4 w-4 text-blue-600" />
@@ -318,7 +318,7 @@ const Outputs = () => {
                                 <div className="relative">
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                                     <Input
-                                        placeholder="搜索成果标题、摘要或作者..."
+                                        placeholder="搜索成果标题、摘要或简介..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         className="pl-10 h-11 text-base border-blue-200/50 focus:border-blue-300 transition-colors"

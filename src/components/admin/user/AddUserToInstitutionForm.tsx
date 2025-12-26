@@ -346,10 +346,6 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
                   <Asterisk className="h-3 w-3 text-red-500" />
                   <span>标记的字段为必填项</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Info className="h-3 w-3 text-blue-500" />
-                  <span>初始密码默认为：123456</span>
-                </div>
               </div>
             </CardDescription>
           </CardHeader>
@@ -537,7 +533,7 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t">
                 <div className="text-xs text-muted-foreground space-y-1">
                   <div>必填字段：真实姓名、手机号、证件类型、证件号码{isPlatformAdmin && '、所属机构'}</div>
-                  <div>初始密码：123456（用户首次登录后建议修改）</div>
+                  <div>创建账号后须使用手机验证码登录，登录后修改密码后才可以使用密码登录。</div>
                 </div>
                 <div className="flex gap-2">
                   <Button type="button" variant="outline" onClick={resetForm} disabled={loading}>

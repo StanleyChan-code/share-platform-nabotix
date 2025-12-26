@@ -44,6 +44,20 @@ export function formatDateTime(date: Date | string | number): string {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
+export function formatISOString(date: Date | string | number): string {
+  if (!date) return '';
+
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
+
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+
+  // 直接构造 UTC 时间的 ISO 字符串
+  return `${year}-${month}-${day}T00:00:00Z`;
+}
+
 /**
  * 格式化文件大小
  * @param bytes 文件大小（字节）

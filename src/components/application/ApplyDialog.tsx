@@ -24,9 +24,10 @@ interface ApplyDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     datasetId?: string;
+    onSubmitted?: () => void; // 申请提交成功后的回调函数
 }
 
-const ApplyDialog = ({ open, onOpenChange, datasetId }: ApplyDialogProps) => {
+const ApplyDialog = ({ open, onOpenChange, datasetId, onSubmitted }: ApplyDialogProps) => {
     const [formData, setFormData] = useState({
         datasetId: datasetId || "",
         projectTitle: "",
@@ -219,6 +220,11 @@ const ApplyDialog = ({ open, onOpenChange, datasetId }: ApplyDialogProps) => {
             fileUploaderRef.current.acceptedAndReset();
 
             toast.success("申请提交成功");
+
+            // 调用外部回调函数，以便外部组件可以刷新信息
+            if (onSubmitted) {
+                onSubmitted();
+            }
 
             // 关闭对话框
             onOpenChange(false);

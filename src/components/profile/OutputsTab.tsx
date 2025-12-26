@@ -34,7 +34,7 @@ import SubmitOutputDialog from "@/components/outputs/SubmitOutputDialog";
 import OutputDetailDialog from "@/components/outputs/OutputDetailDialog";
 import EditOutputDialog from "@/components/outputs/EditOutputDialog";
 import {formatDateTime} from "@/lib/utils";
-import PaginatedList from "@/components/ui/PaginatedList";
+import ReactPaginatedList from "@/components/ui/ReactPaginatedList";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import {Dataset} from "@/integrations/api/datasetApi.ts";
 import {getCurrentUserInfoFromSession} from "@/lib/authUtils.ts";
@@ -49,6 +49,7 @@ const OutputsTab = () => {
     const [selectedOutput, setSelectedOutput] = useState<ResearchOutput | null>(null);
     const {toast} = useToast();
     const paginatedListRef = useRef<any>(null);
+
 
     const fetchUserOutputs = useCallback(async (page: number, size: number) => {
         return await outputApi.getMySubmissions({
@@ -366,7 +367,7 @@ const OutputsTab = () => {
                     </Button>
                 </CardHeader>
                 <CardContent>
-                    <PaginatedList
+                    <ReactPaginatedList
                         ref={paginatedListRef}
                         fetchData={fetchUserOutputs}
                         renderItem={renderOutputItem}
