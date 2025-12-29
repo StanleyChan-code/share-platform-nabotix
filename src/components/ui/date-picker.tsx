@@ -149,8 +149,8 @@ export const CustomDatePicker = React.forwardRef<HTMLButtonElement, DatePickerPr
                           onChange={({ target: { value } }) => changeYear(parseInt(value))}
                           className="px-2 py-1 border rounded text-sm"
                       >
-                          {Array.from({ length: 20 }, (_, i) => {
-                              const year = new Date().getFullYear() - 10 + i;
+                          {Array.from({ length: 42 }, (_, i) => {
+                              const year = new Date().getFullYear() - 40 + i;
                               return (
                                   <option key={year} value={year}>
                                       {year} 年

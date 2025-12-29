@@ -185,10 +185,7 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
       const response = await login(requestData);
 
       if (response.data.success) {
-        const token = response.data.data.token;
-        api.setAuthToken(token);
-        localStorage.setItem('authToken', token);
-
+        // 登录API已经在内部处理了token的存储
         // 获取用户信息
         await fetchUserInfo();
 
@@ -220,6 +217,7 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
   const fetchUserInfo = async () => {
     try {
       const userProfile = await refreshUserInfo();
+      if (!userProfile) return;
 
       toast({
         title: "登录成功",
@@ -227,7 +225,18 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
       });
 
       onLoginSuccess();
-      navigate('/');
+      
+      // 检查是否有记录的重定向路径
+      const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+      if (redirectPath && redirectPath !== '/auth') {
+        // 清除重定向路径
+        sessionStorage.removeItem('redirectAfterLogin');
+        // 跳转到记录的路径
+        navigate(redirectPath);
+      } else {
+        // 如果没有记录的路径或路径为auth页面，则跳转到首页
+        navigate('/');
+      }
 
     } catch (error: any) {
       console.error("获取用户信息失败:", error);

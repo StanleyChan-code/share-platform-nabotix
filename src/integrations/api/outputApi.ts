@@ -166,5 +166,11 @@ export const outputApi = {
       responseType: 'blob'
     });
     return response.data;
+  },
+
+  // 根据ID获取单个公开的研究成果
+  async getPublicOutputById(id: string) {
+    const response = await api.get<ResearchOutput>(`/research-outputs/${id}`);
+    return response.data;
   }
 };

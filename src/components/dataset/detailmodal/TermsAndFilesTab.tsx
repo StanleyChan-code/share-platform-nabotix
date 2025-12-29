@@ -52,17 +52,17 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
                 // 获取最新的审核状态为APPROVED的申请记录
                 const applications = response.data.data;
                 const approvedApplication = applications.find(app => app.status === "APPROVED");
-                
+
                 // 检查是否有待审核的申请
-                const pendingApplication = applications.find(app => 
-                    app.status === "SUBMITTED" || 
-                    app.status === "PENDING_PROVIDER_REVIEW" || 
+                const pendingApplication = applications.find(app =>
+                    app.status === "SUBMITTED" ||
+                    app.status === "PENDING_PROVIDER_REVIEW" ||
                     app.status === "PENDING_INSTITUTION_REVIEW"
                 );
-                
+
                 // 检查是否所有申请都被拒绝
                 const allDenied = applications.every(app => app.status === "DENIED");
-                
+
                 if (approvedApplication) {
                     setApplicationStatus(approvedApplication);
                     setPendingApplication(null); // 有批准的申请时，不需要显示待审核的申请
@@ -471,7 +471,7 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
                         checkApplicationStatus();
                     }}
                 />
-                
+
                 {/* 待审核申请详情对话框 */}
                 {pendingApplication && (
                     <ApplicationDetailDialog

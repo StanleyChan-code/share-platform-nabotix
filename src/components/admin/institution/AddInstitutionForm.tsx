@@ -213,7 +213,10 @@ const AddInstitutionForm = ({ open, onOpenChange, onInstitutionAdded }: AddInsti
 
     return (
         <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogContent 
+                className="max-w-3xl max-h-[90vh] overflow-y-auto"
+                onInteractOutside={(e) => e.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Building className="h-5 w-5" />

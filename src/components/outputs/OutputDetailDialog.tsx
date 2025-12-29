@@ -13,11 +13,13 @@ import {ResearchOutput, outputApi} from "@/integrations/api/outputApi";
 import {getCurrentUserFromSession} from "@/lib/authUtils";
 import React, {useEffect, useState} from "react";
 import {fileApi, FileInfo} from "@/integrations/api/fileApi";
-import {Download, ExternalLink, User, Calendar, FileText, Award, BookOpen} from "lucide-react";
+import {Download, ExternalLink, User, Calendar, FileText, Award, Share, Eye, BookOpen} from "lucide-react";
 import {toast} from "@/hooks/use-toast.ts";
 import {DatasetDetailModal} from "@/components/dataset/DatasetDetailModal.tsx";
 import ApprovalActions from "@/components/ui/ApprovalActions.tsx";
 import {api} from "@/integrations/api/client.ts";
+import PDFPreview from '@/components/ui/pdf-preview.tsx'
+import {CopyButton} from "@/components/ui/CopyButton.tsx";
 
 interface OutputDetailDialogProps {
     open: boolean;
@@ -35,11 +37,13 @@ const OutputDetailDialog = ({
                                 canApprove = false,
                                 onApprovalChange,
                                 managementMode = false
-}: OutputDetailDialogProps) => {
+                            }: OutputDetailDialogProps) => {
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
     const [isDatasetModalOpen, setIsDatasetModalOpen] = useState(false);
-    const isSubmitter = currentUserId && output.submitter && output.submitter.id === currentUserId;
+    const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
+    const [pdfPreviewUrl, setPdfPreviewUrl] = useState('');
+    const isSubmitter = currentUserId && output?.submitter && output.submitter.id === currentUserId;
     const canViewSensitiveInfo = isSubmitter || managementMode;
 
     useEffect(() => {
@@ -61,6 +65,8 @@ const OutputDetailDialog = ({
                 } catch (error) {
                     console.error("Failed to fetch file info:", error);
                 }
+            } else {
+                setFileInfo(null);
             }
         };
 
@@ -68,10 +74,18 @@ const OutputDetailDialog = ({
             fetchCurrentUser();
             fetchFileInfo();
         }
-    }, [open, output, currentUserId]);
+    }, [open, output, canViewSensitiveInfo]);
+
+    // 清理预览URL以避免内存泄漏
+    useEffect(() => {
+        return () => {
+            if (pdfPreviewUrl) {
+                URL.revokeObjectURL(pdfPreviewUrl);
+            }
+        };
+    }, [pdfPreviewUrl]);
 
     if (!output) return null;
-
 
     const handleDownloadFile = async () => {
         if (!output?.id || !output?.fileId) return;
@@ -108,6 +122,40 @@ const OutputDetailDialog = ({
         }
     };
 
+    // 处理预览PDF
+    const handlePreviewPdf = async () => {
+        if (!output?.id || !output?.fileId) {
+            toast({
+                title: "无法预览",
+                description: "该成果没有关联的文件",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        try {
+            let response;
+            if (isSubmitter) {
+                response = await outputApi.downloadOutputFile(output.id, output.fileId);
+            } else if (output.submitter.id !== currentUserId) {
+                response = await outputApi.downloadManagedOutputFile(output.id, output.fileId);
+            } else {
+                return;
+            }
+
+            const fileUrl = URL.createObjectURL(new Blob([response], { type: 'application/pdf' }));
+            setPdfPreviewUrl(fileUrl);
+            setIsPdfPreviewOpen(true);
+        } catch (error) {
+            console.error('预览失败:', error);
+            toast({
+                title: "预览失败",
+                description: "无法预览文件，请尝试下载后查看",
+                variant: "destructive"
+            });
+        }
+    };
+
     const getTypeIcon = (type: string) => {
         const IconComponent = getOutputTypeIconComponent(type);
         return <IconComponent className="h-4 w-4"/>;
@@ -126,7 +174,7 @@ const OutputDetailDialog = ({
     // 处理审核操作
     const handleApproval = async (approved: boolean, comment: string) => {
         if (!output) return;
-        
+
         try {
             const response = await api.put(`/manage/research-outputs/${output.id}/approval`, {
                 approved,
@@ -143,7 +191,7 @@ const OutputDetailDialog = ({
                 if (onApprovalChange) {
                     onApprovalChange();
                 }
-                
+
                 // 关闭对话框
                 onOpenChange(false);
             }
@@ -185,317 +233,339 @@ const OutputDetailDialog = ({
     );
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[500px] md:max-w-[700px] lg:max-w-[900px] max-h-[90vh] flex flex-col">
-                <DialogHeader className="pb-4 border-b">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary/10 rounded-lg">
-                            {getTypeIcon(output.type)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <DialogTitle className="text-xl font-bold line-clamp-2">
-                                {output.title}
-                            </DialogTitle>
-                            <div className="flex items-center gap-2 mt-1">
-                                <span className="text-sm text-muted-foreground">
-                                    {getOutputTypeDisplayName(output.type)}
-                                </span>
-                                <span className="text-muted-foreground">•</span>
-                                {getStatusBadge(output.approved)}
+        <>
+            <Dialog open={open} onOpenChange={onOpenChange}>
+                <DialogContent className="sm:max-w-[500px] md:max-w-[700px] lg:max-w-[900px] max-h-[90vh] flex flex-col">
+                    <DialogHeader className="pb-4 border-b">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-primary/10 rounded-lg">
+                                {getTypeIcon(output.type)}
                             </div>
+                            <div className="flex-1 min-w-0">
+                                <DialogTitle className="text-xl font-bold line-clamp-2">
+                                    {output.title}
+                                </DialogTitle>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-sm text-muted-foreground">
+                                        {getOutputTypeDisplayName(output.type)}
+                                    </span>
+                                    <span className="text-muted-foreground">•</span>
+                                    {getStatusBadge(output.approved)}
+                                </div>
+                            </div>
+                            <CopyButton
+                                text={`${window.location.origin}/outputs?id=${output.id}`}
+                                title="分享研究成果"
+                                description="点击下方文本框复制研究成果链接"
+                                variant="outline"
+                                size="sm"
+                                className="flex items-center gap-2 hover:bg-green-50 hover:text-green-600 border-green-200"
+                            >
+                                <Share className="h-4 w-4" />
+                                复制分享链接
+                            </CopyButton>
                         </div>
-                    </div>
-                </DialogHeader>
+                    </DialogHeader>
 
-                <div className="flex-1 overflow-hidden overflow-y-auto">
-                    <ScrollArea className="h-full w-full pr-4">
-                        <div className="space-y-6 py-4">
-                            {/* 基本信息网格 */}
-                            <DetailSection title="基本信息" icon={BookOpen}>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <InfoCard
-                                        title="提交时间"
-                                        value={formatDateTime(output.createdAt)}
-                                        icon={Calendar}
-                                    />
-
-                                    {output.approvedAt && (
+                    <div className="flex-1 overflow-hidden overflow-y-auto">
+                        <ScrollArea className="h-full w-full pr-4">
+                            <div className="space-y-6 py-4">
+                                {/* 基本信息网格 */}
+                                <DetailSection title="基本信息" icon={BookOpen}>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         <InfoCard
-                                            title="审核时间"
-                                            value={formatDateTime(output.approvedAt)}
+                                            title="提交时间"
+                                            value={formatDateTime(output.createdAt)}
                                             icon={Calendar}
                                         />
-                                    )}
 
-                                    {output.submitter && (
-                                        <InfoCard
-                                            title="提交人"
-                                            value={output.submitter.realName || output.submitter.username}
-                                            icon={User}
-                                        />
-                                    )}
-
-                                    {output.outputNumber && (
-                                        <InfoCard
-                                            title={
-                                                output.type === 'PROJECT' ? '项目编号/课题编号' :
-                                                    output.type === 'PUBLICATION' ? '出版物编号' :
-                                                        (output.type === 'INVENTION_PATENT' || output.type === 'UTILITY_PATENT') ? '专利识别号' :
-                                                            output.type === 'SOFTWARE_COPYRIGHT' ? '登记号' : '编号'
-                                            }
-                                            value={output.outputNumber}
-                                        />
-                                    )}
-
-                                    {output.dataset && (
-                                        <InfoCard
-                                            title="关联数据集"
-                                            value={
-                                                <span
-                                                    className="text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
-                                                    onClick={() => setIsDatasetModalOpen(true)}
-                                                >
-                                                {output.dataset.titleCn}
-                                                    <ExternalLink className="h-3 w-3"/>
-                                            </span>
-                                            }
-                                        />
-                                    )}
-                                </div>
-                            </DetailSection>
-
-                            {/* 摘要 */}
-                            {output.abstractText && (
-                                <DetailSection title={output.type === 'OTHER_AWARD' ? '成果简介' : '摘要'} icon={FileText}>
-                                    <div className="bg-muted/30 rounded-lg p-4">
-                                        <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                                            {output.abstractText}
-                                        </p>
-                                    </div>
-                                </DetailSection>
-                            )}
-
-                            {/* 详细信息 */}
-                            <DetailSection title="详细信息" icon={Award}>
-                                <div className="space-y-4">
-                                    {output.otherInfo?.authors && (
-                                        <InfoCard
-                                            title={
-                                                output.type === 'PAPER' ? '作者' :
-                                                    output.type === 'PUBLICATION' ? '作者' :
-                                                        (output.type === 'PROJECT') ? '项目/课题成员' :
-                                                            (output.type === 'INVENTION_PATENT' || output.type === 'UTILITY_PATENT') ? '发明人' :
-                                                                output.type === 'SOFTWARE_COPYRIGHT' ? '著作权人' : '相关人员'
-                                            }
-                                            value={output.otherInfo.authors}
-                                            className="col-span-2"
-                                        />
-                                    )}
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        {output.otherInfo?.journal && (
-                                            <InfoCard title="发表期刊" value={output.otherInfo.journal}/>
-                                        )}
-
-                                        {output.otherInfo?.journalPartition && output.type === 'PAPER' && (
-                                            <InfoCard title="期刊分区"
-                                                      value={getJournalPartitionName(output.otherInfo.journalPartition)}/>
-                                        )}
-
-                                        {(output.type === 'INVENTION_PATENT' || output.type === 'UTILITY_PATENT') && output.otherInfo?.legalStatus && (
-                                            <InfoCard title="法律状态" value={output.otherInfo.legalStatus}/>
-                                        )}
-
-                                        {(output.type === 'INVENTION_PATENT' || output.type === 'UTILITY_PATENT') && output.otherInfo?.patentCountry && (
-                                            <InfoCard title="专利国别/地区" value={output.otherInfo.patentCountry}/>
-                                        )}
-
-                                        {output.type === 'SOFTWARE_COPYRIGHT' && output.otherInfo?.softwareName && (
-                                            <InfoCard title="软件名称(全称)" value={output.otherInfo.softwareName}/>
-                                        )}
-
-                                        {output.type === 'SOFTWARE_COPYRIGHT' && output.otherInfo?.copyrightOwner && (
-                                            <InfoCard title="著作权人" value={output.otherInfo.copyrightOwner}/>
-                                        )}
-
-                                        {output.type === 'SOFTWARE_COPYRIGHT' && output.otherInfo?.registrationDate && (
-                                            <InfoCard title="登记日期"
-                                                      value={formatDate(output.otherInfo.registrationDate)}/>
-                                        )}
-
-                                        {output.type === 'OTHER_AWARD' && output.otherInfo?.awardRecipient && (
-                                            <InfoCard title="获奖人/单位" value={output.otherInfo.awardRecipient}/>
-                                        )}
-
-                                        {output.type === 'OTHER_AWARD' && output.otherInfo?.awardIssuingAuthority && (
-                                            <InfoCard title="颁发单位" value={output.otherInfo.awardIssuingAuthority}/>
-                                        )}
-
-                                        {output.type === 'OTHER_AWARD' && output.otherInfo?.awardTime && (
-                                            <InfoCard title="获奖时间" value={formatDate(output.otherInfo.awardTime)}/>
-                                        )}
-
-                                        {output.type === 'OTHER_AWARD' && output.otherInfo?.competitionLevel && (
+                                        {output.approvedAt && (
                                             <InfoCard
-                                                title="赛事层次"
+                                                title="审核时间"
+                                                value={formatDateTime(output.approvedAt)}
+                                                icon={Calendar}
+                                            />
+                                        )}
+
+                                        {output.submitter && (
+                                            <InfoCard
+                                                title="提交人"
+                                                value={output.submitter.realName || output.submitter.username}
+                                                icon={User}
+                                            />
+                                        )}
+
+                                        {output.outputNumber && (
+                                            <InfoCard
+                                                title={
+                                                    output.type === 'PROJECT' ? '项目编号/课题编号' :
+                                                        output.type === 'PUBLICATION' ? '出版物编号' :
+                                                            (output.type === 'INVENTION_PATENT' || output.type === 'UTILITY_PATENT') ? '专利识别号' :
+                                                                output.type === 'SOFTWARE_COPYRIGHT' ? '登记号' : '编号'
+                                                }
+                                                value={output.outputNumber}
+                                            />
+                                        )}
+
+                                        {output.dataset && (
+                                            <InfoCard
+                                                title="关联数据集"
                                                 value={
-                                                    {
-                                                        'unit': '单位内部',
-                                                        'district': '县区级',
-                                                        'city': '市级',
-                                                        'province': '省级',
-                                                        'national': '国家级',
-                                                        'international': '国际级'
-                                                    }[output.otherInfo.competitionLevel] || output.otherInfo.competitionLevel
+                                                    <span
+                                                        className="text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
+                                                        onClick={() => setIsDatasetModalOpen(true)}
+                                                    >
+                                                        {output.dataset.titleCn}
+                                                        <ExternalLink className="h-3 w-3"/>
+                                                    </span>
                                                 }
                                             />
                                         )}
                                     </div>
-
-                                    {output.publicationUrl && (
-                                        <InfoCard
-                                            title={output.type === 'PAPER' ? 'DOI链接' : 'URL链接'}
-                                            value={
-                                                <a
-                                                    href={output.publicationUrl.startsWith('http') ? output.publicationUrl : `https://${output.publicationUrl}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-blue-600 hover:underline break-all flex items-center gap-1"
-                                                >
-                                                    {output.publicationUrl}
-                                                    <ExternalLink className="h3 w-3"/>
-                                                </a>
-                                            }
-                                            className="col-span-2"
-                                        />
-                                    )}
-
-                                    {/* 其他信息 */}
-                                    {output.otherInfo && Object.keys(output.otherInfo).map((key) => {
-                                        const processedFields = [
-                                            'authors', 'journal', 'legalStatus', 'patentCountry',
-                                            'softwareName', 'copyrightOwner', 'registrationDate',
-                                            'awardRecipient', 'awardIssuingAuthority', 'awardTime', 'competitionLevel',
-                                            'journalPartition'
-                                        ];
-
-                                        if (processedFields.includes(key)) return null;
-
-                                        return (
-                                            <InfoCard
-                                                key={key}
-                                                title={key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                                value={String(output.otherInfo[key])}
-                                            />
-                                        );
-                                    })}
-                                </div>
-                            </DetailSection>
-
-                            {/* 文件信息 */}
-                            {managementMode && canViewSensitiveInfo && fileInfo && (
-                                <DetailSection title="说明文件" icon={FileText}>
-                                    <div className="bg-muted/30 rounded-lg p-4">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <FileText className="h-4 w-4 text-muted-foreground"/>
-                                                    <span className="text-sm font-medium truncate">
-                                                    {fileInfo.fileName}
-                                                </span>
-                                                </div>
-                                                <div className="text-xs text-muted-foreground">
-                                                    {formatFileSize(fileInfo.fileSize)}
-                                                </div>
-                                            </div>
-                                            <Button
-                                                onClick={handleDownloadFile}
-                                                variant="outline"
-                                                size="sm"
-                                                className="ml-4"
-                                            >
-                                                <Download className="h-4 w-4 mr-2"/>
-                                                下载
-                                            </Button>
-                                        </div>
-                                    </div>
                                 </DetailSection>
-                            )}
 
-                            {/* 审核信息 */}
-                            {managementMode && canViewSensitiveInfo && output.approved !== null && (
-                                <DetailSection title="审核信息" icon={Award}>
-                                    <div className="space-y-3">
-                                        <InfoCard
-                                            title="审核状态"
-                                            value={getStatusBadge(output.approved)}
-                                        />
+                                {/* 摘要 */}
+                                {output.abstractText && (
+                                    <DetailSection title={output.type === 'OTHER_AWARD' ? '成果简介' : '摘要'} icon={FileText}>
+                                        <div className="bg-muted/30 rounded-lg p-4">
+                                            <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                                                {output.abstractText}
+                                            </p>
+                                        </div>
+                                    </DetailSection>
+                                )}
 
-                                        {output.approved === false && output.rejectionReason && (
+                                {/* 详细信息 */}
+                                <DetailSection title="详细信息" icon={Award}>
+                                    <div className="space-y-4">
+                                        {output.otherInfo?.authors && (
                                             <InfoCard
-                                                title="拒绝原因"
-                                                value={<span
-                                                    className="text-destructive">{output.rejectionReason}</span>}
+                                                title={
+                                                    output.type === 'PAPER' ? '作者' :
+                                                        output.type === 'PUBLICATION' ? '作者' :
+                                                            (output.type === 'PROJECT') ? '项目/课题成员' :
+                                                                (output.type === 'INVENTION_PATENT' || output.type === 'UTILITY_PATENT') ? '发明人' :
+                                                                    output.type === 'SOFTWARE_COPYRIGHT' ? '著作权人' : '相关人员'
+                                                }
+                                                value={output.otherInfo.authors}
                                                 className="col-span-2"
                                             />
                                         )}
 
-                                        {output.approved === true && output.approver && (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {output.otherInfo?.journal && (
+                                                <InfoCard title="发表期刊" value={output.otherInfo.journal}/>
+                                            )}
+
+                                            {output.otherInfo?.journalPartition && output.type === 'PAPER' && (
+                                                <InfoCard title="期刊分区"
+                                                          value={getJournalPartitionName(output.otherInfo.journalPartition)}/>
+                                            )}
+
+                                            {(output.type === 'INVENTION_PATENT' || output.type === 'UTILITY_PATENT') && output.otherInfo?.legalStatus && (
+                                                <InfoCard title="法律状态" value={output.otherInfo.legalStatus}/>
+                                            )}
+
+                                            {(output.type === 'INVENTION_PATENT' || output.type === 'UTILITY_PATENT') && output.otherInfo?.patentCountry && (
+                                                <InfoCard title="专利国别/地区" value={output.otherInfo.patentCountry}/>
+                                            )}
+
+                                            {output.type === 'SOFTWARE_COPYRIGHT' && output.otherInfo?.softwareName && (
+                                                <InfoCard title="软件名称(全称)" value={output.otherInfo.softwareName}/>
+                                            )}
+
+                                            {output.type === 'SOFTWARE_COPYRIGHT' && output.otherInfo?.copyrightOwner && (
+                                                <InfoCard title="著作权人" value={output.otherInfo.copyrightOwner}/>
+                                            )}
+
+                                            {output.type === 'SOFTWARE_COPYRIGHT' && output.otherInfo?.registrationDate && (
+                                                <InfoCard title="登记日期"
+                                                          value={formatDate(output.otherInfo.registrationDate)}/>
+                                            )}
+
+                                            {output.type === 'OTHER_AWARD' && output.otherInfo?.awardRecipient && (
+                                                <InfoCard title="获奖人/单位" value={output.otherInfo.awardRecipient}/>
+                                            )}
+
+                                            {output.type === 'OTHER_AWARD' && output.otherInfo?.awardIssuingAuthority && (
+                                                <InfoCard title="颁发单位" value={output.otherInfo.awardIssuingAuthority}/>
+                                            )}
+
+                                            {output.type === 'OTHER_AWARD' && output.otherInfo?.awardTime && (
+                                                <InfoCard title="获奖时间" value={formatDate(output.otherInfo.awardTime)}/>
+                                            )}
+
+                                            {output.type === 'OTHER_AWARD' && output.otherInfo?.competitionLevel && (
+                                                <InfoCard
+                                                    title="赛事层次"
+                                                    value={
+                                                        {
+                                                            'unit': '单位内部',
+                                                            'district': '县区级',
+                                                            'city': '市级',
+                                                            'province': '省级',
+                                                            'national': '国家级',
+                                                            'international': '国际级'
+                                                        }[output.otherInfo.competitionLevel] || output.otherInfo.competitionLevel
+                                                    }
+                                                />
+                                            )}
+                                        </div>
+
+                                        {output.publicationUrl && (
                                             <InfoCard
-                                                title="审核人"
-                                                value={output.approver.realName || output.approver.username}
+                                                title={output.type === 'PAPER' ? 'DOI链接' : 'URL链接'}
+                                                value={
+                                                    <a
+                                                        href={output.publicationUrl.startsWith('http') ? output.publicationUrl : `https://${output.publicationUrl}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-blue-600 hover:underline break-all flex items-center gap-1"
+                                                    >
+                                                        {output.publicationUrl}
+                                                        <ExternalLink className="h-3 w-3"/>
+                                                    </a>
+                                                }
+                                                className="col-span-2"
                                             />
                                         )}
-                                    </div>
-                                </DetailSection>
-                            )}
-                            
-                            {/* 审核操作 */}
-                            {managementMode && canApprove && output.approved !== false && (
-                                <DetailSection title="审核操作" icon={Award}>
-                                    <div className="space-y-4">
-                                        {output.approved === null ? (
-                                            // 待审核状态：显示通过和拒绝按钮
-                                            <ApprovalActions
-                                                showCommentDialog={true}
-                                                requireCommentOnApprove={false}
-                                                requireCommentOnReject={true}
-                                                approveDialogTitle="审核通过确认"
-                                                rejectDialogTitle="审核拒绝原因"
-                                                onSuccess={handleApproval}
-                                                approveButtonText="通过"
-                                                rejectButtonText="拒绝"
-                                            />
-                                        ) : output.approved === true ? (
-                                            // 已通过状态：显示驳回通过按钮
-                                            <ApprovalActions
-                                                showCommentDialog={true}
-                                                requireCommentOnApprove={false}
-                                                requireCommentOnReject={true}
-                                                approveDialogTitle="审核通过确认"
-                                                rejectDialogTitle="驳回通过原因"
-                                                onSuccess={(approved, comment) => handleApproval(approved, comment)}
-                                                approveButtonText="通过"
-                                                rejectButtonText="驳回通过"
-                                                showRevokeApprovalButton={true}
-                                            />
-                                        ) : null}
-                                    </div>
-                                </DetailSection>
-                            )}
-                        </div>
-                    </ScrollArea>
-                </div>
 
-                <div className="flex justify-end gap-3 pt-4 border-t mt-4">
-                    <Button
-                        onClick={() => onOpenChange(false)}
-                        variant="outline"
-                    >
-                        关闭
-                    </Button>
-                </div>
-            </DialogContent>
+                                        {/* 其他信息 */}
+                                        {output.otherInfo && Object.keys(output.otherInfo).map((key) => {
+                                            const processedFields = [
+                                                'authors', 'journal', 'legalStatus', 'patentCountry',
+                                                'softwareName', 'copyrightOwner', 'registrationDate',
+                                                'awardRecipient', 'awardIssuingAuthority', 'awardTime', 'competitionLevel',
+                                                'journalPartition'
+                                            ];
+
+                                            if (processedFields.includes(key)) return null;
+
+                                            return (
+                                                <InfoCard
+                                                    key={key}
+                                                    title={key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                                    value={String(output.otherInfo[key])}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                </DetailSection>
+
+                                {/* 文件信息 */}
+                                {managementMode && canViewSensitiveInfo && fileInfo && (
+                                    <DetailSection title="说明文件" icon={FileText}>
+                                        <div className="bg-muted/30 rounded-lg p-4">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <FileText className="h-4 w-4 text-muted-foreground"/>
+                                                        <span className="text-sm font-medium truncate">
+                                                            {fileInfo.fileName}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        {formatFileSize(fileInfo.fileSize)}
+                                                    </div>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    {fileInfo.fileName?.toLowerCase().endsWith('.pdf') && (
+                                                        <Button
+                                                            onClick={handlePreviewPdf}
+                                                            variant="outline"
+                                                            size="sm"
+                                                        >
+                                                            <Eye className="h-4 w-4 mr-2"/>
+                                                            预览
+                                                        </Button>
+                                                    )}
+                                                    <Button
+                                                        onClick={handleDownloadFile}
+                                                        variant="outline"
+                                                        size="sm"
+                                                    >
+                                                        <Download className="h-4 w-4 mr-2"/>
+                                                        下载
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </DetailSection>
+                                )}
+
+                                {/* 审核信息 */}
+                                {managementMode && canViewSensitiveInfo && output.approved !== null && (
+                                    <DetailSection title="审核信息" icon={Award}>
+                                        <div className="space-y-3">
+                                            <InfoCard
+                                                title="审核状态"
+                                                value={getStatusBadge(output.approved)}
+                                            />
+
+                                            {output.approved === false && output.rejectionReason && (
+                                                <InfoCard
+                                                    title="拒绝原因"
+                                                    value={<span className="text-destructive">{output.rejectionReason}</span>}
+                                                    className="col-span-2"
+                                                />
+                                            )}
+
+                                            {output.approved === true && output.approver && (
+                                                <InfoCard
+                                                    title="审核人"
+                                                    value={output.approver.realName || output.approver.username}
+                                                />
+                                            )}
+                                        </div>
+                                    </DetailSection>
+                                )}
+
+                                {/* 审核操作 */}
+                                {managementMode && canApprove && output.approved !== false && (
+                                    <DetailSection title="审核操作" icon={Award}>
+                                        <div className="space-y-4">
+                                            {output.approved === null ? (
+                                                // 待审核状态：显示通过和拒绝按钮
+                                                <ApprovalActions
+                                                    showCommentDialog={true}
+                                                    requireCommentOnApprove={false}
+                                                    requireCommentOnReject={true}
+                                                    approveDialogTitle="审核通过确认"
+                                                    rejectDialogTitle="审核拒绝原因"
+                                                    onSuccess={handleApproval}
+                                                    approveButtonText="通过"
+                                                    rejectButtonText="拒绝"
+                                                />
+                                            ) : output.approved === true ? (
+                                                // 已通过状态：显示驳回通过按钮
+                                                <ApprovalActions
+                                                    showCommentDialog={true}
+                                                    requireCommentOnReject={true}
+                                                    approveDialogTitle="审核通过确认"
+                                                    rejectDialogTitle="驳回通过原因"
+                                                    onSuccess={(approved, comment) => handleApproval(approved, comment)}
+                                                    approveButtonText="通过"
+                                                    rejectButtonText="驳回通过"
+                                                    showRevokeApprovalButton={true}
+                                                />
+                                            ) : null}
+                                        </div>
+                                    </DetailSection>
+                                )}
+                            </div>
+                        </ScrollArea>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t mt-4">
+                        <Button
+                            onClick={() => onOpenChange(false)}
+                            variant="outline"
+                        >
+                            关闭
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {/* 数据集详情对话框 */}
             {output?.dataset && (
@@ -505,7 +575,15 @@ const OutputDetailDialog = ({
                     onOpenChange={setIsDatasetModalOpen}
                 />
             )}
-        </Dialog>
+
+            {/* PDF预览对话框 */}
+            <PDFPreview
+                open={isPdfPreviewOpen}
+                onOpenChange={setIsPdfPreviewOpen}
+                fileUrl={pdfPreviewUrl}
+                fileName={fileInfo?.fileName}
+            />
+        </>
     );
 };
 

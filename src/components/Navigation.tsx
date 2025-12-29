@@ -22,8 +22,7 @@ import {
 } from "lucide-react";
 import {useToast} from "@/hooks/use-toast";
 import {logout, getCurrentUser, getCurrentUserRoles} from "@/integrations/api/authApi.ts";
-import {institutionApi} from "@/integrations/api/institutionApi.ts";
-import {getCurrentUserInfoFromSession} from "@/lib/authUtils.ts";
+import {clearTokens, getCurrentUserInfoFromSession} from "@/lib/authUtils.ts";
 import {getPermissionRoleDisplayName, PermissionRoles} from "@/lib/permissionUtils.ts";
 
 const navigationItems = [
@@ -44,26 +43,53 @@ export function Navigation() {
     const [userProfile, setUserProfile] = useState<any>(null);
     const [userRoles, setUserRoles] = useState<string[]>([]);
     const {toast} = useToast();
-
+    
+    // 创建全局导航函数
     useEffect(() => {
-        // 检查现有会话
-        const userInfo = getCurrentUserInfoFromSession();
+        (window as any).globalNavigate = (path: string) => {
+            navigate(path);
+        };
+        
+        return () => {
+            (window as any).globalNavigate = null;
+        };
+    }, [navigate]);
 
+    const checkAuthStatus = () => {
+        const userInfo = getCurrentUserInfoFromSession();
+        
         if (userInfo) {
-            // 从sessionStorage中获取用户信息
             try {
                 setUserProfile(userInfo);
                 setUser(userInfo.user);
                 setUserRoles(userInfo.roles);
-                setSession({token: localStorage.getItem('authToken')});
+                setSession({token: localStorage.getItem('access_token')});
             } catch (error) {
-                console.error("Failed to parse user info from sessionStorage:", error);
-                // 如果解析失败，清除token并跳转到登录页
-                localStorage.removeItem('authToken');
-                sessionStorage.removeItem('userInfo');
-                navigate('/auth');
+                clearTokens();
             }
+        } else {
+            // 如果没有用户信息，确保状态正确设置
+            setUserProfile(null);
+            setUser(null);
+            setUserRoles([]);
+            setSession(null);
         }
+    };
+    
+    useEffect(() => {
+        // 检查现有会话
+        checkAuthStatus();
+        
+        // 监听认证状态变化事件
+        const handleAuthStatusChange = () => {
+            checkAuthStatus();
+        };
+        
+        window.addEventListener('authStatusChanged', handleAuthStatusChange);
+        
+        return () => {
+            window.removeEventListener('authStatusChanged', handleAuthStatusChange);
+        };
     }, []);
 
     const handleLogout = async () => {
@@ -103,7 +129,7 @@ export function Navigation() {
                         return user && hasAdminPermission();
                     }
 
-                    if (userProfile === null && item.href === "/profile") {
+                    if (userProfile === null && (item.href === "/profile" || item.href === "/admin")) {
                         return false;
                     }
 
@@ -122,7 +148,15 @@ export function Navigation() {
                         <Link
                             key={item.href}
                             to={href}
-                            onClick={() => mobile && setIsOpen(false)}
+                            onClick={(e) => {
+                                // 检查认证状态，如果用户未认证但尝试访问需要认证的页面，阻止默认行为
+                                const currentUserInfo = getCurrentUserInfoFromSession();
+                                if (!currentUserInfo && ['/admin', '/profile'].includes(item.href)) {
+                                    e.preventDefault();
+                                    navigate('/auth');
+                                }
+                                mobile && setIsOpen(false);
+                            }}
                             className={`group flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                                 isActive
                                     ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg"

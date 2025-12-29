@@ -232,7 +232,7 @@ const Index = () => {
                                     <Target className="h-5 w-5 text-blue-600" />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-semibold text-gray-900">研究方向分布</h3>
+                                    <h3 className="text-lg font-semibold text-gray-900">研究学科分布</h3>
                                     <p className="text-sm text-muted-foreground">各学科领域研究热度</p>
                                 </div>
                             </div>

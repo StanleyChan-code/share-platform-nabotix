@@ -1,26 +1,24 @@
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import {useEffect, useState} from "react";
+import {ScrollArea} from "@/components/ui/scroll-area";
+import {Button} from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
-import { UpdateUserRequest, userApi } from "@/integrations/api/userApi";
-import { ID_TYPES, EDUCATION_LEVELS } from "@/lib/enums";
+import {useToast} from "@/hooks/use-toast";
+import {UpdateUserRequest, userApi} from "@/integrations/api/userApi";
+import {ID_TYPES, EDUCATION_LEVELS} from "@/lib/enums";
 import {
-    Select,
     SelectContent,
     SelectItem,
-    SelectTrigger,
-    SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Loader2, User, Mail, Phone, IdCard, GraduationCap, Briefcase, Target, Asterisk } from "lucide-react";
+import {Card, CardContent} from "@/components/ui/card";
+import {Separator} from "@/components/ui/separator";
+import {Loader2, User, Mail, Phone, IdCard, GraduationCap, Briefcase, Target, Asterisk} from "lucide-react";
 import {FormValidator, Input, ValidatedSelect} from "@/components/ui/FormValidator";
-import { z } from "zod";
+import {z} from "zod";
 
 // 修正表单验证规则 - 只有真实姓名、手机号、证件类型、证件号码是必填
 const formSchema = z.object({
@@ -28,7 +26,7 @@ const formSchema = z.object({
     realName: z.string().min(1, "真实姓名不能为空"),
     phone: z.string().min(1, "手机号不能为空").regex(/^1[3-9]\d{9}$/, "请输入有效的手机号码"),
     idType: z.enum(Object.keys(ID_TYPES) as [string, ...string[]], {
-        errorMap: () => ({ message: "请选择证件类型" })
+        errorMap: () => ({message: "请选择证件类型"})
     }),
     idNumber: z.string().min(1, "证件号码不能为空"),
 
@@ -47,8 +45,8 @@ interface EditUserDialogProps {
     onUserUpdated: () => void;
 }
 
-const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: EditUserDialogProps) => {
-    const { toast } = useToast();
+const EditUserDialog = ({open, onOpenChange, user, onUserUpdated}: EditUserDialogProps) => {
+    const {toast} = useToast();
     const [formData, setFormData] = useState({
         username: "",
         realName: "",
@@ -165,8 +163,8 @@ const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: EditUserDia
             icon: User,
             required: true,
             fields: [
-                { name: "realName", label: "真实姓名", icon: User, required: true },
-                { name: "phone", label: "手机号码", icon: Phone, required: true, type: "tel", disabled: true },
+                {name: "realName", label: "真实姓名", icon: User, required: true},
+                {name: "phone", label: "手机号码", icon: Phone, required: true, type: "tel", disabled: true},
             ]
         },
         {
@@ -184,7 +182,7 @@ const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: EditUserDia
                     required: true,
                     placeholder: "请选择证件类型"
                 },
-                { name: "idNumber", label: "证件号码", icon: IdCard, required: true },
+                {name: "idNumber", label: "证件号码", icon: IdCard, required: true},
             ]
         },
         {
@@ -193,8 +191,8 @@ const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: EditUserDia
             icon: Mail,
             required: false,
             fields: [
-                { name: "username", label: "用户名", icon: User, required: false },
-                { name: "email", label: "邮箱", icon: Mail, required: false, type: "email" },
+                {name: "username", label: "用户名", icon: User, required: false},
+                {name: "email", label: "邮箱", icon: Mail, required: false, type: "email"},
             ]
         },
         {
@@ -212,7 +210,7 @@ const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: EditUserDia
                     required: false,
                     placeholder: "可选项，请选择学历"
                 },
-                { name: "field", label: "专业领域", icon: Target, required: false },
+                {name: "field", label: "专业领域", icon: Target, required: false},
             ]
         },
         {
@@ -221,7 +219,7 @@ const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: EditUserDia
             icon: Briefcase,
             required: false,
             fields: [
-                { name: "title", label: "职称", icon: Briefcase, required: false },
+                {name: "title", label: "职称", icon: Briefcase, required: false},
             ]
         }
     ];
@@ -231,10 +229,13 @@ const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: EditUserDia
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent
+                className="max-w-2xl max-h-[90vh] flex flex-col"
+                onInteractOutside={(e) => e.preventDefault()}
+            >
                 <DialogHeader className="pb-4">
                     <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                        <User className="h-5 w-5" />
+                        <User className="h-5 w-5"/>
                         编辑用户信息
                     </DialogTitle>
                     <div className="space-y-2">
@@ -243,7 +244,7 @@ const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: EditUserDia
                         </p>
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
                             <div className="flex items-center gap-1">
-                                <Asterisk className="h-3 w-3 text-red-500" />
+                                <Asterisk className="h-3 w-3 text-red-500"/>
                                 <span>标记的字段为必填项</span>
                             </div>
                             <div className="w-px h-3 bg-border"></div>
@@ -252,107 +253,115 @@ const EditUserDialog = ({ open, onOpenChange, user, onUserUpdated }: EditUserDia
                     </div>
                 </DialogHeader>
 
-                <FormValidator onSubmit={handleSubmit} className="space-y-6">
-                    {fieldGroups.map((group, groupIndex) => (
-                        <Card key={group.title} className={group.required ? "border-l-4 border-l-red-500" : "border-l-4 border-l-blue-500"}>
-                            <CardContent className="p-4">
-                                <div className="mb-4">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <group.icon className={`h-4 w-4 ${group.required ? 'text-red-500' : 'text-blue-500'}`} />
-                                        <h3 className="font-semibold text-base">{group.title}</h3>
-                                        {!group.required && (
-                                            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">选填</span>
-                                        )}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground ml-6">{group.description}</p>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {group.fields.map((field) => (
-                                        <div key={field.name} className="space-y-2">
-                                            <div className="flex items-center gap-2 text-sm">
-                                                <field.icon className="h-3 w-3" />
-                                                {field.label}
-                                                {field.required ? (
-                                                    <Asterisk className="h-3 w-3 text-red-500" />
-                                                ) : (
-                                                    <span className="text-xs text-muted-foreground">选填</span>
+                <div className="flex-1 overflow-hidden overflow-y-auto">
+                    <ScrollArea className="h-full w-full pr-4">
+                        <FormValidator onSubmit={handleSubmit} className="space-y-6">
+                            {fieldGroups.map((group, groupIndex) => (
+                                <Card key={group.title}
+                                      className={group.required ? "border-l-4 border-l-red-500" : "border-l-4 border-l-blue-500"}>
+                                    <CardContent className="p-4">
+                                        <div className="mb-4">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <group.icon
+                                                    className={`h-4 w-4 ${group.required ? 'text-red-500' : 'text-blue-500'}`}/>
+                                                <h3 className="font-semibold text-base">{group.title}</h3>
+                                                {!group.required && (
+                                                    <span
+                                                        className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">选填</span>
                                                 )}
                                             </div>
-                                            {field.type === "select" ? (
-                                                <ValidatedSelect required={field.required}
-                                                                 name={field.name}
-                                                                 placeholder={field.placeholder || (field.required ? `请选择${field.label}` : `可选项，请选择${field.label}`)}
-                                                                 errorMessage={`请选择${field.label}`}
-                                                                 value={formData[field.name as keyof typeof formData] as string}
-                                                                 onValueChange={(value) => handleInputChange(field.name, value)}>
-                                                    <SelectContent>
-                                                        {Object.entries(field.options!).map(([key, value]) => (
-                                                            <SelectItem key={key} value={key}>
-                                                                {value.toString()}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </ValidatedSelect>
-                                            ) : (
-                                                <Input
-                                                    value={formData[field.name as keyof typeof formData] as string}
-                                                    onChange={(e) => handleInputChange(field.name, e.target.value)}
-                                                    disabled={field.disabled}
-                                                    type={field.type || "text"}
-                                                    placeholder={field.required ? `请输入${field.label}` : `可选项，请输入${field.label}`}
-                                                    className="transition-colors focus:border-primary"
-                                                    idType={field.name === 'idNumber' ? idTypeValue : undefined}
-                                                    required={field.required}
-                                                    validationType={
-                                                        field.name === 'phone' ? 'phone' :
-                                                            field.name === 'email' ? 'email' :
-                                                                field.name === 'idNumber' ? 'idNumber' : undefined
-                                                    }
-                                                    validateOnSubmit={field.required}
-                                                />
-                                            )}
+                                            <p className="text-xs text-muted-foreground ml-6">{group.description}</p>
                                         </div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                            {groupIndex < fieldGroups.length - 1 && (
-                                <Separator className="mx-4 w-auto" />
-                            )}
-                        </Card>
-                    ))}
 
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t">
-                        <div className="text-xs text-muted-foreground">
-                            必填字段：真实姓名、手机号、证件类型、证件号码
-                        </div>
-                        <div className="flex space-x-3 w-full sm:w-auto">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => onOpenChange(false)}
-                                disabled={isLoading}
-                                className="min-w-20 flex-1 sm:flex-none"
-                            >
-                                取消
-                            </Button>
-                            <Button
-                                type="submit"
-                                disabled={isLoading}
-                                className="min-w-20 flex-1 sm:flex-none"
-                            >
-                                {isLoading ? (
-                                    <>
-                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                        保存中...
-                                    </>
-                                ) : (
-                                    "保存更改"
-                                )}
-                            </Button>
-                        </div>
-                    </div>
-                </FormValidator>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {group.fields.map((field) => (
+                                                <div key={field.name} className="space-y-2">
+                                                    <div className="flex items-center gap-2 text-sm">
+                                                        <field.icon className="h-3 w-3"/>
+                                                        {field.label}
+                                                        {field.required ? (
+                                                            <Asterisk className="h-3 w-3 text-red-500"/>
+                                                        ) : (
+                                                            <span className="text-xs text-muted-foreground">选填</span>
+                                                        )}
+                                                    </div>
+                                                    {field.type === "select" ? (
+                                                        <ValidatedSelect required={field.required}
+                                                                         name={field.name}
+                                                                         placeholder={field.placeholder || (field.required ? `请选择${field.label}` : `可选项，请选择${field.label}`)}
+                                                                         errorMessage={`请选择${field.label}`}
+                                                                         value={formData[field.name as keyof typeof formData] as string}
+                                                                         onValueChange={(value) => handleInputChange(field.name, value)}>
+                                                            <SelectContent>
+                                                                {Object.entries(field.options!).map(([key, value]) => (
+                                                                    <SelectItem key={key} value={key}>
+                                                                        {value.toString()}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </ValidatedSelect>
+                                                    ) : (
+                                                        <Input
+                                                            value={formData[field.name as keyof typeof formData] as string}
+                                                            onChange={(e) => handleInputChange(field.name, e.target.value)}
+                                                            disabled={field.disabled}
+                                                            type={field.type || "text"}
+                                                            placeholder={field.required ? `请输入${field.label}` : `可选项，请输入${field.label}`}
+                                                            className="transition-colors focus:border-primary"
+                                                            idType={field.name === 'idNumber' ? idTypeValue : undefined}
+                                                            required={field.required}
+                                                            validationType={
+                                                                field.name === 'phone' ? 'phone' :
+                                                                    field.name === 'email' ? 'email' :
+                                                                        field.name === 'idNumber' ? 'idNumber' : undefined
+                                                            }
+                                                            validateOnSubmit={field.required}
+                                                        />
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                    {groupIndex < fieldGroups.length - 1 && (
+                                        <Separator className="mx-4 w-auto"/>
+                                    )}
+                                </Card>
+                            ))}
+
+                            <div
+                                className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t">
+                                <div className="text-xs text-muted-foreground">
+                                    必填字段：真实姓名、手机号、证件类型、证件号码
+                                </div>
+                                <div className="flex space-x-3 w-full sm:w-auto">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => onOpenChange(false)}
+                                        disabled={isLoading}
+                                        className="min-w-20 flex-1 sm:flex-none"
+                                    >
+                                        取消
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        disabled={isLoading}
+                                        className="min-w-20 flex-1 sm:flex-none"
+                                    >
+                                        {isLoading ? (
+                                            <>
+                                                <Loader2 className="h-4 w-4 animate-spin mr-2"/>
+                                                保存中...
+                                            </>
+                                        ) : (
+                                            "保存更改"
+                                        )}
+                                    </Button>
+                                </div>
+                            </div>
+                        </FormValidator>
+                    </ScrollArea>
+                </div>
             </DialogContent>
         </Dialog>
     );

@@ -4,7 +4,6 @@ import {Navigation} from "@/components/Navigation";
 import {Badge} from "@/components/ui/badge";
 import {Card, CardContent} from "@/components/ui/card";
 import {useToast} from "@/hooks/use-toast";
-import {updateUserProfile} from "@/integrations/api/authApi";
 import {getPermissionRoleDisplayName} from "@/lib/permissionUtils";
 import ProfileInfo from "@/components/profile/ProfileInfo";
 import ApplicationsTab from "@/components/profile/ApplicationsTab";
@@ -83,7 +82,8 @@ const Profile = () => {
                 setLoading(false);
             } catch (error) {
                 console.error("解析用户信息失败:", error);
-                localStorage.removeItem('authToken');
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
                 sessionStorage.removeItem('userInfo');
                 navigate('/auth');
             }

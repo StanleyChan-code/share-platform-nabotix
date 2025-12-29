@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table.tsx";
-import { Users, Database, Calendar, TrendingUp, Building, Link, Pen, User, Mail, MapPin } from "lucide-react";
+import { Users, Database, Calendar, TrendingUp, Building, Link, Pen, User, Mail, MapPin, Share } from "lucide-react";
 import { formatDate } from "@/lib/utils.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { useState, useEffect } from "react";
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { InstitutionSelector } from "@/components/dataset/InstitutionSelector";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import {canUploadDataset} from "@/lib/permissionUtils.ts";
+import { CopyButton } from "@/components/ui/CopyButton.tsx";
 
 interface OverviewTabProps {
   dataset: any;
@@ -143,7 +144,7 @@ export function OverviewTab({
   return (
       <div className="space-y-6 p-2">
         {/* 统计信息卡片组 - 按照图片样式 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
               icon={Users}
               label="样本量"
@@ -177,30 +178,43 @@ export function OverviewTab({
                 <Database className="h-5 w-5 text-primary" />
                 基本信息
               </CardTitle>
-                {canUploadDataset() && useAdvancedQuery && (
-                    <div className="flex space-x-2">
-                        {isEditing ? (
-                            <>
-                                <Button variant="outline" onClick={handleCancelEdit} size="sm">
-                                    取消
-                                </Button>
-                                <Button onClick={handleSaveChanges} size="sm">
-                                    保存更改
-                                </Button>
-                            </>
-                        ) : (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleEditClick}
-                                className="flex items-center gap-2"
-                            >
-                                <Pen className="h-4 w-4" />
-                                编辑
-                            </Button>
-                        )}
-                    </div>
-                )}
+                <div className="flex space-x-2">
+                  <CopyButton
+                    text={`${window.location.origin}/datasets?id=${dataset.id}`}
+                    title="分享数据集"
+                    description="点击下方文本框复制数据集链接"
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2 hover:bg-green-50 hover:text-green-600 border-green-200"
+                  >
+                    <Share className="h-4 w-4" />
+                    复制分享链接
+                  </CopyButton>
+                  {canUploadDataset() && useAdvancedQuery && (
+                      <div className="flex space-x-2">
+                          {isEditing ? (
+                              <>
+                                  <Button variant="outline" onClick={handleCancelEdit} size="sm">
+                                      取消
+                                  </Button>
+                                  <Button onClick={handleSaveChanges} size="sm">
+                                      保存更改
+                                  </Button>
+                              </>
+                          ) : (
+                              <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={handleEditClick}
+                                  className="flex items-center gap-2"
+                              >
+                                  <Pen className="h-4 w-4" />
+                                  编辑
+                              </Button>
+                          )}
+                      </div>
+                  )}
+                </div>
             </div>
           </CardHeader>
 

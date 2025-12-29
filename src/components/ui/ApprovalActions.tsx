@@ -196,7 +196,7 @@ const ApprovalActions = ({
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>
               {isApprove ? approveDialogTitle : rejectDialogTitle}

@@ -3,7 +3,17 @@ import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/compo
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import {useToast} from "@/hooks/use-toast.ts";
-import {CheckCircle, Clock, Plus, Loader2, Search, ChevronRightIcon, ChevronLeftIcon, X} from "lucide-react";
+import {CheckCircle, Clock, Plus, Loader2, Search, ChevronRightIcon, ChevronLeftIcon, X, Eye, EyeOff, Trash2} from "lucide-react";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog.tsx";
 import AddInstitutionForm from "@/components/admin/institution/AddInstitutionForm.tsx";
 import {formatDate} from "@/lib/utils.ts";
 import InstitutionProfileTab from "@/components/admin/institution/InstitutionProfileTab.tsx";
@@ -13,12 +23,19 @@ import {InstitutionTypes} from "@/lib/enums.ts";
 import { ApiResponse, Page } from "@/integrations/api/client";
 import { useDebounce } from "@/hooks/useDebounce";
 import {Input} from "@/components/ui/FormValidator.tsx";
+import { getCurrentUserRolesFromSession } from "@/lib/authUtils.ts";
+import { PermissionRoles } from "@/lib/permissionUtils.ts";
 
 const InstitutionManagementTab = () => {
     const [showAddInstitutionForm, setShowAddInstitutionForm] = useState(false);
     const [selectedInstitution, setSelectedInstitution] = useState<Institution | null>(null);
     const [institutions, setInstitutions] = useState<Institution[]>([]);
     const [loading, setLoading] = useState(false);
+    const [deleteDialog, setDeleteDialog] = useState({
+        open: false,
+        id: "",
+        fullName: ""
+    });
     const {toast} = useToast();
 
     // 分页相关状态
@@ -92,6 +109,57 @@ const InstitutionManagementTab = () => {
         fetchInstitutions(page, debouncedSearchTerm);
     };
 
+    const toggleVerification = async (id: string, verified: boolean) => {
+        try {
+            const response = await institutionApi.verifyInstitution(id, verified);
+            toast({
+                title: "操作成功",
+                description: `机构${verified ? '公开' : '取消公开'}状态已更新`,
+            });
+            // 重新获取数据
+            fetchInstitutions(currentPage, debouncedSearchTerm);
+        } catch (error: any) {
+            console.error('更新机构公开状态失败:', error);
+            toast({
+                title: "操作失败",
+                description: error.message || `更新机构公开状态失败`,
+                variant: "destructive",
+            });
+        }
+    };
+
+    const openDeleteDialog = (id: string, fullName: string) => {
+        setDeleteDialog({ open: true, id, fullName });
+    };
+
+    const handleDeleteInstitution = async () => {
+        const { id, fullName } = deleteDialog;
+        
+        try {
+            const response = await institutionApi.deleteInstitution(id);
+            toast({
+                title: "删除成功",
+                description: "机构已成功删除",
+            });
+            // 重新获取数据
+            fetchInstitutions(currentPage, debouncedSearchTerm);
+            
+            // 如果删除的是当前选中的机构，则清除选择
+            if (selectedInstitution && selectedInstitution.id === id) {
+                setSelectedInstitution(null);
+            }
+        } catch (error: any) {
+            console.error('删除机构失败:', error);
+            toast({
+                title: "删除失败",
+                description: error.message || "删除机构失败",
+                variant: "destructive",
+            });
+        } finally {
+            setDeleteDialog({ open: false, id: "", fullName: "" });
+        }
+    };
+
     return (
         <div className="space-y-6">
                         <AddInstitutionForm
@@ -139,10 +207,17 @@ const InstitutionManagementTab = () => {
                                         <TableHead>类型</TableHead>
                                         <TableHead>联系邮箱</TableHead>
                                         <TableHead>创建时间</TableHead>
+                                        <TableHead>状态</TableHead>
+                                        <TableHead>操作</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {institutions.map((institution) => (
+                                    {institutions.map((institution) => {
+                                        const userRoles = getCurrentUserRolesFromSession();
+                                        const canVerify = userRoles.includes(PermissionRoles.PLATFORM_ADMIN) || userRoles.includes(PermissionRoles.INSTITUTION_SUPERVISOR);
+                                        const canDelete = userRoles.includes(PermissionRoles.PLATFORM_ADMIN);
+                                        
+                                        return (
                                         <TableRow
                                             key={institution.id}
                                             className="cursor-pointer hover:bg-muted/50"
@@ -153,8 +228,44 @@ const InstitutionManagementTab = () => {
                                             <TableCell>{InstitutionTypes[institution.type]}</TableCell>
                                             <TableCell>{institution.contactEmail}</TableCell>
                                             <TableCell>{formatDate(institution.createdAt)}</TableCell>
+                                            <TableCell>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        toggleVerification(institution.id, !institution.verified);
+                                                    }}
+                                                    disabled={!canVerify}
+                                                    className={institution.verified ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}
+                                                ><span className={"inline-flex items-center justify-center gap-1 px-2 py-1 rounded-full text-xs font-medium min-w-20"}>
+                                                    {institution.verified ? (
+                                                        <><Eye className="h-4 w-4" />公开</>
+                                                    ) : (
+                                                        <><EyeOff className="h-4 w-4" />不公开</>
+                                                    )}
+                                                    </span>
+                                                </Button>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            openDeleteDialog(institution.id, institution.fullName);
+                                                        }}
+                                                        disabled={!canDelete}
+                                                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                                                        title="删除机构"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
                                         </TableRow>
-                                    ))}
+                                    )})}
                                 </TableBody>
                             </Table>
 
@@ -216,6 +327,23 @@ const InstitutionManagementTab = () => {
                     <InstitutionProfileTab institutionId={selectedInstitution.id} />
                 </div>
             )}
+            
+            <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog(prev => ({...prev, open}))}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>确认删除</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            确定要删除机构 "<strong>{deleteDialog.fullName}</strong>" 吗？此操作不可逆，请谨慎操作。
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>取消</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteInstitution} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            删除
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };

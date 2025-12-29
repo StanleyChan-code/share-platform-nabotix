@@ -1,16 +1,10 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useCallback, useEffect } from 'react';
 import ReactPaginate from "react-paginate";
 import {
-  Application,
-  reviewApplicationByApprover,
-  getAllApplications, reviewApplicationByProvider
+  Application, getAllApplications
 } from '@/integrations/api/applicationApi';
-import {
-  FileText,
-  Filter
-} from "lucide-react";
-import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {  FileText} from "lucide-react";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import ApplicationDetailDialog from './ApplicationDetailDialog';
 import { useToast } from '@/components/ui/use-toast';
 import { DatasetDetailModal } from '@/components/dataset/DatasetDetailModal';
@@ -80,11 +74,6 @@ const ApplicationReviewTab: React.FC = () => {
       setLoading(false);
     }
   }, [institutionId, debouncedSearchTerm, selectedStatus, toast]);
-
-  // 初始加载和筛选条件变化时重新加载
-  useEffect(() => {
-    fetchApplications(0);
-  }, [fetchApplications]);
   
   // 监听防抖后的搜索值变化，执行搜索
   useEffect(() => {

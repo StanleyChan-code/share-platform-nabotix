@@ -202,8 +202,8 @@ export const datasetApi = {
         providerId?: string;
         subjectAreaId?: string;
         institutionId?: string;
-        dateFrom?: string;
-        dateTo?: string;
+        dateFrom?: string | Date | null;
+        dateTo?: string | Date | null;
         loadTimeline?: boolean;
         sortBy?: string;
     }) {

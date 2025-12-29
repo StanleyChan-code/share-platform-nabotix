@@ -29,7 +29,7 @@ export function BaselineDatasetSelector({ value, onChange }: BaselineDatasetSele
         size={10}
       />
       <p className="text-xs text-muted-foreground">
-        只显示您上传的基线数据集
+        请选择您上传的已审核基线数据集
       </p>
     </div>
   );

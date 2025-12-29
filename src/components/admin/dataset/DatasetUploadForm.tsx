@@ -932,7 +932,6 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                           value={formData.parentDatasetId}
                           onChange={(value) => setFormData(prev => ({ ...prev, parentDatasetId: value }))}
                       />
-                      <p className="text-xs text-muted-foreground">选择此随访数据集对应的基线数据集</p>
                     </div>
                 )}
               </div>

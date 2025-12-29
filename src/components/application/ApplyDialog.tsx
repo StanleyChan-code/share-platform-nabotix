@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Upload, AlertTriangle, Asterisk, ClockIcon, CheckCircle, XCircle } from "lucide-react";
+import { AlertCircle, Upload, AlertTriangle, Asterisk, ClockIcon, CheckCircle, XCircle, User } from "lucide-react";
 import { toast } from "sonner";
 import { createApplication, CreateApplicationRequest, Application } from "@/integrations/api/applicationApi";
 import { Dataset } from "@/integrations/api/datasetApi";
@@ -146,6 +146,13 @@ const ApplyDialog = ({ open, onOpenChange, datasetId, onSubmitted }: ApplyDialog
         return selectedDataset.applicationInstitutionIds.includes(userInstitutionId);
     };
 
+    // 检查当前用户是否为数据集提供者
+    const isCurrentUserDatasetProvider = () => {
+        if (!selectedDataset || !getCurrentUserInfoFromSession()) return false;
+        const currentUserId = getCurrentUserInfoFromSession().user.id;
+        return selectedDataset.provider && selectedDataset.provider.id === currentUserId;
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         // 验证必填字段
         if (!formData.agreeToTerms) {
@@ -277,7 +284,10 @@ const ApplyDialog = ({ open, onOpenChange, datasetId, onSubmitted }: ApplyDialog
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[425px] md:max-w-[500px] lg:max-w-[700px] max-h-[85vh] min-h-[20vh] overflow-hidden flex flex-col">
+            <DialogContent 
+                className="sm:max-w-[425px] md:max-w-[500px] lg:max-w-[700px] max-h-[85vh] min-h-[20vh] overflow-hidden flex flex-col"
+                onInteractOutside={(e) => e.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle>数据集申请</DialogTitle>
                     <DialogDescription>
@@ -352,6 +362,19 @@ const ApplyDialog = ({ open, onOpenChange, datasetId, onSubmitted }: ApplyDialog
                                         )}
                                     </div>
 
+                                    {/* 检查当前用户是否为数据集提供者，如果是则显示无需申请的提示 */}
+                                    {isCurrentUserDatasetProvider() && (
+                                        <Alert variant="default" className="border-blue-200 bg-blue-50">
+                                            <User className="h-4 w-4 text-blue-600" />
+                                            <AlertDescription className="text-blue-800">
+                                                <div className="flex flex-col">
+                                                    <span className="font-semibold">无需申请</span>
+                                                    <span>您是该数据集的提供者，可以直接下载数据集数据，无需提交申请。</span>
+                                                </div>
+                                            </AlertDescription>
+                                        </Alert>
+                                    )}
+
                                     {/* 申请状态提醒 */}
                                     {loadingApplication ? (
                                         <div className="p-4 text-center text-muted-foreground">
@@ -387,246 +410,263 @@ const ApplyDialog = ({ open, onOpenChange, datasetId, onSubmitted }: ApplyDialog
                                         </>
                                     )}
 
-                                    {isDatasetAvailableToUser() && !pendingApplication && !applicationStatus && (
+                                    {/* 只有当用户不是数据集提供者时才显示申请表单 */}
+                                    {!isCurrentUserDatasetProvider() && !pendingApplication && !applicationStatus && (
                                         <>
-                                            {/* Applicant Role Selection */}
-                                            <div className="space-y-4">
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="applicantRole" className="flex items-center gap-1">
-                                                        申请者角色类型 <Asterisk className="h-3 w-3 text-red-500" />
-                                                    </Label>
-                                                    <ValidatedSelect
-                                                        id="applicantRole"
-                                                        name="applicantRole"
-                                                        required={true}
-                                                        placeholder={"请选择申请者角色类型"}
-                                                        errorMessage={"请选择申请者角色类型"}
-                                                        value={formData.applicantRole}
-                                                        onValueChange={(value) => {
-                                                            setFormData(prev => ({
-                                                                ...prev,
-                                                                applicantRole: value,
-                                                                applicantType: ""
-                                                            }));
-                                                        }}
-                                                    >
-                                                        <SelectContent>
-                                                            <SelectItem value="TEAM_RESEARCHER">团队研究者</SelectItem>
-                                                            <SelectItem
-                                                                value="COLLABORATIVE_RESEARCHER">合作团队研究者</SelectItem>
-                                                        </SelectContent>
-                                                    </ValidatedSelect>
-                                                </div>
+                                            {/* 机构限制提示 */}
+                                            {!isDatasetAvailableToUser() && (
+                                                <Alert variant="destructive" className="mt-3">
+                                                    <AlertTriangle className="h-4 w-4" />
+                                                    <AlertDescription>
+                                                        该数据集暂未对用户所属机构开放申请
+                                                    </AlertDescription>
+                                                </Alert>
+                                            )}
 
-                                                {formData.applicantRole === "TEAM_RESEARCHER" && (
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="applicantType" className="flex items-center gap-1">
-                                                            研究者类型 <Asterisk className="h-3 w-3 text-red-500" />
-                                                        </Label>
-                                                        <ValidatedSelect
-                                                            id="applicantType"
-                                                            name="applicantType"
-                                                            placeholder={"请选择研究者类型"}
-                                                            errorMessage={"请选择研究者类型"}
-                                                            value={formData.applicantType}
-                                                            onValueChange={(value) => setFormData(prev => ({
-                                                                ...prev,
-                                                                applicantType: value
-                                                            }))}
-                                                            required={formData.applicantRole === "TEAM_RESEARCHER"}
-                                                        >
-                                                            <SelectContent>
-                                                                <SelectItem value="employee">在职工作人员</SelectItem>
-                                                                <SelectItem value="student">学生</SelectItem>
-                                                            </SelectContent>
-                                                        </ValidatedSelect>
+                                            {isDatasetAvailableToUser() && (
+                                                <>
+                                                    {/* Applicant Role Selection */}
+                                                    <div className="space-y-4">
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="applicantRole" className="flex items-center gap-1">
+                                                                申请者角色类型 <Asterisk className="h-3 w-3 text-red-500" />
+                                                            </Label>
+                                                            <ValidatedSelect
+                                                                id="applicantRole"
+                                                                name="applicantRole"
+                                                                required={true}
+                                                                placeholder={"请选择申请者角色类型"}
+                                                                errorMessage={"请选择申请者角色类型"}
+                                                                value={formData.applicantRole}
+                                                                onValueChange={(value) => {
+                                                                    setFormData(prev => ({
+                                                                        ...prev,
+                                                                        applicantRole: value,
+                                                                        applicantType: ""
+                                                                    }));
+                                                                }}
+                                                            >
+                                                                <SelectContent>
+                                                                    <SelectItem value="TEAM_RESEARCHER">团队研究者</SelectItem>
+                                                                    <SelectItem
+                                                                        value="COLLABORATIVE_RESEARCHER">合作团队研究者</SelectItem>
+                                                                </SelectContent>
+                                                            </ValidatedSelect>
+                                                        </div>
+
+                                                        {formData.applicantRole === "TEAM_RESEARCHER" && (
+                                                            <div className="space-y-2">
+                                                                <Label htmlFor="applicantType" className="flex items-center gap-1">
+                                                                    研究者类型 <Asterisk className="h-3 w-3 text-red-500" />
+                                                                </Label>
+                                                                <ValidatedSelect
+                                                                    id="applicantType"
+                                                                    name="applicantType"
+                                                                    placeholder={"请选择研究者类型"}
+                                                                    errorMessage={"请选择研究者类型"}
+                                                                    value={formData.applicantType}
+                                                                    onValueChange={(value) => setFormData(prev => ({
+                                                                        ...prev,
+                                                                        applicantType: value
+                                                                    }))}
+                                                                    required={formData.applicantRole === "TEAM_RESEARCHER"}
+                                                                >
+                                                                    <SelectContent>
+                                                                        <SelectItem value="employee">在职工作人员</SelectItem>
+                                                                        <SelectItem value="student">学生</SelectItem>
+                                                                    </SelectContent>
+                                                                </ValidatedSelect>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                )}
-                                            </div>
 
-                                            {/* Project Information */}
-                                            <div className="space-y-4">
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="projectTitle" className="flex items-center gap-1">
-                                                        项目标题 <Asterisk className="h-3 w-3 text-red-500" />
-                                                    </Label>
-                                                    <Input
-                                                        id="projectTitle"
-                                                        name="projectTitle"
-                                                        value={formData.projectTitle}
-                                                        onChange={(e) => handleInputChange("projectTitle", e.target.value)}
-                                                        placeholder="请输入研究项目标题"
-                                                        maxLength={200}
-                                                        required
-                                                        validationType="custom"
-                                                        customValidation={validateProjectTitle}
-                                                    />
-                                                </div>
+                                                    {/* Project Information */}
+                                                    <div className="space-y-4">
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="projectTitle" className="flex items-center gap-1">
+                                                                项目标题 <Asterisk className="h-3 w-3 text-red-500" />
+                                                            </Label>
+                                                            <Input
+                                                                id="projectTitle"
+                                                                name="projectTitle"
+                                                                value={formData.projectTitle}
+                                                                onChange={(e) => handleInputChange("projectTitle", e.target.value)}
+                                                                placeholder="请输入研究项目标题"
+                                                                maxLength={200}
+                                                                required
+                                                                validationType="custom"
+                                                                customValidation={validateProjectTitle}
+                                                            />
+                                                        </div>
 
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="projectDescription" className="flex items-center gap-1">
-                                                        项目描述 <Asterisk className="h-3 w-3 text-red-500" />
-                                                    </Label>
-                                                    {/* 注意：Textarea 也需要支持验证功能，如果 Textarea 不支持，需要先扩展它 */}
-                                                    <Textarea
-                                                        id="projectDescription"
-                                                        name="projectDescription"
-                                                        rows={4}
-                                                        value={formData.projectDescription}
-                                                        onChange={(e) => handleInputChange("projectDescription", e.target.value)}
-                                                        placeholder="详细描述研究背景、目标、方法和预期成果"
-                                                        maxLength={2000}
-                                                        required
-                                                        validationType="custom"
-                                                        customValidation={validateProjectDescription}
-                                                    />
-                                                </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="projectDescription" className="flex items-center gap-1">
+                                                                项目描述 <Asterisk className="h-3 w-3 text-red-500" />
+                                                            </Label>
+                                                            {/* 注意：Textarea 也需要支持验证功能，如果 Textarea 不支持，需要先扩展它 */}
+                                                            <Textarea
+                                                                id="projectDescription"
+                                                                name="projectDescription"
+                                                                rows={4}
+                                                                value={formData.projectDescription}
+                                                                onChange={(e) => handleInputChange("projectDescription", e.target.value)}
+                                                                placeholder="详细描述研究背景、目标、方法和预期成果"
+                                                                maxLength={2000}
+                                                                required
+                                                                validationType="custom"
+                                                                customValidation={validateProjectDescription}
+                                                            />
+                                                        </div>
 
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="purpose" className="flex items-center gap-1">
-                                                        数据使用目的 <Asterisk className="h-3 w-3 text-red-500" />
-                                                    </Label>
-                                                    <Textarea
-                                                        id="purpose"
-                                                        name="purpose"
-                                                        rows={3}
-                                                        value={formData.purpose}
-                                                        onChange={(e) => handleInputChange("purpose", e.target.value)}
-                                                        placeholder="说明申请数据的具体用途和分析计划"
-                                                        maxLength={1000}
-                                                        required
-                                                        validationType="custom"
-                                                        customValidation={validatePurpose}
-                                                    />
-                                                </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="purpose" className="flex items-center gap-1">
+                                                                数据使用目的 <Asterisk className="h-3 w-3 text-red-500" />
+                                                            </Label>
+                                                            <Textarea
+                                                                id="purpose"
+                                                                name="purpose"
+                                                                rows={3}
+                                                                value={formData.purpose}
+                                                                onChange={(e) => handleInputChange("purpose", e.target.value)}
+                                                                placeholder="说明申请数据的具体用途和分析计划"
+                                                                maxLength={1000}
+                                                                required
+                                                                validationType="custom"
+                                                                customValidation={validatePurpose}
+                                                            />
+                                                        </div>
 
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="fundingSource">资助来源</Label>
-                                                    <Input
-                                                        id="fundingSource"
-                                                        name="fundingSource"
-                                                        value={formData.fundingSource}
-                                                        onChange={(e) => handleInputChange("fundingSource", e.target.value)}
-                                                        placeholder="国家自然科学基金、省部级基金等（选填）"
-                                                        maxLength={200}
-                                                    />
-                                                    <p className="text-xs text-muted-foreground">选填字段</p>
-                                                </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="fundingSource">资助来源</Label>
+                                                            <Input
+                                                                id="fundingSource"
+                                                                name="fundingSource"
+                                                                value={formData.fundingSource}
+                                                                onChange={(e) => handleInputChange("fundingSource", e.target.value)}
+                                                                placeholder="国家自然科学基金、省部级基金等（选填）"
+                                                                maxLength={200}
+                                                            />
+                                                            <p className="text-xs text-muted-foreground">选填字段</p>
+                                                        </div>
 
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="projectLeader" className="flex items-center gap-1">
-                                                        项目负责人 <Asterisk className="h-3 w-3 text-red-500" />
-                                                    </Label>
-                                                    <Input
-                                                        id="projectLeader"
-                                                        name="projectLeader"
-                                                        value={formData.projectLeader}
-                                                        onChange={(e) => handleInputChange("projectLeader", e.target.value)}
-                                                        placeholder="请输入项目负责人的姓名"
-                                                        maxLength={50}
-                                                        required
-                                                        validationType="custom"
-                                                        customValidation={validateProjectLeader}
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            {/* Approval Document Upload */}
-                                            <div className="space-y-4">
-                                                <h3 className="text-lg font-semibold flex items-center gap-2">
-                                                    <Upload className="h5 w-5" />
-                                                    审批表上传
-                                                </h3>
-
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="approvalDocument" className="flex items-center gap-1">
-                                                        审批表签字扫描文档 <Asterisk className="h-3 w-3 text-red-500" />
-                                                    </Label>
-                                                    <FileUploader
-                                                        ref={fileUploaderRef}
-                                                        onResetComplete={() => {
-                                                            setUploadedFile(null);
-                                                        }}
-                                                        onUploadComplete={(fileInfo) => {
-                                                            setUploadedFile(fileInfo);
-                                                        }}
-                                                        maxSize={20 * 1024 * 1024} // 20MB限制
-                                                        acceptedFileTypes={['.pdf']} // 只允许PDF格式
-                                                    />
-                                                    <p className="text-xs text-muted-foreground">支持PDF格式，最大20MB</p>
-                                                </div>
-                                            </div>
-
-                                            {/* Agreement */}
-                                            <Alert variant="destructive" className="border-amber-200 bg-amber-50">
-                                                <AlertCircle className="h-4 w-4 text-amber-800" />
-                                                <AlertDescription className="text-amber-800 space-y-2">
-                                                    <h4 className="font-semibold">数据使用协议</h4>
-                                                    <p>申请数据前，请仔细阅读以下条款：</p>
-                                                    <ul className="list-disc list-inside space-y-1 ml-4">
-                                                        <li>数据仅用于学术研究，不得用于商业用途</li>
-                                                        <li>严格保护数据隐私，不得尝试重新识别患者身份</li>
-                                                        <li>研究成果发表时需注明数据来源</li>
-                                                        <li>不得将数据转让给第三方</li>
-                                                        <li>使用结束后需删除本地数据副本</li>
-                                                    </ul>
-
-                                                    <div className="flex items-center space-x-2 mt-4">
-                                                        <Checkbox
-                                                            id="agree"
-                                                            checked={formData.agreeToTerms}
-                                                            onCheckedChange={(checked) => setFormData(prev => ({
-                                                                ...prev,
-                                                                agreeToTerms: checked as boolean
-                                                            }))}
-                                                        />
-                                                        <Label htmlFor="agree" className="text-sm text-amber-800 flex items-center gap-1">
-                                                            我已阅读并同意遵守数据使用协议 <Asterisk className="h-3 w-3 text-red-500" />
-                                                        </Label>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="projectLeader" className="flex items-center gap-1">
+                                                                项目负责人 <Asterisk className="h-3 w-3 text-red-500" />
+                                                            </Label>
+                                                            <Input
+                                                                id="projectLeader"
+                                                                name="projectLeader"
+                                                                value={formData.projectLeader}
+                                                                onChange={(e) => handleInputChange("projectLeader", e.target.value)}
+                                                                placeholder="请输入项目负责人的姓名"
+                                                                maxLength={50}
+                                                                required
+                                                                validationType="custom"
+                                                                customValidation={validateProjectLeader}
+                                                            />
+                                                        </div>
                                                     </div>
-                                                </AlertDescription>
-                                            </Alert>
+
+                                                    {/* Approval Document Upload */}
+                                                    <div className="space-y-4">
+                                                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                                                            <Upload className="h5 w-5" />
+                                                            审批表上传
+                                                        </h3>
+
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="approvalDocument" className="flex items-center gap-1">
+                                                                审批表签字扫描文档 <Asterisk className="h-3 w-3 text-red-500" />
+                                                            </Label>
+                                                            <FileUploader
+                                                                ref={fileUploaderRef}
+                                                                onResetComplete={() => {
+                                                                    setUploadedFile(null);
+                                                                }}
+                                                                onUploadComplete={(fileInfo) => {
+                                                                    setUploadedFile(fileInfo);
+                                                                }}
+                                                                maxSize={20 * 1024 * 1024} // 20MB限制
+                                                                acceptedFileTypes={['.pdf']} // 只允许PDF格式
+                                                            />
+                                                            <p className="text-xs text-muted-foreground">支持PDF格式，最大20MB</p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Agreement */}
+                                                    <Alert variant="destructive" className="border-amber-200 bg-amber-50">
+                                                        <AlertCircle className="h-4 w-4 text-amber-800" />
+                                                        <AlertDescription className="text-amber-800 space-y-2">
+                                                            <h4 className="font-semibold">数据使用协议</h4>
+                                                            <p>申请数据前，请仔细阅读以下条款：</p>
+                                                            <ul className="list-disc list-inside space-y-1 ml-4">
+                                                                <li>数据仅用于学术研究，不得用于商业用途</li>
+                                                                <li>严格保护数据隐私，不得尝试重新识别患者身份</li>
+                                                                <li>研究成果发表时需注明数据来源</li>
+                                                                <li>不得将数据转让给第三方</li>
+                                                                <li>使用结束后需删除本地数据副本</li>
+                                                            </ul>
+
+                                                            <div className="flex items-center space-x-2 mt-4">
+                                                                <Checkbox
+                                                                    id="agree"
+                                                                    checked={formData.agreeToTerms}
+                                                                    onCheckedChange={(checked) => setFormData(prev => ({
+                                                                        ...prev,
+                                                                        agreeToTerms: checked as boolean
+                                                                    }))}
+                                                                />
+                                                                <Label htmlFor="agree" className="text-sm text-amber-800 flex items-center gap-1">
+                                                                    我已阅读并同意遵守数据使用协议 <Asterisk className="h-3 w-3 text-red-500" />
+                                                                </Label>
+                                                            </div>
+                                                        </AlertDescription>
+                                                    </Alert>
+                                                </>
+                                            )}
                                         </>
                                     )}
+
+                                    {/* 在用户是提供者或已有申请状态时，禁用提交按钮 */}
+                                    <div className="flex justify-end space-x-4 pt-4">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => onOpenChange(false)}
+                                            disabled={submitting}
+                                        >
+                                            取消
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            disabled={
+                                                submitting ||
+                                                !formData.agreeToTerms ||
+                                                !uploadedFile ||
+                                                !formData.datasetId ||
+                                                !isDatasetAvailableToUser() ||
+                                                !!pendingApplication || // 如果有待审核的申请，则禁用提交
+                                                !formData.applicantRole ||
+                                                (formData.applicantRole === "TEAM_RESEARCHER" && !formData.applicantType) ||
+                                                !formData.projectTitle.trim() ||
+                                                !formData.projectDescription.trim() ||
+                                                !formData.purpose.trim() ||
+                                                !formData.projectLeader.trim() ||
+                                                isCurrentUserDatasetProvider() // 如果当前用户是数据集提供者，则禁用提交
+                                            }
+                                        >
+                                            {submitting ? (
+                                                <>
+                                                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                                                    提交中...
+                                                </>
+                                            ) : (
+                                                '提交申请'
+                                            )}
+                                        </Button>
+                                    </div>
                                 </>
                             )}
-
-                            <div className="flex justify-end space-x-4 pt-4">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => onOpenChange(false)}
-                                    disabled={submitting}
-                                >
-                                    取消
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    disabled={
-                                        submitting ||
-                                        !formData.agreeToTerms ||
-                                        !uploadedFile ||
-                                        !formData.datasetId ||
-                                        !isDatasetAvailableToUser() ||
-                                        !!pendingApplication || // 如果有待审核的申请，则禁用提交
-                                        !formData.applicantRole ||
-                                        (formData.applicantRole === "TEAM_RESEARCHER" && !formData.applicantType) ||
-                                        !formData.projectTitle.trim() ||
-                                        !formData.projectDescription.trim() ||
-                                        !formData.purpose.trim() ||
-                                        !formData.projectLeader.trim()
-                                    }
-                                >
-                                    {submitting ? (
-                                        <>
-                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
-                                            提交中...
-                                        </>
-                                    ) : (
-                                        '提交申请'
-                                    )}
-                                </Button>
-                            </div>
                         </FormValidator>
                     </ScrollArea>
                 </div>

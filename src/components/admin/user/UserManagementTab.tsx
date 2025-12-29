@@ -7,7 +7,17 @@ import {getPermissionRoleDisplayName, getUserPermissionRoleDisplayNames, Permiss
 import {formatDateTime} from "@/lib/utils.ts";
 import {userApi} from "@/integrations/api/userApi.ts";
 import {Button} from "@/components/ui/button.tsx";
-import {PlusCircle, Eye, Pencil, ChevronRightIcon, ChevronLeftIcon, Phone, Shield, Search} from "lucide-react";
+import {
+    PlusCircle,
+    Eye,
+    Pencil,
+    ChevronRightIcon,
+    ChevronLeftIcon,
+    Phone,
+    Shield,
+    Search,
+    Asterisk
+} from "lucide-react";
 import {AdminInstitutionSelector} from "@/components/admin/institution/AdminInstitutionSelector.tsx";
 import {getCurrentUserInfoFromSession} from "@/lib/authUtils.ts";
 import {
@@ -439,10 +449,16 @@ const UserManagementTab = () => {
                                         新增用户
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent className="max-w-5xl">
+                                <DialogContent className="max-w-5xl" onInteractOutside={(e) => e.preventDefault()}>
                                     <DialogHeader>
                                         <DialogTitle>新增用户到机构</DialogTitle>
                                     </DialogHeader>
+                                    <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
+                                        <div className="flex items-center gap-1">
+                                            <Asterisk className="h-3 w-3 text-red-500" />
+                                            <span>标记的字段为必填项</span>
+                                        </div>
+                                    </div>
                                     <div className="flex-1 overflow-hidden overflow-y-auto">
                                         <ScrollArea className="h-full w-full pr-4">
                                             <div className="h-[calc(85vh-100px)]">

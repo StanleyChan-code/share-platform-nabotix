@@ -195,13 +195,13 @@ const ResearchSubjectManagementTab = () => {
                                     <TableCell>{subject.nameEn || "-"}</TableCell>
                                     <TableCell>{subject.description || "-"}</TableCell>
                                     <TableCell>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          subject.active
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                      }`}>
-                        {subject.active ? "启用" : "禁用"}
-                      </span>
+                                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                                          subject.active
+                                              ? "bg-green-100 text-green-800"
+                                              : "bg-red-100 text-red-800"
+                                      }`}>
+                                        {subject.active ? "启用" : "禁用"}
+                                      </span>
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex space-x-2">
@@ -229,7 +229,10 @@ const ResearchSubjectManagementTab = () => {
             )}
 
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent 
+                    className="sm:max-w-[425px]"
+                    onInteractOutside={(e) => e.preventDefault()}
+                >
                     <DialogHeader>
                         <DialogTitle>
                             {editingSubject ? "编辑研究学科" : "创建研究学科"}

@@ -227,7 +227,7 @@ const ProfileInfo = ({ userProfile, onUpdateProfile }: ProfileInfoProps) => {
                     编辑信息
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
                   <DialogHeader>
                     <DialogTitle className="text-lg font-semibold">编辑个人信息</DialogTitle>
                     <DialogDescription className="text-sm text-muted-foreground">

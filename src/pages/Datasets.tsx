@@ -1,8 +1,9 @@
 import { Navigation } from "@/components/Navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, List, Grid, Database, Search, Filter, RotateCcw } from "lucide-react";
+import {Upload, List, Grid, Database, Search, Filter, RotateCcw, FileText} from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
+import {useNavigate, useSearchParams} from "react-router-dom";
 import { DatasetDetailModal } from "@/components/dataset/DatasetDetailModal";
 import { DatasetTreeView } from "@/components/dataset/DatasetTreeView";
 import { DatasetGrid } from "@/components/dataset/DatasetGrid";
@@ -31,7 +32,8 @@ const Datasets = () => {
     const [annualData, setAnnualData] = useState<{ year: number, count: number }[]>([]);
     const [annualLoading, setAnnualLoading] = useState(true);
     const [filtersChanged, setFiltersChanged] = useState(false);
-
+    const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
     const debouncedSearchTerm = useDebounce(searchTerm, 550);
 
     // Listen for custom event to open dataset detail
@@ -46,6 +48,28 @@ const Datasets = () => {
             window.removeEventListener('openDatasetDetail', handleOpenDatasetDetail);
         };
     }, []);
+
+    // Handle dataset ID from URL parameters
+    useEffect(() => {
+        const datasetId = searchParams.get('id');
+        if (datasetId) {
+            const fetchDatasetById = async () => {
+                try {
+                    const response = await datasetApi.getDatasetById(datasetId);
+                    if (response.success && response.data) {
+                        setSelectedDataset(response.data);
+                        setShowDetail(true);
+                    } else {
+                        console.error('Failed to fetch dataset by ID:', datasetId);
+                    }
+                } catch (error) {
+                    console.error('Error fetching dataset by ID:', error);
+                }
+            };
+
+            fetchDatasetById();
+        }
+    }, [searchParams]);
 
     // Fetch research subjects
     useEffect(() => {
@@ -163,6 +187,15 @@ const Datasets = () => {
                         <p className="text-lg text-muted-foreground max-w-2xl">
                             浏览已发布的临床研究数据集，支持按研究类型、学科领域筛选查找
                         </p>
+                    </div>
+                    <div className="flex gap-3">
+                        <Button
+                            className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                            onClick={() => navigate('/profile?tab=applications')}
+                        >
+                            <FileText className="h-4 w-4"/>
+                            我的申请
+                        </Button>
                     </div>
                 </div>
 

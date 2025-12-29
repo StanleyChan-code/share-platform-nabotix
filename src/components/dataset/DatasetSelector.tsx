@@ -107,9 +107,13 @@ export function DatasetSelector({
 
   return (
     <div className="space-y-2">
-      <Label htmlFor="dataset">
-        {label} {required && <Asterisk className="h-3 w-3 text-red-500" />}
-      </Label>
+
+      <div className="flex items-center gap-1">
+        <Label htmlFor="dataset">
+          {label}
+        </Label>
+        {required && <Asterisk className="h-3 w-3 text-red-500" />}
+      </div>
       <Popover open={datasetPopoverOpen} onOpenChange={setDatasetPopoverOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -120,7 +124,7 @@ export function DatasetSelector({
             disabled={disabled}
           >
             <span className="truncate">
-              {selectedDataset ? (selectedDataset.titleCn?.length > 30 ? `${selectedDataset.titleCn.substring(0, 30)}...` : selectedDataset.titleCn) : "选择使用的数据集"}
+              {selectedDataset ? (selectedDataset.titleCn?.length > 30 ? `${selectedDataset.titleCn.substring(0, 30)}...` : selectedDataset.titleCn) : "未选择数据集"}
             </span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>

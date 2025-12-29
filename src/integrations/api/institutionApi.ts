@@ -37,8 +37,10 @@ export const institutionApi = {
   },
 
   // 验证通过机构（适用于平台管理员）
-  async verifyInstitution(id: string) {
-    const response = await api.post<Institution>(`/manage/institutions/${id}/verify`);
+  async verifyInstitution(id: string, verified: boolean) {
+    const response = await api.post<ApiResponse<Institution>>(`/manage/institutions/${id}/verify`, null, {
+      params: { verified }
+    });
     return response.data;
   },
 
@@ -84,7 +86,7 @@ export const institutionApi = {
 
   // 删除机构（平台管理员专用）
   async deleteInstitution(id: string) {
-    const response = await api.delete<void>(`/manage/institutions/${id}`);
+    const response = await api.delete<ApiResponse<void>>(`/manage/institutions/${id}`);
     return response.data;
   },
 

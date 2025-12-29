@@ -164,7 +164,7 @@ const SettingsTab = ({ user }: SettingsTabProps) => {
                     修改密码
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-[425px]" onInteractOutside={(e) => e.preventDefault()}>
                   <DialogHeader>
                     <DialogTitle>修改密码</DialogTitle>
                     <DialogDescription>

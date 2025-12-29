@@ -100,7 +100,7 @@ export const fileApi = {
   // 合并分片
   async mergeChunks(uploadId: string) {
     const response = await api.post<FileInfo>(`/files/chunked-upload/merge?uploadId=${uploadId}`, undefined, {
-      timeout: 60000, // 60秒超时，适用于大文件合并操作
+      timeout: 90000, // 90秒超时，适用于大文件合并操作，用于等待服务器处理完成
     });
     return response.data;
   },

@@ -333,23 +333,6 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
 
   return (
       <TooltipProvider>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              添加用户到机构
-            </CardTitle>
-            <CardDescription>
-              请输入用户信息，创建新的机构用户账户
-              <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
-                <div className="flex items-center gap-1">
-                  <Asterisk className="h-3 w-3 text-red-500" />
-                  <span>标记的字段为必填项</span>
-                </div>
-              </div>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
             <FormValidator onSubmit={handleSubmit} className="space-y-6">
               {fieldGroups.map((group, groupIndex) => (
                   <div key={group.title} className="space-y-4">
@@ -545,8 +528,6 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
                 </div>
               </div>
             </FormValidator>
-          </CardContent>
-        </Card>
       </TooltipProvider>
   );
 };

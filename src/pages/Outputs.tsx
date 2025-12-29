@@ -21,6 +21,7 @@ import {
     Eye
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import SubmitOutputDialog from "@/components/outputs/SubmitOutputDialog";
 import OutputDetailDialog from "@/components/outputs/OutputDetailDialog";
 import { getAllOutputTypes, getJournalPartitionName, getOutputTypeDisplayName } from "@/lib/outputUtils";
@@ -44,8 +45,31 @@ const Outputs = () => {
         totalCitations: 0
     });
     const navigate = useNavigate();
-
+    const [searchParams] = useSearchParams();
+    
     const debouncedSearchTerm = useDebounce(searchTerm, 550);
+
+    // Handle output ID from URL parameters
+    useEffect(() => {
+        const outputId = searchParams.get('id');
+        if (outputId) {
+            const fetchOutputById = async () => {
+                try {
+                    const response = await outputApi.getPublicOutputById(outputId);
+                    if (response.success && response.data) {
+                        setSelectedOutput(response.data);
+                        setIsDetailDialogOpen(true);
+                    } else {
+                        console.error('Failed to fetch output by ID:', outputId);
+                    }
+                } catch (error) {
+                    console.error('Error fetching output by ID:', error);
+                }
+            };
+
+            fetchOutputById();
+        }
+    }, [searchParams]);
 
     const fetchOutputs = useCallback(async (page: number, size: number) => {
         return await outputApi.getPublicOutputs({
@@ -311,7 +335,7 @@ const Outputs = () => {
                 </div>
 
                 {/* Search and Filter */}
-                <Card className="sticky top-14 z-50 bg-white/80 backdrop-blur-sm border-blue-200/50 shadow-xl">
+                <Card className="sticky top-16 z-50 bg-white/80 backdrop-blur-sm border-blue-200/50 shadow-xl">
                     <CardContent className="p-6">
                         <div className="flex flex-col sm:flex-row items-center gap-4">
                             <div className="flex-1 w-full sm:max-w-md">

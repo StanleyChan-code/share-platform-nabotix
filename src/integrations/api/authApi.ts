@@ -9,7 +9,8 @@ export interface LoginCredentials {
 }
 
 export interface LoginResponse {
-  token: string;
+  accessToken: string;
+  refreshToken: string;
   roles: string[];
   user: {
     id: number;
@@ -21,7 +22,15 @@ export interface LoginResponse {
 }
 
 export const login = async (credentials: LoginCredentials) => {
-  return api.post<LoginResponse>('/auth/login', credentials);
+  const response = await api.post<LoginResponse>('/auth/login', credentials);
+  
+  // 登录成功后保存双token
+  if (response.data.success) {
+    const { accessToken, refreshToken } = response.data.data;
+    api.setAuthToken(accessToken, refreshToken);
+  }
+  
+  return response;
 };
 
 // 注册请求
@@ -95,11 +104,14 @@ export const updateUserProfile = async (userData: UpdateUserProfileData) => {
 // 登出请求
 export const logout = async () => {
   try {
-    await api.post('/auth/logout');
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (refreshToken) {
+      await api.post('/auth/logout', { refreshToken });
+    }
   } catch (error) {
     console.warn('Logout API call failed:', error);
   } finally {
     // 无论API调用是否成功，都要清理本地状态
-    localStorage.removeItem('authToken');
+    api.clearAuthToken();
   }
 };

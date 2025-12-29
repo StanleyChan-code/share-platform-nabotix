@@ -188,7 +188,10 @@ const EditUserAuthoritiesDialog = ({ open, onOpenChange, user, onAuthoritiesUpda
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+            <DialogContent 
+                className="max-w-md max-h-[80vh] overflow-hidden flex flex-col"
+                onInteractOutside={(e) => e.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle>修改用户权限</DialogTitle>
                 </DialogHeader>

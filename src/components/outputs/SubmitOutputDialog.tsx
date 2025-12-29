@@ -312,7 +312,9 @@ const SubmitOutputDialog = ({open, onOpenChange, onSubmit}: SubmitOutputDialogPr
             }
         }}>
             <DialogContent
-                className="sm:max-w-[425px] md:max-w-[500px] lg:max-w-[700px] max-h-[85vh] min-h-[20vh] overflow-hidden flex flex-col">
+                className="sm:max-w-[425px] md:max-w-[500px] lg:max-w-[600px] max-h-[85vh] overflow-hidden flex flex-col"
+                onInteractOutside={(e) => e.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle>提交研究成果</DialogTitle>
                 </DialogHeader>

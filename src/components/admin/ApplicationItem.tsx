@@ -221,12 +221,12 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
     const {toast} = useToast();
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-    const handleApproveApplication = async (role: 'provider' | 'institution' ,  applicationId: string, notes: string = "") => {
+    const handleApproveApplication = async (role: 'provider' | 'institution', applicationId: string, notes: string = "") => {
         try {
             if (role === 'provider') {
                 // 数据集提供者审核
                 await reviewApplicationByProvider(applicationId, {
-                    notes: notes || "数据集提供者批准申请",
+                    notes: notes,
                     approved: true
                 });
                 toast({
@@ -236,7 +236,7 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
             } else if (role === 'institution') {
                 // 机构审核
                 await reviewApplicationByApprover(applicationId, {
-                    notes: notes || "机构审核员批准申请",
+                    notes: notes,
                     approved: true
                 });
                 toast({
@@ -263,7 +263,7 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
             if (role === 'provider') {
                 // 数据集提供者审核
                 await reviewApplicationByProvider(applicationId, {
-                    notes: notes || "数据集提供者拒绝申请",
+                    notes: notes,
                     approved: false
                 });
                 toast({
@@ -273,7 +273,7 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
             } else if (role === 'institution') {
                 // 机构审核
                 await reviewApplicationByApprover(applicationId, {
-                    notes: notes || "机构审核员拒绝申请",
+                    notes: notes,
                     approved: false
                 });
                 toast({
@@ -382,72 +382,72 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                                 )}
                                 {/* 显示审核按钮 */}
                                 {variant === 'review' && (
-                                        <div className="flex gap-1">
-                                            {canApproveApplication(application, 'provider') && application.providerReviewResult === null ? (
-                                                <ApprovalActions
-                                                    requireCommentOnApprove={true}
-                                                    requireCommentOnReject={true}
-                                                    approveButtonText="提供者通过"
-                                                    rejectButtonText="提供者拒绝"
-                                                    approveDialogTitle="提供者审核通过意见"
-                                                    rejectDialogTitle="提供者审核拒绝意见"
-                                                    rejectButtonVariant="outline"
-                                                    onSuccess={async (approved, comment) => {
-                                                        if (approved) {
-                                                            await handleApproveApplication('provider', application.id, comment);
-                                                        } else {
-                                                            await handleRejectApplication('provider', application.id, comment);
-                                                        }
-                                                    }}
-                                                />
-                                            ): application.providerReviewResult && canApproveApplication(application, 'institution') && application.institutionReviewResult === null && (
-                                                <ApprovalActions
-                                                    requireCommentOnApprove={true}
-                                                    requireCommentOnReject={true}
-                                                    approveButtonText="机构通过"
-                                                    rejectButtonText="机构拒绝"
-                                                    approveDialogTitle="机构审核通过意见"
-                                                    rejectDialogTitle="机构审核拒绝意见"
-                                                    rejectButtonVariant="outline"
-                                                    onSuccess={async (approved, comment) => {
-                                                        if (approved) {
-                                                            await handleApproveApplication( 'institution', application.id, comment);
-                                                        } else {
-                                                            await handleRejectApplication('institution', application.id, comment);
-                                                        }
-                                                    }}
-                                                />
-                                            )}
-                                            {canApproveApplication(application, 'provider') && application.status !== 'DENIED' && application.providerReviewResult && (
-                                                <ApprovalActions
-                                                    requireCommentOnReject={true}
-                                                    showRevokeApprovalButton={true}
-                                                    revokeApprovalButtonText={"提供者驳回通过"}
-                                                    rejectDialogTitle="驳回通过原因"
-                                                    rejectButtonVariant="outline"
-                                                    onSuccess={async (approved, comment) => {
-                                                        if (!approved) {
-                                                            await handleRejectApplication('provider', application.id, comment || "已通过的申请被拒绝");
-                                                        }
-                                                    }}
-                                                />
-                                            )}
-                                            {canApproveApplication(application, 'institution') && application.status !== 'DENIED' && application.institutionReviewResult && (
-                                                <ApprovalActions
-                                                    requireCommentOnReject={true}
-                                                    showRevokeApprovalButton={true}
-                                                    revokeApprovalButtonText={"机构驳回通过"}
-                                                    rejectDialogTitle="驳回通过原因"
-                                                    rejectButtonVariant="outline"
-                                                    onSuccess={async (approved, comment) => {
-                                                        if (!approved) {
-                                                            await handleRejectApplication('institution', application.id, comment || "已通过的申请被拒绝");
-                                                        }
-                                                    }}
-                                                />
-                                            )}
-                                        </div>
-                                    )}
+                                    <div className="flex gap-1">
+                                        {canApproveApplication(application, 'provider') && application.providerReviewResult === null ? (
+                                            <ApprovalActions
+                                                requireCommentOnApprove={true}
+                                                requireCommentOnReject={true}
+                                                approveButtonText="提供者通过"
+                                                rejectButtonText="提供者拒绝"
+                                                approveDialogTitle="提供者审核通过意见"
+                                                rejectDialogTitle="提供者审核拒绝意见"
+                                                rejectButtonVariant="outline"
+                                                onSuccess={async (approved, comment) => {
+                                                    if (approved) {
+                                                        await handleApproveApplication('provider', application.id, comment);
+                                                    } else {
+                                                        await handleRejectApplication('provider', application.id, comment);
+                                                    }
+                                                }}
+                                            />
+                                        ) : application.providerReviewResult && canApproveApplication(application, 'institution') && application.institutionReviewResult === null && (
+                                            <ApprovalActions
+                                                requireCommentOnApprove={true}
+                                                requireCommentOnReject={true}
+                                                approveButtonText="机构通过"
+                                                rejectButtonText="机构拒绝"
+                                                approveDialogTitle="机构审核通过意见"
+                                                rejectDialogTitle="机构审核拒绝意见"
+                                                rejectButtonVariant="outline"
+                                                onSuccess={async (approved, comment) => {
+                                                    if (approved) {
+                                                        await handleApproveApplication('institution', application.id, comment);
+                                                    } else {
+                                                        await handleRejectApplication('institution', application.id, comment);
+                                                    }
+                                                }}
+                                            />
+                                        )}
+                                        {canApproveApplication(application, 'provider') && application.status !== 'DENIED' && application.providerReviewResult && (
+                                            <ApprovalActions
+                                                requireCommentOnReject={true}
+                                                showRevokeApprovalButton={true}
+                                                revokeApprovalButtonText={"提供者驳回通过"}
+                                                rejectDialogTitle="驳回通过原因"
+                                                rejectButtonVariant="outline"
+                                                onSuccess={async (approved, comment) => {
+                                                    if (!approved) {
+                                                        await handleRejectApplication('provider', application.id, comment || "已通过的申请被拒绝");
+                                                    }
+                                                }}
+                                            />
+                                        )}
+                                        {canApproveApplication(application, 'institution') && application.status !== 'DENIED' && application.institutionReviewResult && (
+                                            <ApprovalActions
+                                                requireCommentOnReject={true}
+                                                showRevokeApprovalButton={true}
+                                                revokeApprovalButtonText={"机构驳回通过"}
+                                                rejectDialogTitle="驳回通过原因"
+                                                rejectButtonVariant="outline"
+                                                onSuccess={async (approved, comment) => {
+                                                    if (!approved) {
+                                                        await handleRejectApplication('institution', application.id, comment || "已通过的申请被拒绝");
+                                                    }
+                                                }}
+                                            />
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -523,13 +523,13 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                                     {application.providerReviewResult !== null && (
                                         <p className="break-words">
                                                 <span
-                                                    className="font-medium text-blue-600">数据集提供者:</span> {application.providerNotes}
+                                                    className="font-medium text-blue-600">数据集提供者:</span> {application.providerNotes || "无"}
                                         </p>
                                     )}
                                     {application.institutionReviewedAt !== null && (
                                         <p className="break-words">
                                                 <span
-                                                    className="font-medium text-purple-600">机构管理员:</span> {application.adminNotes}
+                                                    className="font-medium text-purple-600">机构管理员:</span> {application.adminNotes || "无"}
                                         </p>
                                     )}
                                 </div>
@@ -543,8 +543,10 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                             {getTimelineItems(application).map((item) => (
                                 <Tooltip key={item.id}>
                                     <TooltipTrigger>
-                                        <div className={`flex flex-col items-center ${item.completed ? 'text-primary' : 'text-muted-foreground'}`}>
-                                            <div className={`p-1 rounded-full ${item.completed ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                                        <div
+                                            className={`flex flex-col items-center ${item.completed ? 'text-primary' : 'text-muted-foreground'}`}>
+                                            <div
+                                                className={`p-1 rounded-full ${item.completed ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
                                                 {item.icon}
                                             </div>
                                             <span className="mt-1 text-center whitespace-nowrap">{item.status}</span>
@@ -560,27 +562,25 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                 </CardContent>
             </Card>
             {/* 删除确认对话框 - 仅在需要时渲染 */}
-            {variant === 'my-applications' && (
-                <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>确认删除申请？</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                此操作将永久删除申请"{application.projectTitle}"。此操作不可撤销。
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>取消</AlertDialogCancel>
-                            <AlertDialogAction
-                                onClick={handleDeleteClick}
-                                className="bg-red-600 hover:bg-red-700"
-                            >
-                                删除
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-            )}
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>确认删除申请？</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            此操作将永久删除申请"{application.projectTitle}"。此操作不可撤销。
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>取消</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDeleteClick}
+                            className="bg-red-600 hover:bg-red-700"
+                        >
+                            删除
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 };

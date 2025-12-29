@@ -1,23 +1,16 @@
-import React, {useState, useEffect} from 'react';
-import {Dialog, DialogContent, DialogHeader, DialogTitle} from "@/components/ui/dialog";
-import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
-import {Button} from "@/components/ui/button";
-import {ScrollArea} from "@/components/ui/scroll-area";
-import {
-    FileText,
-    User,
-    Building,
-    Download,
-    Plus,
-    Clock,
-    CheckCircle,
-    XCircle,
-    AlertCircle
-} from "lucide-react";
-import {Application, downloadApplicationFile} from '@/integrations/api/applicationApi';
-import {fileApi, FileInfo} from '@/integrations/api/fileApi';
-import {formatDateTime, formatFileSize} from '@/lib/utils';
-import {useToast} from '@/components/ui/use-toast';
+
+import React, { useEffect, useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/hooks/use-toast.ts';
+import { Clock, User, Building, CheckCircle, XCircle, Plus, FileText, Download, Eye, AlertCircle } from 'lucide-react';
+import { formatDateTime, formatFileSize } from '@/lib/utils.ts';
+import { fileApi, FileInfo } from '@/integrations/api/fileApi.ts';
+import { downloadApplicationFile } from '@/integrations/api/applicationApi.ts';
+import { Application } from '@/lib/enums';
+import PDFPreview from '@/components/ui/pdf-preview.tsx'
 
 interface ApplicationDetailDialogProps {
     open: boolean;
@@ -31,6 +24,8 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
                                                                              application
                                                                          }) => {
     const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
+    const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
+    const [pdfPreviewUrl, setPdfPreviewUrl] = useState('');
     const {toast} = useToast();
 
     // 当对话框打开且选中有审批文档的应用时，获取文件信息
@@ -51,6 +46,15 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
 
         fetchFileInfo();
     }, [open, application]);
+
+    // 清理预览URL以避免内存泄漏
+    useEffect(() => {
+        return () => {
+            if (pdfPreviewUrl) {
+                URL.revokeObjectURL(pdfPreviewUrl);
+            }
+        };
+    }, [pdfPreviewUrl]);
 
     if (!application) return null;
 
@@ -172,7 +176,7 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
                 status: isApproved ? '审批完成' : '审批结束',
                 date: application.approvedAt || application.institutionReviewedAt,
                 completed: true,
-                icon: isApproved ? <CheckCircle className="h-4 w-4"/> : <XCircle className="h-4 w-4"/> ,
+                icon: isApproved ? <CheckCircle className="h-4 w-4"/> : <XCircle className="h-4 w-4"/>,
                 notes: null,
                 reviewer: null
             });
@@ -200,7 +204,7 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
             const url = window.URL.createObjectURL(new Blob([response]));
             const link = document.createElement('a');
             link.href = url;
-            link.download = fileInfo.fileName || `approval-document-${application.id}`;
+            link.download = fileInfo?.fileName || `approval-document-${application.id}`;
             document.body.appendChild(link);
             link.click();
 
@@ -210,7 +214,7 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
 
             toast({
                 title: "开始下载",
-                description: `文件 "${fileInfo.fileName}" 已开始下载`
+                description: `文件 "${fileInfo?.fileName}" 已开始下载`
             });
         } catch (error) {
             console.error('下载失败:', error);
@@ -222,165 +226,216 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
         }
     };
 
+    // 处理预览PDF
+    const handlePreviewPdf = async () => {
+        if (!application.approvalDocumentId) {
+            toast({
+                title: "无法预览",
+                description: "该申请没有关联的审批文件",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        try {
+            // 获取文件下载响应
+            const response = await downloadApplicationFile(application.id, application.approvalDocumentId);
+            // 创建PDF预览URL
+            const fileUrl = URL.createObjectURL(new Blob([response], { type: 'application/pdf' }));
+            setPdfPreviewUrl(fileUrl);
+            setIsPdfPreviewOpen(true);
+        } catch (error) {
+            console.error('预览失败:', error);
+            toast({
+                title: "预览失败",
+                description: "无法预览文件，请尝试下载后查看",
+                variant: "destructive"
+            });
+        }
+    };
+
     const timelineItems = getTimelineItems(application);
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <FileText className="h-5 w-5"/>
-                        <span>申请详情 - {application.projectTitle}</span>
-                    </DialogTitle>
-                </DialogHeader>
+        <>
+            <Dialog open={open} onOpenChange={onOpenChange}>
+                <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <FileText className="h-5 w-5"/>
+                            <span>申请详情 - {application.projectTitle}</span>
+                        </DialogTitle>
+                    </DialogHeader>
 
-                {/* 数据集名称单独一行显示 */}
-                <div className="p-4 bg-muted rounded-lg">
-                    <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-muted-foreground"/>
-                        <p className="font-medium">数据集</p>
-                    </div>
-                    <p>{application.datasetTitle}</p>
-                </div>
-
-                <Tabs defaultValue="basic" className="w-full mt-4 h-[600px]">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="basic">基本信息</TabsTrigger>
-                        <TabsTrigger value="timeline">审核进度</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="basic" className="space-y-4">
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-sm font-medium text-muted-foreground">项目名称</label>
-                                    <p className="mt-1">{application.projectTitle}</p>
+                    <div className="flex-1 overflow-hidden overflow-y-auto">
+                        <ScrollArea className="h-full w-full pr-4">
+                            {/* 数据集名称单独一行显示 */}
+                            <div className="p-4 bg-muted rounded-lg mb-4">
+                                <div className="flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-muted-foreground"/>
+                                    <p className="font-medium">数据集</p>
                                 </div>
-                                <div>
-                                    <label className="text-sm font-medium text-muted-foreground">申请人</label>
-                                    <p className="mt-1">{application.applicantName}</p>
-                                </div>
+                                <p>{application.datasetTitle}</p>
                             </div>
 
-                            {application.supervisorName && (
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="text-sm font-medium text-muted-foreground">监督人</label>
-                                        <p className="mt-1">{application.supervisorName}</p>
-                                    </div>
-                                    <div>
-                                        {/* 占位符，保持布局一致 */}
-                                    </div>
-                                </div>
-                            )}
+                            <Tabs defaultValue="basic" className="w-full">
+                                <TabsList className="grid w-full grid-cols-2">
+                                    <TabsTrigger value="basic">基本信息</TabsTrigger>
+                                    <TabsTrigger value="timeline">审核进度</TabsTrigger>
+                                </TabsList>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-sm font-medium text-muted-foreground">项目负责人</label>
-                                    <p className="mt-1">{application.projectLeader}</p>
-                                </div>
-                                <div>
-                                    <label className="text-sm font-medium text-muted-foreground">资金来源</label>
-                                    <p className="mt-1">{application.fundingSource}</p>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-sm font-medium text-muted-foreground">项目描述</label>
-                                <p className="mt-1 p-2 bg-muted rounded text-sm">{application.projectDescription}</p>
-                            </div>
-
-                            <div>
-                                <label className="text-sm font-medium text-muted-foreground">申请用途</label>
-                                <p className="mt-1 p-2 bg-muted rounded text-sm">{application.purpose}</p>
-                            </div>
-
-                            <div>
-                                <label className="text-sm font-medium text-muted-foreground">申请时间</label>
-                                <p className="mt-1">{formatDate(application.submittedAt)}</p>
-                            </div>
-
-                            {/* 审批文件信息显示区域 */}
-                            {fileInfo && (
-                                <div className="border-t pt-4">
-                                    <h3 className="text-lg font-semibold mb-3">审批表文件</h3>
-                                    <div className="bg-muted rounded-lg p-4">
-                                        <div className="grid grid-cols-3 gap-3 text-sm">
-                                            <div className={"col-span-2"}>
-                                                <label className="text-muted-foreground">文件名:</label>
-                                                <p className="font-medium break-all">
-                                                    {fileInfo.fileName}（{formatFileSize(fileInfo.fileSize)}）
-                                                </p>
+                                <TabsContent value="basic" className="space-y-4 mt-4">
+                                    <div className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="text-sm font-medium text-muted-foreground">项目名称</label>
+                                                <p className="mt-1">{application.projectTitle}</p>
                                             </div>
-                                            <div className="flex items-end">
-                                                <Button
-                                                    onClick={handleDownloadApproval}
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="w-full"
-                                                >
-                                                    <Download className="h-4 w-4 mr-2"/>
-                                                    下载
-                                                </Button>
+                                            <div>
+                                                <label className="text-sm font-medium text-muted-foreground">申请人</label>
+                                                <p className="mt-1">{application.applicantName}</p>
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </TabsContent>
 
-                    <TabsContent value="timeline" className="space-y-6">
-                        <ScrollArea className="w-full pr-4">
-                            <div className="relative">
-                                {timelineItems.map((item, index) => (
-                                    <div key={index} className="relative flex gap-4 pb-6 last:pb-0">
-                                        {/* 连接线 */}
-                                        {index < timelineItems.length - 1 && (
-                                            <div className="absolute left-4 top-8 w-0.5 h-6 bg-border"/>
+                                        {application.supervisorName && (
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="text-sm font-medium text-muted-foreground">监督人</label>
+                                                    <p className="mt-1">{application.supervisorName}</p>
+                                                </div>
+                                                <div>
+                                                    {/* 占位符，保持布局一致 */}
+                                                </div>
+                                            </div>
                                         )}
 
-                                        {/* 图标 */}
-                                        <div
-                                            className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center relative z-10 ${
-                                                item.completed ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                                            }`}>
-                                            {item.icon}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="text-sm font-medium text-muted-foreground">项目负责人</label>
+                                                <p className="mt-1">{application.projectLeader}</p>
+                                            </div>
+                                            <div>
+                                                <label className="text-sm font-medium text-muted-foreground">资金来源</label>
+                                                <p className="mt-1">{application.fundingSource}</p>
+                                            </div>
                                         </div>
 
-                                        {/* 内容 */}
-                                        <div className="flex-1">
-                                            <div className="font-medium flex items-center gap-2">
-                                                {item.status}
-                                                {item.reviewer && (
-                                                    <span className="text-sm text-muted-foreground font-normal">
-                                                        ({item.reviewer})
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="text-sm text-muted-foreground mt-1">
-                                                {item.date ? formatDate(item.date) : '待处理'}
-                                            </div>
-                                            {item.notes && (
-                                                <div className="mt-2 p-2 bg-muted rounded text-sm">
-                                                    {item.notes}
-                                                </div>
-                                            )}
+                                        <div>
+                                            <label className="text-sm font-medium text-muted-foreground">项目描述</label>
+                                            <p className="mt-1 p-2 bg-muted rounded text-sm">{application.projectDescription}</p>
                                         </div>
+
+                                        <div>
+                                            <label className="text-sm font-medium text-muted-foreground">申请用途</label>
+                                            <p className="mt-1 p-2 bg-muted rounded text-sm">{application.purpose}</p>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-sm font-medium text-muted-foreground">申请时间</label>
+                                            <p className="mt-1">{formatDate(application.submittedAt)}</p>
+                                        </div>
+
+                                        {/* 审批文件信息显示区域 */}
+                                        {fileInfo && (
+                                            <div className="border-t pt-4">
+                                                <h3 className="text-lg font-semibold mb-3">审批表文件</h3>
+                                                <div className="bg-muted rounded-lg p-4">
+                                                    <div className="grid grid-cols-3 gap-3 text-sm">
+                                                        <div className="col-span-2">
+                                                            <label className="text-muted-foreground">文件名:</label>
+                                                            <p className="font-medium break-all">
+                                                                {fileInfo.fileName}（{formatFileSize(fileInfo.fileSize)}）
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex items-end gap-2">
+                                                            {fileInfo.fileName?.toLowerCase().endsWith('.pdf') && (
+                                                                <Button
+                                                                    onClick={handlePreviewPdf}
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="w-full"
+                                                                >
+                                                                    <Eye className="h-4 w-4 mr-2"/>
+                                                                    预览
+                                                                </Button>
+                                                            )}
+                                                            <Button
+                                                                onClick={handleDownloadApproval}
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="w-full"
+                                                            >
+                                                                <Download className="h-4 w-4 mr-2"/>
+                                                                下载
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                ))}
+                                </TabsContent>
+
+                                <TabsContent value="timeline" className="space-y-6 mt-4">
+                                    <div className="relative">
+                                        {timelineItems.map((item, index) => (
+                                            <div key={index} className="relative flex gap-4 pb-6 last:pb-0">
+                                                {/* 连接线 */}
+                                                {index < timelineItems.length - 1 && (
+                                                    <div className="absolute left-4 top-8 w-0.5 h-6 bg-border"/>
+                                                )}
+
+                                                {/* 图标 */}
+                                                <div
+                                                    className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center relative z-10 ${
+                                                        item.completed ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                                                    }`}>
+                                                    {item.icon}
+                                                </div>
+
+                                                {/* 内容 */}
+                                                <div className="flex-1">
+                                                    <div className="font-medium flex items-center gap-2">
+                                                        {item.status}
+                                                        {item.reviewer && (
+                                                            <span className="text-sm text-muted-foreground font-normal">
+                                                                ({item.reviewer})
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-sm text-muted-foreground mt-1">
+                                                        {item.date ? formatDate(item.date) : '待处理'}
+                                                    </div>
+                                                    {item.notes && (
+                                                        <div className="mt-2 p-2 bg-muted rounded text-sm">
+                                                            {item.notes}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </TabsContent>
+                            </Tabs>
+
+                            <div className="flex justify-end gap-2 pt-4 border-t mt-4">
+                                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                                    关闭
+                                </Button>
                             </div>
                         </ScrollArea>
-                    </TabsContent>
-                </Tabs>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
-                <div className="flex justify-end gap-2 pt-4 border-t">
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>
-                        关闭
-                    </Button>
-                </div>
-            </DialogContent>
-        </Dialog>
+            {/* PDF预览对话框 */}
+            <PDFPreview
+                open={isPdfPreviewOpen}
+                onOpenChange={setIsPdfPreviewOpen}
+                fileUrl={pdfPreviewUrl}
+                fileName={fileInfo?.fileName}
+            />
+        </>
     );
 };
 

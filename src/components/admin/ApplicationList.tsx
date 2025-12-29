@@ -1,6 +1,6 @@
 import React, {useState, useCallback, useRef} from 'react';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
-import ReactPaginatedList from '@/components/ui/ReactPaginatedList';
+import ReactPaginatedList, { ReactPaginatedListRef } from '@/components/ui/ReactPaginatedList';
 import {
     Application,
     getMyApplications,
@@ -14,7 +14,6 @@ import {TooltipProvider} from "@/components/ui/tooltip";
 import ApplyDialog from '@/components/application/ApplyDialog';
 import ApplicationDetailDialog from './ApplicationDetailDialog';
 import ApplicationItem from './ApplicationItem';
-import {useToast} from '@/components/ui/use-toast';
 import {DatasetDetailModal} from '@/components/dataset/DatasetDetailModal';
 
 interface ApplicationListProps {
@@ -29,8 +28,7 @@ const ApplicationList: React.FC<ApplicationListProps> = ({
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
     const [selectedDataset, setSelectedDataset] = useState<any>(null);
     const [isDatasetModalOpen, setIsDatasetModalOpen] = useState(false);
-    const {toast} = useToast();
-    const [refetchData, setRefetchData] = useState<(() => void) | null>(null);
+    const paginatedListRef = useRef<ReactPaginatedListRef>(null);
 
     const fetchApplications = useCallback(async (page: number, size: number) => {
         const myApplications = await getMyApplications(page, size);
@@ -61,8 +59,8 @@ const ApplicationList: React.FC<ApplicationListProps> = ({
             onViewDataset={handleViewDataset}
             onDelete={() => {
                 // 刷新数据
-                if (refetchData) {
-                    refetchData();
+                if (paginatedListRef.current && typeof paginatedListRef.current.refresh === 'function') {
+                    paginatedListRef.current.refresh();
                 }
             }}
         />
@@ -104,11 +102,11 @@ const ApplicationList: React.FC<ApplicationListProps> = ({
                     </CardHeader>
                     <CardContent>
                         <ReactPaginatedList
+                            ref={paginatedListRef}
                             fetchData={fetchApplications}
                             renderItem={renderApplicationItem}
                             renderEmptyState={renderEmptyState}
                             pageSize={10}
-                            onRefetch={setRefetchData}
                         />
                     </CardContent>
                 </Card>
@@ -118,8 +116,8 @@ const ApplicationList: React.FC<ApplicationListProps> = ({
                     onOpenChange={setIsApplyDialogOpen}
                     onSubmitted={() => {
                         // 刷新数据
-                        if (refetchData) {
-                            refetchData();
+                        if (paginatedListRef.current && typeof paginatedListRef.current.refresh === 'function') {
+                            paginatedListRef.current.refresh();
                         }
                     }}
                 />

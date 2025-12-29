@@ -95,14 +95,14 @@ export function ResearchDirectionChart() {
                   border: "1px solid hsl(var(--border))",
                   borderRadius: "6px"
                 }}
-                formatter={(value) => [value, "搜索次数"]}
+                formatter={(value) => [value, "访问热度"]}
                 labelFormatter={(label) => `研究学科: ${label}`}
               />
               <Bar 
                 dataKey="searchCount" 
                 fill="hsl(var(--primary))" 
                 radius={[4, 4, 0, 0]}
-                name="搜索次数"
+                name="访问热度"
               />
             </BarChart>
           </ResponsiveContainer>
