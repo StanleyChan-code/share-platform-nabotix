@@ -385,7 +385,7 @@ const EditOutputDialog = ({open, onOpenChange, output, onEdit}: EditOutputDialog
             }
         }}>
             <DialogContent
-                className="sm:max-w-[425px] md:max-w-[500px] lg:max-w-[600px] max-h-[85vh] overflow-hidden flex flex-col"
+                className="sm:max-w-[500px] md:max-w-[600px] lg:max-w-[700px] max-h-[85vh] overflow-hidden flex flex-col"
                 onInteractOutside={(e) => e.preventDefault()}
             >
                 <DialogHeader>

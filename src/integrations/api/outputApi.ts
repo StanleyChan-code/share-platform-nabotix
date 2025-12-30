@@ -172,5 +172,10 @@ export const outputApi = {
   async getPublicOutputById(id: string) {
     const response = await api.get<ResearchOutput>(`/research-outputs/${id}`);
     return response.data;
+  },
+
+  async getManagedOutputById(id: string)      {
+    const response = await api.get<ResearchOutput>(`/manage/research-outputs/${id}`);
+    return response.data;
   }
 };

@@ -8,8 +8,7 @@ import { useToast } from '@/hooks/use-toast.ts';
 import { Clock, User, Building, CheckCircle, XCircle, Plus, FileText, Download, Eye, AlertCircle } from 'lucide-react';
 import { formatDateTime, formatFileSize } from '@/lib/utils.ts';
 import { fileApi, FileInfo } from '@/integrations/api/fileApi.ts';
-import { downloadApplicationFile } from '@/integrations/api/applicationApi.ts';
-import { Application } from '@/lib/enums';
+import {Application, downloadApplicationFile} from '@/integrations/api/applicationApi.ts';
 import PDFPreview from '@/components/ui/pdf-preview.tsx'
 
 interface ApplicationDetailDialogProps {
@@ -239,7 +238,7 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
 
         try {
             // 获取文件下载响应
-            const response = await downloadApplicationFile(application.id, application.approvalDocumentId);
+            const response:any = await downloadApplicationFile(application.id, application.approvalDocumentId);
             // 创建PDF预览URL
             const fileUrl = URL.createObjectURL(new Blob([response], { type: 'application/pdf' }));
             setPdfPreviewUrl(fileUrl);

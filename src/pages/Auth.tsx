@@ -6,6 +6,7 @@ import LoginTab from "@/components/auth/LoginTab";
 import SignupTab from "@/components/auth/SignupTab";
 import {Database, Shield} from "lucide-react";
 import {Navigation} from "@/components/Navigation.tsx";
+import RcImageComponent from "@/components/ui/RcImageComponent.tsx";
 
 const Auth = () => {
     const [phone, setPhone] = useState("");
@@ -40,12 +41,16 @@ const Auth = () => {
             <div className="bg-gradient-to-br from-background to-muted flex items-center justify-center p-4" style={{minHeight: 'calc(100vh - 64px)'}}>
                 <Card className="w-full max-w-md">
                     <CardHeader className="text-center">
-                        <div className="flex justify-center mb-4">
-                            <Database className="h-12 w-12 text-primary"/>
+                        <div className="flex justify-center mb-1">
+                            <RcImageComponent
+                                src="/public/logo.jpeg"
+                                alt="老年疾病国家临床医学研究中心（华西）"
+                                className="h-24 w-24"
+                            />
                         </div>
-                        <CardTitle className="text-2xl">临床研究数据共享平台</CardTitle>
+                        <CardTitle className="text-2xl">临床科研数据共享平台</CardTitle>
                         <CardDescription>
-                            欢迎使用
+                            老年疾病国家临床医学研究中心（华西）
                         </CardDescription>
                     </CardHeader>
                     <CardContent>

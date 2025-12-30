@@ -9,7 +9,7 @@ import { CheckCircle, XCircle, Clock, Eye, ChevronLeftIcon, ChevronRightIcon, Se
 import { formatDate } from "@/lib/utils.ts";
 import { getOutputTypeDisplayName, getOutputTypeIconComponent, getAllOutputTypes } from "@/lib/outputUtils.ts";
 import ReactPaginate from "react-paginate";
-import { getCurrentUserInfoFromSession } from "@/lib/authUtils.ts";
+import { getCurrentUserInfoFromSession } from "@/lib/authUtils";
 import { hasPermissionRole, PermissionRoles } from "@/lib/permissionUtils.ts";
 import {
   Select,
@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/select.tsx";
 import { useDebounce } from "@/hooks/useDebounce";
 import {Input} from "@/components/ui/FormValidator.tsx";
+import OutputItem from "@/components/profile/OutputItem.tsx";
+import {refreshOutputPendingCount} from "@/lib/pendingCountsController";
 
 const ResearchOutputsManagementTab = () => {
   const [selectedInstitution, setSelectedInstitution] = useState<string | null>(null);
@@ -33,7 +35,7 @@ const ResearchOutputsManagementTab = () => {
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [canApproveOutputs, setCanApproveOutputs] = useState(false);
   const [searchTitle, setSearchTitle] = useState(""); // 搜索标题
-  const [selectedStatus, setSelectedStatus] = useState<string>("all"); // 状态筛选
+  const [selectedStatus, setSelectedStatus] = useState<string>("pending"); // 状态筛选
   const [selectedType, setSelectedType] = useState<string>("all"); // 类型筛选
   const { toast } = useToast();
   
@@ -167,77 +169,18 @@ const ResearchOutputsManagementTab = () => {
     setDetailDialogOpen(true);
   };
 
-  const getStatusBadge = (approved: boolean | null) => {
-    switch (approved) {
-      case true:
-        return (
-            <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-              <CheckCircle className="mr-1 h-3 w-3" />
-              已审核
-            </div>
-        );
-      case false:
-        return (
-            <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-              <XCircle className="mr-1 h-3 w-3" />
-              已拒绝
-            </div>
-        );
-      default:
-        return (
-            <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-              <Clock className="mr-1 h-3 w-3" />
-              待审核
-            </div>
-        );
-    }
-  };
-
-  const getTypeIcon = (type: string) => {
-    const IconComponent = getOutputTypeIconComponent(type);
-    return <IconComponent className="h-4 w-4" />;
-  };
-
   const renderOutputItem = (output: ResearchOutput) => (
-      <div
-          key={output.id}
-          className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-white"
-          onClick={() => handleOutputClick(output)}
-      >
-        <div className="flex justify-between items-start">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="p-1.5 bg-primary/10 rounded-md">
-                {getTypeIcon(output.type)}
-              </div>
-              <h3 className="text-sm font-medium truncate">{output.title}</h3>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mb-2">
-              <span>{getOutputTypeDisplayName(output.type)}</span>
-              <span>•</span>
-              <span>{output.submitter?.realName || output.submitter?.username}</span>
-              <span>•</span>
-              <span>{formatDate(output.createdAt)}</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {getStatusBadge(output.approved)}
-            </div>
-          </div>
-
-          <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleOutputClick(output);
-              }}
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+      <OutputItem
+        key={output.id}
+        output={output}
+        onDetail={handleOutputClick}
+        onDelete={()  => {
+            fetchResearchOutputs(currentPage);
+            // 刷新待审核数量
+            refreshOutputPendingCount();
+        }}
+        managementMode={true}
+      />
   );
 
   const renderEmptyState = () => (
@@ -322,7 +265,7 @@ const ResearchOutputsManagementTab = () => {
                 <div className="space-y-4">
                   {outputs.length > 0 ? (
                       <>
-                        <div className="grid gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                           {outputs.map(renderOutputItem)}
                         </div>
 
@@ -360,7 +303,7 @@ const ResearchOutputsManagementTab = () => {
                                   breakClassName=""
                                   breakLinkClassName="flex h-10 w-10 items-center justify-center text-gray-500 dark:text-gray-400"
                                   activeClassName=""
-                                  activeLinkClassName="!border-blue-500 !bg-blue-500 !text-white hover:!bg-blue-600 hover:!border-blue-600 dark:!border-blue-500 dark:!bg-blue-5500"
+                                  activeLinkClassName="!border-blue-500 !bg-blue-500 !text-white hover:!bg-blue-600 hover:!border-blue-600 dark:!border-blue-500 dark:!bg-blue-500"
                                   disabledClassName="opacity-40 cursor-not-allowed"
                                   disabledLinkClassName="hover:border-gray-200 hover:bg-white hover:text-gray-700 dark:hover:border-gray-700 dark:hover:bg-gray-800"
                                   forcePage={currentPage}
@@ -380,7 +323,11 @@ const ResearchOutputsManagementTab = () => {
               onOpenChange={setDetailDialogOpen}
               output={selectedOutput}
               canApprove={canApproveOutputs}
-              onApprovalChange={() => fetchResearchOutputs(currentPage)}
+              onApprovalChange={() => {
+                  fetchResearchOutputs(currentPage);
+                  // 刷新待审核数量
+                  refreshOutputPendingCount();
+              }}
               managementMode={true}
           />
         </div>
@@ -389,3 +336,4 @@ const ResearchOutputsManagementTab = () => {
 };
 
 export default ResearchOutputsManagementTab;
+

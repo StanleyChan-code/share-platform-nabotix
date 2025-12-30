@@ -350,7 +350,7 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
                                     <div>
                                         <h4 className="font-medium text-yellow-800">存在待审核的申请</h4>
                                         <p className="text-sm text-yellow-700 mt-1">
-                                            您有一个申请正在审核中: "{pendingApplication.projectTitle}"。
+                                            您有一个申请待审核: "{pendingApplication.projectTitle}"。
                                             请等待审核完成。
                                         </p>
                                         <Button

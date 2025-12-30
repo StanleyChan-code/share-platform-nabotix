@@ -1,7 +1,12 @@
 // Token管理工具函数
 import {institutionApi} from "@/integrations/api/institutionApi.ts";
 import {getCurrentUser, getCurrentUserRoles} from "@/integrations/api/authApi.ts";
-import {apiClient} from "@/integrations/api/client.ts";
+import {
+  ACCESS_TOKEN_KEY,
+  REFRESH_TOKEN_KEY,
+  USER_INFO_KEY,
+  AUTH_BROADCAST_CHANNEL,
+} from "@/lib/constants.ts";
 
 // 存储等待重试的请求队列
 interface QueueItem {
@@ -13,50 +18,89 @@ interface QueueItem {
 let isRefreshing = false;
 let failedQueue: QueueItem[] = [];
 
+// BroadcastChannel 用于跨 tab 通知（如果环境支持）
+const authChannel = typeof window !== 'undefined' && (window as any).BroadcastChannel ? new (window as any).BroadcastChannel(AUTH_BROADCAST_CHANNEL) : null;
+
+// 防止重复清除token导致多次事件触发（抖动抑制）
+let _lastClearAt = 0;
+const CLEAR_SUPPRESSION_MS = 500; // 500ms内重复的clearTokens调用会被抑制
+
 /**
  * 获取访问令牌
  */
 export const getAccessToken = (): string | null => {
-  return localStorage.getItem('access_token');
+  return localStorage.getItem(ACCESS_TOKEN_KEY);
 };
 
 /**
  * 获取刷新令牌
  */
 export const getRefreshToken = (): string | null => {
-  return localStorage.getItem('refresh_token');
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
 };
 
 /**
- * 设置访问令牌
+ * 单一入口设置access和refresh token
  */
-export const setAccessToken = (token: string): void => {
-  localStorage.setItem('access_token', token);
+export const setAuthTokens = (accessToken: string | null, refreshToken: string | null, suppressEvent = false): void => {
+  if (accessToken) {
+    localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+  } else {
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+  }
 
-  // 触发认证状态变化事件
-  window.dispatchEvent(new CustomEvent('authStatusChanged', { detail: { isAuthenticated: true } }));
+  if (refreshToken) {
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  } else {
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  }
+
+  // 触发认证状态变化事件（减少噪声，仅在必要时触发）
+  if (!suppressEvent) {
+    window.dispatchEvent(new CustomEvent('authStatusChanged', { detail: { isAuthenticated: !!refreshToken } }));
+    // 也通过 BroadcastChannel 通知其他标签页
+    if (authChannel) {
+      try {
+        authChannel.postMessage({ type: 'authStatusChanged', isAuthenticated: !!refreshToken });
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
 };
 
-/**
- * 设置刷新令牌
- */
-export const setRefreshToken = (token: string): void => {
-  localStorage.setItem('refresh_token', token);
-  
-  // 触发认证状态变化事件
-  window.dispatchEvent(new CustomEvent('authStatusChanged', { detail: { isAuthenticated: true } }));
-};
+// 保持向后兼容的单独 setter（仍导出以兼容现有调用）
+export const setAccessToken = (token: string): void => setAuthTokens(token, getRefreshToken());
+export const setRefreshToken = (token: string): void => setAuthTokens(getAccessToken(), token);
 
 /**
  * 清除所有令牌
  */
-export const clearTokens = (): void => {
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('refresh_token');
-  sessionStorage.removeItem('userInfo');
-  
-  // 触发认证状态变化事件
-  window.dispatchEvent(new CustomEvent('authStatusChanged', { detail: { isAuthenticated: false } }));
+export const clearTokens = (suppressEvent = false): void => {
+  const now = Date.now();
+  // 如果上一次清除在短时间内发生，抑制重复调用
+  if (now - _lastClearAt < CLEAR_SUPPRESSION_MS) {
+    return;
+  }
+  _lastClearAt = now;
+
+  // 仅在确实存在token时才触发事件，避免不必要的广播
+  const hadToken = !!(localStorage.getItem(ACCESS_TOKEN_KEY) || localStorage.getItem(REFRESH_TOKEN_KEY));
+
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  localStorage.removeItem(USER_INFO_KEY);
+
+  if (!suppressEvent && hadToken) {
+    window.dispatchEvent(new CustomEvent('authStatusChanged', { detail: { isAuthenticated: false } }));
+    if (authChannel) {
+      try {
+        authChannel.postMessage({ type: 'authStatusChanged', isAuthenticated: false });
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
 };
 
 /**
@@ -96,6 +140,8 @@ export const addRequestToQueue = (config: any): Promise<any> => {
 
 /**
  * 清空等待队列
+ * 如果提供 error，则 reject 否则 resolve
+ * 注意：在重试之前应确保 apiClient.defaults.headers.common['Authorization'] 已更新
  */
 export const clearRequestQueue = (error?: any): void => {
   failedQueue.forEach((item) => {
@@ -106,13 +152,6 @@ export const clearRequestQueue = (error?: any): void => {
     }
   });
   failedQueue = [];
-};
-
-/**
- * 获取等待队列
- */
-export const getFailedQueue = (): QueueItem[] => {
-  return failedQueue;
 };
 
 /**
@@ -130,16 +169,16 @@ export const getIsRefreshing = (): boolean => {
 };
 
 /**
- * 从sessionStorage获取当前用户信息
+ * 获取当前用户信息（从 localStorage，这样可以触发 storage 事件进行跨tab同步）
  */
 export const getCurrentUserInfoFromSession = (): any | null => {
-  // 只检查refresh token是否过期，不过期直接返回session中的用户信息
+  // 只检查refresh token是否过期，不过期直接返回localStorage中的用户信息
   if (!isAuthenticated()) {
-    sessionStorage.removeItem('userInfo');
+    localStorage.removeItem(USER_INFO_KEY);
     return null;
   }
-  
-  const userInfo = sessionStorage.getItem('userInfo');
+
+  const userInfo = localStorage.getItem(USER_INFO_KEY);
   if (userInfo) {
     try {
       return JSON.parse(userInfo);
@@ -148,11 +187,34 @@ export const getCurrentUserInfoFromSession = (): any | null => {
       return null;
     }
   }
+
+  // 如果localStorage中没有用户信息，但token有效，自动获取用户信息并缓存
+  return null;
+};
+
+// 自动获取并缓存用户信息的函数
+export const getOrFetchUserInfo = async (): Promise<any | null> => {
+  // 首先尝试从localStorage获取
+  let userInfo = getCurrentUserInfoFromSession();
+  if (userInfo) {
+    return userInfo;
+  }
+
+  // 如果localStorage中没有，但认证有效，尝试获取并缓存
+  if (isAuthenticated()) {
+    try {
+      return await refreshUserInfo();
+    } catch (error) {
+      console.error('获取用户信息失败:', error);
+      return null;
+    }
+  }
+
   return null;
 };
 
 /**
- * 从sessionStorage获取当前用户角色
+ * 从localStorage获取当前用户角色
  */
 export const getCurrentUserRolesFromSession = (): string[] | null => {
   const currentUserInfoFromSession = getCurrentUserInfoFromSession();
@@ -163,7 +225,7 @@ export const getCurrentUserRolesFromSession = (): string[] | null => {
 };
 
 /**
- * 从sessionStorage获取当前用户信息
+ * 从localStorage获取当前用户信息
  */
 export const getCurrentUserFromSession = (): any | null => {
   const currentUserInfoFromSession = getCurrentUserInfoFromSession();
@@ -228,9 +290,18 @@ export const refreshUserInfo = async (): Promise<UserInfo> => {
       institution,
     };
     
-    // 将用户信息存储到sessionStorage
-    sessionStorage.setItem('userInfo', JSON.stringify(userInfo));
-    
+    // 将用户信息存储到localStorage（以便触发 storage 事件进行跨tab同步）
+    localStorage.setItem(USER_INFO_KEY, JSON.stringify(userInfo));
+
+    // 通过 BroadcastChannel 通知其他 tab
+    if (authChannel) {
+      try {
+        authChannel.postMessage({ type: 'userInfoUpdated' });
+      } catch (e) {
+        // ignore
+      }
+    }
+
     return userInfo;
   } catch (error) {
     console.error('刷新用户信息失败:', error);

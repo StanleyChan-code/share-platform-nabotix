@@ -16,7 +16,7 @@ import FileUploader from "@/components/fileuploader/FileUploader.tsx";
 import { FileUploaderHandles} from "@/components/fileuploader/types.ts";
 import { FileInfo } from "@/integrations/api/fileApi";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
-import { getCurrentUserInfoFromSession } from "@/lib/authUtils.ts";
+import { getCurrentUserInfoFromSession } from "@/lib/authUtils";
 import {FormValidator, Input, Textarea, ValidatedSelect} from "@/components/ui/FormValidator";
 import { api } from "@/integrations/api/client";
 
@@ -133,13 +133,16 @@ const ApplyDialog = ({ open, onOpenChange, datasetId, onSubmitted }: ApplyDialog
     };
 
     const isDatasetAvailableToUser = () => {
-        if (!selectedDataset || !getCurrentUserInfoFromSession()) return false;
+        if (!selectedDataset) return false;
+        
+        const userInfo = getCurrentUserInfoFromSession();
+        if (!userInfo) return false;
 
         // 如果数据集没有设置申请机构限制，则所有人都可以申请
         if (!selectedDataset.applicationInstitutionIds) return true;
 
         // 如果用户不属于任何机构，则无法申请有限制的数据集
-        const userInstitutionId = getCurrentUserInfoFromSession().user.institutionId;
+        const userInstitutionId = userInfo.user.institutionId;
         if (!userInstitutionId) return false;
 
         // 检查用户所属机构是否在数据集允许申请的机构列表中
@@ -148,8 +151,12 @@ const ApplyDialog = ({ open, onOpenChange, datasetId, onSubmitted }: ApplyDialog
 
     // 检查当前用户是否为数据集提供者
     const isCurrentUserDatasetProvider = () => {
-        if (!selectedDataset || !getCurrentUserInfoFromSession()) return false;
-        const currentUserId = getCurrentUserInfoFromSession().user.id;
+        if (!selectedDataset) return false;
+        
+        const userInfo = getCurrentUserInfoFromSession();
+        if (!userInfo) return false;
+        
+        const currentUserId = userInfo.user.id;
         return selectedDataset.provider && selectedDataset.provider.id === currentUserId;
     };
 
@@ -389,7 +396,7 @@ const ApplyDialog = ({ open, onOpenChange, datasetId, onSubmitted }: ApplyDialog
                                                     <AlertDescription className="text-yellow-800">
                                                         <div className="flex flex-col">
                                                             <span className="font-semibold">存在待审核的申请</span>
-                                                            <span>您有一个申请正在审核中: "{pendingApplication.projectTitle}"，请等待审核完成。</span>
+                                                            <span>您有一个申请待审核: "{pendingApplication.projectTitle}"，请等待审核完成。</span>
                                                         </div>
                                                     </AlertDescription>
                                                 </Alert>

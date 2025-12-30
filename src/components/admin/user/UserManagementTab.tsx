@@ -19,7 +19,7 @@ import {
     Asterisk
 } from "lucide-react";
 import {AdminInstitutionSelector} from "@/components/admin/institution/AdminInstitutionSelector.tsx";
-import {getCurrentUserInfoFromSession} from "@/lib/authUtils.ts";
+import {getCurrentUserInfoFromSession} from "@/lib/authUtils";
 import {
     Dialog,
     DialogContent,
@@ -77,6 +77,11 @@ const UserManagementTab = () => {
             const isPlatformAdminUser = userInfo.roles.includes(PermissionRoles.PLATFORM_ADMIN);
             setIsPlatformAdmin(isPlatformAdminUser);
             setUserInstitutionId(userInfo.user.institutionId);
+            setInstitutionMap( {
+                [userInfo.user.institutionId]: {
+                    fullName: userInfo.user.institutionName
+                }
+            })
 
             // 设置初始机构
             if (!isPlatformAdminUser) {
@@ -264,12 +269,6 @@ const UserManagementTab = () => {
         setCurrentPage(0);
         fetchUsers(0);
     };
-
-    // 初始化获取用户列表
-    useEffect(() => {
-        setCurrentPage(0);
-        fetchUsers(0);
-    }, [selectedInstitutionId]);
 
     // 监听刷新事件
     useEffect(() => {
@@ -830,3 +829,4 @@ const UserManagementTab = () => {
 };
 
 export default UserManagementTab;
+

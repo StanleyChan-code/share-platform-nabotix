@@ -1,4 +1,6 @@
 import { api } from './client';
+import { refreshAfterLogin } from "@/lib/pendingCountsController";
+import { getRefreshToken } from "@/lib/authUtils";
 
 // 登录请求
 export interface LoginCredentials {
@@ -28,6 +30,9 @@ export const login = async (credentials: LoginCredentials) => {
   if (response.data.success) {
     const { accessToken, refreshToken } = response.data.data;
     api.setAuthToken(accessToken, refreshToken);
+    
+    // 登录成功后立即刷新待审核数量
+    refreshAfterLogin();
   }
   
   return response;
@@ -104,7 +109,7 @@ export const updateUserProfile = async (userData: UpdateUserProfileData) => {
 // 登出请求
 export const logout = async () => {
   try {
-    const refreshToken = localStorage.getItem('refresh_token');
+    const refreshToken = getRefreshToken();
     if (refreshToken) {
       await api.post('/auth/logout', { refreshToken });
     }
@@ -113,5 +118,9 @@ export const logout = async () => {
   } finally {
     // 无论API调用是否成功，都要清理本地状态
     api.clearAuthToken();
+    
+    // 登出时重置待审核数量为0
+    // 由于我们无法直接访问控制器内部状态，我们可以通过刷新来重置
+    // 这将在API返回401错误时自动将数量设为0
   }
 };

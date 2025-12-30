@@ -1,17 +1,16 @@
-import {useState, useEffect} from "react";
+import {useState, useEffect, useRef} from "react";
 import {useNavigate, useLocation} from "react-router-dom";
 import {Navigation} from "@/components/Navigation";
 import {Badge} from "@/components/ui/badge";
 import {Card, CardContent} from "@/components/ui/card";
-import {useToast} from "@/hooks/use-toast";
 import {getPermissionRoleDisplayName} from "@/lib/permissionUtils";
 import ProfileInfo from "@/components/profile/ProfileInfo";
 import ApplicationsTab from "@/components/profile/ApplicationsTab";
 import OutputsTab from "@/components/profile/OutputsTab";
 import SettingsTab from "@/components/profile/SettingsTab";
 import {User, FileText, Settings, Award, Calendar, Building, Star} from "lucide-react";
-import {formatDate} from "@/lib/utils.ts";
-import {refreshUserInfo, UserInfo} from "@/lib/authUtils.ts";
+import {formatDate} from "@/lib/utils";
+import {refreshUserInfo, UserInfo, clearTokens} from "@/lib/authUtils";
 
 const Profile = () => {
     const [activeTab, setActiveTab] = useState<"profile" | "applications" | "outputs" | "datasets" | "settings">("profile");
@@ -21,11 +20,10 @@ const Profile = () => {
     const [institution, setInstitution] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [points, setPoints] = useState<number>(0);
-    const {toast} = useToast();
     const navigate = useNavigate();
     const location = useLocation();
 
-    const [editForm, setEditForm] = useState({
+    const [_editForm, setEditForm] = useState({
         username: "",
         realName: "",
         title: "",
@@ -34,6 +32,10 @@ const Profile = () => {
         email: "",
         education: ""
     });
+
+    // mounted guard
+    const mountedRef = useRef(true);
+    useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
 
     // 计算积分的函数
     const calculatePoints = (registrationDate: string | Date): number => {
@@ -51,54 +53,64 @@ const Profile = () => {
     };
 
     const fetchUser = async () => {
-        const userInfo = await refreshUserInfo();
+        try {
+            const userInfo = await refreshUserInfo();
 
-        if (userInfo) {
-            try {
-                setUser({
-                    id: userInfo.user.id,
-                    phone: userInfo.user.phone
-                });
-                setUserProfile(userInfo);
-                setUserRoles(userInfo.roles);
-                setInstitution(userInfo.institution);
+            if (userInfo) {
+                if (!mountedRef.current) return;
+                try {
+                    setUser({
+                        id: userInfo.user.id,
+                        phone: userInfo.user.phone
+                    });
+                    setUserProfile(userInfo);
+                    setUserRoles(userInfo.roles);
+                    setInstitution(userInfo.institution);
 
-                // 计算并设置积分
-                if (userInfo.user.createdAt) {
-                    const userPoints = calculatePoints(userInfo.user.createdAt);
-                    setPoints(userPoints);
+                    // 计算并设置积分
+                    if (userInfo.user.createdAt) {
+                        const userPoints = calculatePoints(userInfo.user.createdAt);
+                        setPoints(userPoints);
+                    }
+
+                    setEditForm({
+                        username: userInfo.user.username || "",
+                        realName: userInfo.user.realName || "",
+                        title: userInfo.user.title || "",
+                        field: userInfo.user.field || "",
+                        phone: userInfo.user.phone || "",
+                        email: userInfo.user.email || "",
+                        education: userInfo.user.education || ""
+                    });
+
+                    if (mountedRef.current) setLoading(false);
+                } catch (error) {
+                    console.error("解析用户信息失败:", error);
+                    // 统一清理token和用户信息，但抑制多次广播
+                    clearTokens(true);
+                    if (mountedRef.current) navigate('/auth');
                 }
-
-                setEditForm({
-                    username: userInfo.user.username || "",
-                    realName: userInfo.user.realName || "",
-                    title: userInfo.user.title || "",
-                    field: userInfo.user.field || "",
-                    phone: userInfo.user.phone || "",
-                    email: userInfo.user.email || "",
-                    education: userInfo.user.education || ""
-                });
-
-                setLoading(false);
-            } catch (error) {
-                console.error("解析用户信息失败:", error);
-                localStorage.removeItem('access_token');
-                localStorage.removeItem('refresh_token');
-                sessionStorage.removeItem('userInfo');
-                navigate('/auth');
+            } else {
+                if (mountedRef.current) navigate('/auth');
             }
-        } else {
-            navigate('/auth');
-        }
 
-        // 检查URL参数，如果tab=outputs，则切换到成果标签页
-        const params = new URLSearchParams(location.search);
-        if (params.get('tab') === 'outputs') {
-            setActiveTab('outputs');
-        } else if (params.get('tab') === 'applications') {
-            setActiveTab('applications');
-        } else if (params.get('tab') === 'profile') {
-            setActiveTab('profile');
+            // 检查URL参数，如果tab=outputs，则切换到成果标签页
+            const params = new URLSearchParams(location.search);
+            if (params.get('tab') === 'outputs') {
+                setActiveTab('outputs');
+            } else if (params.get('tab') === 'applications') {
+                setActiveTab('applications');
+            } else if (params.get('tab') === 'profile') {
+                setActiveTab('profile');
+            }
+        } catch (error) {
+            console.error("获取用户信息失败:", error);
+            // 仅在响应为401时才清理token
+            // @ts-ignore
+            if (error?.response?.status === 401) {
+                clearTokens(true);
+            }
+            if (mountedRef.current) navigate('/auth');
         }
     }
 
@@ -119,7 +131,7 @@ const Profile = () => {
     }
 
     if (!user) {
-        navigate('/auth');
+        if (mountedRef.current) navigate('/auth');
         return null;
     }
 

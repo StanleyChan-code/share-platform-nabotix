@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
-import {getCurrentUserRolesFromSession} from "@/lib/authUtils.ts";
+import {getCurrentUserRolesFromSession} from "@/lib/authUtils";
 import { Label } from "@/components/ui/label.tsx";
 
 interface EditUserAuthoritiesDialogProps {

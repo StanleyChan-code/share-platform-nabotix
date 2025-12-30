@@ -186,12 +186,12 @@ const EditUserDialog = ({open, onOpenChange, user, onUserUpdated}: EditUserDialo
             ]
         },
         {
-            title: "账户信息（选填）",
+            title: "账户信息",
             description: "可选填写用户的账户相关信息",
             icon: Mail,
-            required: false,
+            required: true,
             fields: [
-                {name: "username", label: "用户名", icon: User, required: false},
+                {name: "username", label: "用户名", icon: User, required: true},
                 {name: "email", label: "邮箱", icon: Mail, required: false, type: "email"},
             ]
         },

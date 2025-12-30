@@ -128,61 +128,66 @@ export const FormValidator: React.FC<FormValidatorProps> = ({
     const [errors, setErrors] = useState<ValidationError[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    if (!onInvalid) {
-        onInvalid = (errors: ValidationError[]) => {
-            if (errors.length > 0) {
-                // 如果有多个错误，显示第一个错误
-                const firstError = errors[0];
+    // 默认的 onInvalid 处理函数
+    const defaultOnInvalid = useCallback((errors: ValidationError[]) => {
+        if (errors.length > 0) {
+            const firstError = errors[0];
 
-                // 根据错误类型显示不同的提示
-                let title = "填写验证错误";
-                let description = firstError.message || "请检查填写的内容";
+            // 默认错误消息映射
+            const defaultErrorMessages: Record<string, string> = {
+                phone: "请输入有效的11位手机号码",
+                email: "请输入有效的邮箱地址",
+                password: "密码必须包含字母和数字，长度至少6位",
+                verificationCode: "请输入6位数字验证码",
+                idNumber: "请输入有效的证件号码",
+                confirmPassword: "两次输入的密码不一致"
+            };
 
-                // 根据错误类型定制提示
-                if (errors.length > 1) {
-                    title = `填写验证错误 (${errors.length} 处错误)`;
-                    description = `${firstError.message} 等 ${errors.length} 处错误，请检查填写内容`;
-                }
+            let title = "填写验证错误";
+            let description = firstError.message || "请检查填写的内容";
 
-                // 特殊字段的错误提示优化
-                if (firstError.fieldName.includes('password') || firstError.fieldName.includes('Password')) {
-                    description = "密码相关内容填写有误，请检查";
-                } else if (firstError.fieldName.includes('phone') || firstError.fieldName.includes('Phone')) {
-                    description = "手机号格式不正确";
-                } else if (firstError.fieldName.includes('email') || firstError.fieldName.includes('Email')) {
-                    description = "邮箱格式不正确";
-                }
-
-                toast({
-                    title: title,
-                    description: description,
-                    variant: "destructive",
-                    duration: 5000, // 显示5秒
-                });
-
-                // 在控制台输出所有错误详情，方便调试
-                if (errors.length > 1) {
-                    console.group('表单验证错误详情');
-                    errors.forEach((error, index) => {
-                        console.log(`错误 ${index + 1}:`, {
-                            字段: error.fieldName,
-                            消息: error.message
-                        });
-                    });
-                    console.groupEnd();
-                }
+            // 根据错误类型定制提示
+            if (errors.length > 1) {
+                title = `填写验证错误 (${errors.length} 处错误)`;
+                description = `请检查${errors.length}处填写错误`;
             } else {
-                // 理论上不会进入这里，但作为保护
-                toast({
-                    title: "填写验证错误",
-                    description: "未知错误，请检查填写内容",
-                    variant: "destructive",
-                });
+                // 单错误时的智能描述
+                const fieldName = firstError.fieldName.toLowerCase();
+                if (fieldName.includes('password') || fieldName.includes('pwd')) {
+                    description = firstError.message || defaultErrorMessages.password;
+                } else if (fieldName.includes('phone') || fieldName.includes('mobile')) {
+                    description = firstError.message || defaultErrorMessages.phone;
+                } else if (fieldName.includes('email') || fieldName.includes('mail')) {
+                    description = firstError.message || defaultErrorMessages.email;
+                } else if (fieldName.includes('code') || fieldName.includes('verification')) {
+                    description = firstError.message || defaultErrorMessages.verificationCode;
+                } else if (fieldName.includes('id') || fieldName.includes('card')) {
+                    description = firstError.message || defaultErrorMessages.idNumber;
+                }
             }
-        };
-    }
 
-    // 注册输入字段 - 修复：防止重复注册
+            toast({
+                title: title,
+                description: description,
+                variant: "destructive",
+                duration: 5000,
+            });
+
+            // 调试信息
+            if (process.env.NODE_ENV === 'development' && errors.length > 1) {
+                console.group('表单验证错误详情');
+                errors.forEach((error, index) => {
+                    console.log(`错误 ${index + 1}:`, {
+                        字段: error.fieldName,
+                        消息: error.message
+                    });
+                });
+                console.groupEnd();
+            }
+        }
+    }, []);
+
+    // 注册输入字段
     const registerInput = useCallback((inputRef: React.RefObject<any>) => {
         if (!inputRef.current) return;
 
@@ -192,23 +197,19 @@ export const FormValidator: React.FC<FormValidatorProps> = ({
         );
 
         if (existingIndex >= 0) {
-            // 替换已存在的注册
             inputRefs.current[existingIndex] = {
                 ref: inputRef,
                 name,
                 isPasswordConfirm: inputRef.current?.isPasswordConfirm,
                 passwordRef: inputRef.current?.passwordRef
             };
-            console.log('替换已注册的输入字段:', name);
         } else {
-            // 新注册
             inputRefs.current.push({
                 ref: inputRef,
                 name,
                 isPasswordConfirm: inputRef.current?.isPasswordConfirm,
                 passwordRef: inputRef.current?.passwordRef
             });
-            console.log('注册输入字段:', name);
         }
     }, []);
 
@@ -223,25 +224,14 @@ export const FormValidator: React.FC<FormValidatorProps> = ({
         confirmPasswordRef: React.RefObject<any>
     ) => {
         if (passwordRef && confirmPasswordRef) {
-            passwordPairs.current.push({passwordRef, confirmPasswordRef});
+            // 避免重复注册
+            const exists = passwordPairs.current.some(pair =>
+                pair.passwordRef === passwordRef && pair.confirmPasswordRef === confirmPasswordRef
+            );
+            if (!exists) {
+                passwordPairs.current.push({ passwordRef, confirmPasswordRef });
+            }
         }
-    }, []);
-
-    // 验证单个字段
-    const validateField = useCallback((inputRef: React.RefObject<any>): boolean => {
-        if (!inputRef.current) return true;
-
-        // 检查是否有 validate 方法
-        if (typeof inputRef.current.validate === 'function') {
-            return inputRef.current.validate();
-        }
-
-        // 如果没有 validate 方法，进行基本验证
-        const value = inputRef.current.value?.toString().trim() || '';
-        if (inputRef.current.required && !value) {
-            return false;
-        }
-        return true;
     }, []);
 
     // 验证密码对
@@ -253,7 +243,8 @@ export const FormValidator: React.FC<FormValidatorProps> = ({
                 const passwordValue = pair.passwordRef.current.value;
                 const confirmPasswordValue = pair.confirmPasswordRef.current.value;
 
-                if (passwordValue !== confirmPasswordValue && passwordValue) {
+                // 只在两个字段都有值且不相等时报错
+                if (passwordValue && confirmPasswordValue && passwordValue !== confirmPasswordValue) {
                     passwordErrors.push({
                         fieldName: pair.confirmPasswordRef.current.name || 'confirmPassword',
                         message: '两次输入的密码不一致',
@@ -274,7 +265,7 @@ export const FormValidator: React.FC<FormValidatorProps> = ({
     // 清除所有错误
     const clearErrors = useCallback(() => {
         setErrors([]);
-        inputRefs.current.forEach(({ref}) => {
+        inputRefs.current.forEach(({ ref }) => {
             if (ref.current && ref.current.clearError) {
                 ref.current.clearError();
             }
@@ -283,7 +274,7 @@ export const FormValidator: React.FC<FormValidatorProps> = ({
 
     // 标记所有字段为已触摸
     const markAllAsTouched = useCallback(() => {
-        inputRefs.current.forEach(({ref}) => {
+        inputRefs.current.forEach(({ ref }) => {
             if (ref.current && ref.current.markAsTouched) {
                 ref.current.markAsTouched();
             }
@@ -293,7 +284,7 @@ export const FormValidator: React.FC<FormValidatorProps> = ({
     // 重置表单
     const reset = useCallback(() => {
         clearErrors();
-        inputRefs.current.forEach(({ref}) => {
+        inputRefs.current.forEach(({ ref }) => {
             if (ref.current && ref.current.reset) {
                 ref.current.reset();
             }
@@ -302,38 +293,19 @@ export const FormValidator: React.FC<FormValidatorProps> = ({
 
     // 强制显示所有错误信息
     const showAllErrors = useCallback(() => {
-        console.log('强制显示所有错误信息，注册字段数:', inputRefs.current.length);
-
-        // 1. 标记所有字段为已触摸状态
-        inputRefs.current.forEach(({ref, name}) => {
+        inputRefs.current.forEach(({ ref }) => {
             if (ref.current && ref.current.markAsTouched) {
                 ref.current.markAsTouched();
-            } else {
-                console.log('markAsTouched 方法不存在:', name);
+            }
+            if (ref.current && (ref.current.forceValidate || ref.current.validate)) {
+                (ref.current.forceValidate || ref.current.validate)();
             }
         });
-
-        // 2. 强制验证所有字段
-        inputRefs.current.forEach(({ref, name}) => {
-            if (ref.current) {
-                if (ref.current.forceValidate) {
-                    ref.current.forceValidate();
-                } else if (ref.current.validate) {
-                    ref.current.validate();
-                } else {
-                    console.log('验证方法不存在:', name);
-                }
-            }
-        });
-
-        // 3. 强制验证密码对
         validatePasswordPairs();
     }, [validatePasswordPairs]);
 
     // 验证所有字段
     const validateAll = useCallback(async (): Promise<{ isValid: boolean; errors: ValidationError[] }> => {
-        console.log('开始验证所有字段，注册的字段数量:', inputRefs.current.length);
-
         let allValid = true;
         const newErrors: ValidationError[] = [];
 
@@ -348,41 +320,22 @@ export const FormValidator: React.FC<FormValidatorProps> = ({
         );
 
         // 1. 验证所有输入字段
-        validInputRefs.forEach(({ref}) => {
+        validInputRefs.forEach(({ ref }) => {
             if (ref.current) {
-                console.log('验证字段:', ref.current.name, '类型:', ref.current.type, '标签名:', ref.current.tagName);
-
                 // 标记为已触摸
                 if (ref.current.markAsTouched) {
                     ref.current.markAsTouched();
                 }
 
-                // 检查是否是 Select 组件
-                const isSelectComponent = ref.current.tagName === 'BUTTON' && ref.current.hasAttribute('data-state');
-
                 let isValid = true;
                 if (ref.current.validate) {
-                    // 如果有自定义 validate 方法，使用它
                     isValid = ref.current.validate();
-                } else if (isSelectComponent) {
-                    // 处理 Select 组件 - 检查 required 和 value
-                    const isRequired = ref.current.required;
-                    const value = ref.current.value || '';
-
-                    if (isRequired && !value.trim()) {
-                        isValid = false;
-                    }
                 } else {
-                    // 默认验证：检查 required 和 value
+                    // 基础验证
                     const isRequired = ref.current.required;
                     const value = ref.current.value || '';
-
-                    if (isRequired && !value.trim()) {
-                        isValid = false;
-                    }
+                    isValid = !isRequired || (isRequired && value.trim() !== '');
                 }
-
-                console.log('字段验证结果:', ref.current.name, isValid);
 
                 if (!isValid) {
                     allValid = false;
@@ -408,7 +361,7 @@ export const FormValidator: React.FC<FormValidatorProps> = ({
         if (customValidation) {
             try {
                 const formData: Record<string, any> = {};
-                validInputRefs.forEach(({ref, name}) => {
+                validInputRefs.forEach(({ ref, name }) => {
                     if (ref.current && name) {
                         formData[name] = ref.current.value;
                     }
@@ -425,7 +378,7 @@ export const FormValidator: React.FC<FormValidatorProps> = ({
                 newErrors.push({
                     fieldName: 'form',
                     message: '表单验证失败',
-                    inputRef: {current: null}
+                    inputRef: { current: null }
                 });
             }
         }
@@ -433,8 +386,7 @@ export const FormValidator: React.FC<FormValidatorProps> = ({
         setErrors(newErrors);
         onValidityChange?.(allValid, newErrors);
 
-        console.log('验证完成，结果:', {isValid: allValid, errors: newErrors});
-        return {isValid: allValid, errors: newErrors};
+        return { isValid: allValid, errors: newErrors };
     }, [showAllErrorsOnSubmit, showAllErrors, validatePasswordPairs, customValidation, onValidityChange]);
 
     // 处理表单提交
@@ -442,33 +394,26 @@ export const FormValidator: React.FC<FormValidatorProps> = ({
         e.preventDefault();
         e.stopPropagation();
 
-        if (disabled) {
-            return;
-        }
-
-        console.log('=== 表单提交开始 ===');
-        console.log('注册的输入字段:', inputRefs.current);
+        if (disabled) return;
 
         setIsSubmitting(true);
 
         try {
-            // 1. 强制显示所有错误信息
+            // 验证前先显示所有错误
             showAllErrors();
 
-            // 2. 进行完整验证
             const validationResult = await validateAll();
 
-            // 3. 检查验证结果
             if (!validationResult.isValid) {
-                console.log('验证失败，错误:', validationResult.errors);
-                onInvalid?.(validationResult.errors);
+                const invalidHandler = onInvalid || defaultOnInvalid;
+                invalidHandler(validationResult.errors);
                 setIsSubmitting(false);
                 return;
             }
 
-            // 4. 收集表单数据
+            // 收集表单数据
             const formData: Record<string, any> = {};
-            inputRefs.current.forEach(({ref, name}) => {
+            inputRefs.current.forEach(({ ref, name }) => {
                 if (ref.current && name) {
                     const value = ref.current.value;
                     if (value !== undefined && value !== null) {
@@ -477,21 +422,18 @@ export const FormValidator: React.FC<FormValidatorProps> = ({
                 }
             });
 
-            console.log('收集的表单数据:', formData);
-
-            // 5. 调用提交处理函数
             await onSubmit?.(formData);
 
         } catch (error) {
             console.error('Form submission error:', error);
-            onInvalid?.([{
+            const invalidHandler = onInvalid || defaultOnInvalid;
+            invalidHandler([{
                 fieldName: 'form',
-                message: '表单验证过程中发生错误',
-                inputRef: {current: null}
+                message: '表单提交过程中发生错误',
+                inputRef: { current: null }
             }]);
         } finally {
             setIsSubmitting(false);
-            console.log('=== 表单提交结束 ===');
         }
     };
 
@@ -500,13 +442,15 @@ export const FormValidator: React.FC<FormValidatorProps> = ({
         registerInput,
         unregisterInput,
         registerPasswordPair,
-        validateField,
         validateAll,
         getErrors,
         clearErrors,
         markAllAsTouched,
         reset,
-        showAllErrors
+        showAllErrors,
+        validateField: function (inputRef: React.RefObject<any>): boolean {
+            throw new Error('Function not implemented.');
+        }
     };
 
     return (
@@ -521,11 +465,6 @@ export const FormValidator: React.FC<FormValidatorProps> = ({
         </FormValidatorContext.Provider>
     );
 };
-
-// ============================ Input 组件 ============================
-// ============================ Input 组件 ============================
-
-// ============================ Input 组件 ============================
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
     ({
@@ -554,252 +493,178 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         const [error, setError] = useState<string | null>(null);
         const [isTouched, setIsTouched] = useState(false);
         const [internalValue, setInternalValue] = useState(value || '');
-        const [showError, setShowError] = useState(false);
+        const [shouldShowError, setShouldShowError] = useState(false);
 
-        const {registerInput, unregisterInput, registerPasswordPair} = useFormValidator();
+        const { registerInput, unregisterInput, registerPasswordPair } = useFormValidator();
 
-        // 验证函数 - 修复：使用 useCallback 并添加 idType 和 required 依赖
-        const validateInput = useCallback((value: string, forceValidation = false, forceShowError = false): boolean => {
+        // 默认错误消息映射
+        const getDefaultErrorMessage = (): string => {
+            if (errorMessage) return errorMessage;
+
+            const defaultMessages: Record<string, string> = {
+                phone: "请输入有效的11位手机号码",
+                email: "请输入有效的邮箱地址",
+                password: "密码必须包含字母和数字，长度至少6位",
+                verificationCode: "请输入6位数字验证码",
+                idNumber: "请输入有效的证件号码"
+            };
+
+            return defaultMessages[validationType || ''] || "请填写正确的信息";
+        };
+
+        // 主验证函数 - 简化逻辑，避免重叠验证
+        const validateInput = useCallback((value: string, forceShowError = false): boolean => {
             const trimmedValue = value.trim();
+            const showErrorNow = forceShowError || isTouched;
 
-            // 强制显示错误或已触摸或已有错误
-            const shouldShowError = forceShowError || isTouched || error;
-
-            if (!shouldShowError && !forceValidation && !trimmedValue) {
-                setError(null);
-                setShowError(false);
-                onValidityChange?.(!required);
-                return !required;
-            }
-
-            // 必填字段验证
+            // 1. 检查必填字段
             if (required && !trimmedValue) {
-                const errorMsg = errorMessage || '此字段为必填项';
-                setError(errorMsg);
-                setShowError(true);
+                if (showErrorNow) {
+                    setError(getDefaultErrorMessage());
+                    setShouldShowError(true);
+                }
                 onValidityChange?.(false);
                 return false;
             }
 
-            // 非必填字段为空时跳过其他验证
+            // 2. 非必填字段为空时直接通过
             if (!required && !trimmedValue) {
                 setError(null);
-                setShowError(false);
+                setShouldShowError(false);
                 onValidityChange?.(true);
                 return true;
             }
 
-            // 密码确认验证
+            // 3. 密码确认验证
             if (isPasswordConfirm && passwordRef?.current) {
                 const passwordValue = passwordRef.current.value;
-                if (trimmedValue !== passwordValue && passwordValue) {
-                    const errorMsg = errorMessage || '两次输入的密码不一致';
-                    setError(errorMsg);
-                    setShowError(true);
+                if (trimmedValue !== passwordValue) {
+                    if (showErrorNow) {
+                        setError("两次输入的密码不一致");
+                        setShouldShowError(true);
+                    }
                     onValidityChange?.(false);
                     return false;
                 }
             }
 
-            // 自定义验证
+            // 4. 自定义验证
             if (validationType === 'custom' && customValidation) {
                 const result = customValidation(trimmedValue);
-                if (result === true) {
-                    // 继续后续验证
-                } else if (result === false) {
-                    const errorMsg = errorMessage || '输入格式不正确';
-                    setError(errorMsg);
-                    setShowError(true);
-                    onValidityChange?.(false);
-                    return false;
-                } else if (typeof result === 'string') {
-                    setError(result);
-                    setShowError(true);
+                if (result !== true) {
+                    if (showErrorNow) {
+                        setError(typeof result === 'string' ? result : getDefaultErrorMessage());
+                        setShouldShowError(true);
+                    }
                     onValidityChange?.(false);
                     return false;
                 }
             }
 
-            // 内置验证类型
+            // 5. 内置验证规则
+            let isValid = true;
             switch (validationType) {
                 case 'phone':
-                    const phoneRegex = /^1[3-9]\d{9}$/;
-                    if (!phoneRegex.test(trimmedValue)) {
-                        setError(errorMessage || '请输入有效的11位手机号码');
-                        setShowError(true);
-                        onValidityChange?.(false);
-                        return false;
-                    }
+                    isValid = /^1[3-9]\d{9}$/.test(trimmedValue);
                     break;
-
                 case 'email':
-                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                    if (!emailRegex.test(trimmedValue)) {
-                        setError(errorMessage || '请输入有效的邮箱地址');
-                        setShowError(true);
-                        onValidityChange?.(false);
-                        return false;
-                    }
+                    isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedValue);
                     break;
-
                 case 'verificationCode':
-                    const codeRegex = /^\d{6}$/;
-                    if (!codeRegex.test(trimmedValue)) {
-                        setError(errorMessage || '请输入6位数字验证码');
-                        setShowError(true);
-                        onValidityChange?.(false);
-                        return false;
-                    }
+                    isValid = /^\d{6}$/.test(trimmedValue);
                     break;
-
                 case 'password':
-                    if (trimmedValue.length < 6) {
-                        setError(errorMessage || '密码长度至少为6位');
-                        setShowError(true);
-                        onValidityChange?.(false);
-                        return false;
-                    }
-                    if (!/(?=.*[a-zA-Z])/.test(trimmedValue)) {
-                        setError(errorMessage || '密码必须包含字母');
-                        setShowError(true);
-                        onValidityChange?.(false);
-                        return false;
-                    }
-                    if (!/(?=.*\d)/.test(trimmedValue)) {
-                        setError(errorMessage || '密码必须包含数字');
-                        setShowError(true);
-                        onValidityChange?.(false);
-                        return false;
-                    }
+                    isValid = trimmedValue.length >= 6 &&
+                        /(?=.*[a-zA-Z])/.test(trimmedValue) &&
+                        /(?=.*\d)/.test(trimmedValue);
                     break;
-
                 case 'idNumber':
-                    console.log('idType', idType, 'required:', required);
                     if (idType === 'NATIONAL_ID') {
-                        const idCardRegex = /^[1-9]\d{5}(18|19|20)\d{2}((0[1-9])|(1[0-2]))(([0-2][1-9])|10|20|30|31)\d{3}[0-9Xx]$/;
-                        if (!idCardRegex.test(trimmedValue)) {
-                            setError(errorMessage || '请输入有效的身份证号码');
-                            setShowError(true);
-                            onValidityChange?.(false);
-                            return false;
-                        }
+                        isValid = /^[1-9]\d{5}(18|19|20)\d{2}((0[1-9])|(1[0-2]))(([0-2][1-9])|10|20|30|31)\d{3}[0-9Xx]$/.test(trimmedValue);
                     } else if (idType === 'PASSPORT') {
-                        const passportRegex = /^[a-zA-Z0-9]{5,9}$/;
-                        if (!passportRegex.test(trimmedValue)) {
-                            setError(errorMessage || '请输入有效的护照号码');
-                            setShowError(true);
-                            onValidityChange?.(false);
-                            return false;
-                        }
-                    } else if (idType === 'OTHER') {
-                        // 其他证件类型，可以添加更宽松的验证或跳过验证
-                        if (trimmedValue.length < 2) {
-                            setError(errorMessage || '请输入有效的证件号码');
-                            setShowError(true);
-                            onValidityChange?.(false);
-                            return false;
-                        }
+                        isValid = /^[a-zA-Z0-9]{5,9}$/.test(trimmedValue);
+                    } else {
+                        isValid = trimmedValue.length >= 2;
                     }
                     break;
-
                 default:
-                    break;
+                    isValid = true;
             }
 
+            if (!isValid && showErrorNow) {
+                setError(getDefaultErrorMessage());
+                setShouldShowError(true);
+                onValidityChange?.(false);
+                return false;
+            }
+
+            // 验证通过
             setError(null);
-            setShowError(false);
+            setShouldShowError(false);
             onValidityChange?.(true);
             return true;
         }, [
-            isTouched, error, required, isPasswordConfirm, passwordRef,
-            validationType, customValidation, errorMessage, onValidityChange,
-            idType // 关键：添加 idType 和 required 依赖
+            isTouched, required, isPasswordConfirm, passwordRef,
+            validationType, customValidation, idType, onValidityChange,
+            getDefaultErrorMessage
         ]);
 
-        const checkValidity = (): boolean => {
+        // 暴露给父组件的方法
+        const validate = useCallback((): boolean => {
             return validateInput(internalValue, true);
-        };
+        }, [internalValue, validateInput]);
 
-        // 强制验证并显示错误
-        const forceValidate = (): boolean => {
+        const forceValidate = useCallback((): boolean => {
             setIsTouched(true);
-            return validateInput(internalValue, true, true);
-        };
+            return validateInput(internalValue, true);
+        }, [internalValue, validateInput]);
 
-        // 当 idType 或 required 改变时，重新验证当前值
-        useEffect(() => {
-            if (isTouched && internalValue) {
-                validateInput(internalValue, true, true);
-            } else if (isTouched && !internalValue) {
-                // 当字段为空且已被触摸时，重新验证必填状态
-                validateInput(internalValue, true, true);
-            }
-        }, [idType, required, validateInput, isTouched, internalValue]);
-
-        // 更新注册的方法对象中的 required 值
-        useEffect(() => {
-            if (inputRef.current && typeof inputRef.current === 'object') {
-                // 更新 required 属性
-                Object.assign(inputRef.current, {
-                    required: required || false,
-                    validate: () => validateInput(internalValue, true),
-                    forceValidate: () => forceValidate(),
-                    checkValidity: () => checkValidity(),
-                });
-            }
-        }, [required, validateInput, internalValue]);
+        const checkValidity = useCallback((): boolean => {
+            return validateInput(internalValue, false);
+        }, [internalValue, validateInput]);
 
         // 注册到表单验证器
         useEffect(() => {
             if (!validateOnSubmit) return;
 
-            console.log('Input 组件挂载:', name, 'required:', required);
-
-            // 创建代理对象来存储自定义方法
             const proxyMethods = {
-                validate: () => validateInput(internalValue, true),
-                forceValidate: () => forceValidate(),
-                checkValidity: () => checkValidity(),
+                validate,
+                forceValidate,
+                checkValidity,
                 getValidationError: () => error,
                 setCustomValidity: (message: string) => {
                     setError(message);
-                    setShowError(true);
+                    setShouldShowError(true);
                     onValidityChange?.(false);
                 },
                 markAsTouched: () => {
                     setIsTouched(true);
                     onMarkAsTouched?.();
-                    validateInput(internalValue, true, true);
+                    validateInput(internalValue, true);
                 },
                 clearError: () => {
                     setError(null);
-                    setShowError(false);
+                    setShouldShowError(false);
                     onValidityChange?.(true);
                 },
                 reset: () => {
                     setError(null);
-                    setShowError(false);
+                    setShouldShowError(false);
                     setIsTouched(false);
                     setInternalValue('');
                     onReset?.();
                 },
                 value: internalValue,
                 name: name || '',
-                id: props.id || '',
                 required: required || false,
-                isTouched: isTouched,
-                showError: showError,
                 isPasswordConfirm: isPasswordConfirm,
                 passwordRef: passwordRef
             };
 
-            // 将方法附加到 input 元素
             if (inputRef.current) {
                 Object.assign(inputRef.current, proxyMethods);
-                console.log('方法附加到 input 元素:', name, 'required:', required);
             }
 
-            // 注册到表单验证器
             registerInput(inputRef);
 
             if (isPasswordConfirm && passwordRef) {
@@ -807,28 +672,28 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             }
 
             return () => {
-                console.log('Input 组件卸载:', name);
                 unregisterInput(inputRef);
             };
         }, [
-            validateOnSubmit, name, internalValue, error, isTouched, showError,
-            required, isPasswordConfirm, passwordRef, onMarkAsTouched, onReset,
-            onValidityChange, registerInput, unregisterInput, registerPasswordPair,
-            props.id, validateInput, forceValidate, checkValidity
+            validateOnSubmit, name, internalValue, error, required,
+            isPasswordConfirm, passwordRef, validate, forceValidate,
+            checkValidity, registerInput, unregisterInput, registerPasswordPair,
+            onMarkAsTouched, onReset, onValidityChange, validateInput
         ]);
 
+        // 事件处理
         const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-            let value = e.target.value;
-            setInternalValue(value);
+            let newValue = e.target.value;
 
-            if (maxLength && value.length > maxLength) {
-                value = value.slice(0, maxLength);
-                e.target.value = value;
-                setInternalValue(value);
+            if (maxLength && newValue.length > maxLength) {
+                newValue = newValue.slice(0, maxLength);
             }
 
-            if (isTouched || error) {
-                validateInput(value, false, !!error);
+            setInternalValue(newValue);
+
+            // 只在有错误或已触摸时实时验证
+            if (error || isTouched) {
+                validateInput(newValue, true);
             }
 
             onChange?.(e);
@@ -836,8 +701,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 
         const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
             setIsTouched(true);
-            onMarkAsTouched?.();
-            validateInput(e.target.value, true, true);
+            validateInput(e.target.value, true);
             onBlur?.(e);
         };
 
@@ -845,82 +709,60 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             onFocus?.(e);
         };
 
-        // 暴露方法给父组件
-        useImperativeHandle(ref, () => {
-            const inputElement = inputRef.current;
-
-            if (!inputElement) {
-                return null as any;
+        // 同步外部 value
+        useEffect(() => {
+            if (value !== undefined && value !== internalValue) {
+                setInternalValue(value);
+                // 值改变时重新验证
+                if (isTouched) {
+                    validateInput(value, true);
+                }
             }
+        }, [value]);
 
-            // 创建方法对象
+        // 依赖变化时重新验证
+        useEffect(() => {
+            if (isTouched && internalValue) {
+                validateInput(internalValue, true);
+            }
+        }, [idType, required]);
+
+        useImperativeHandle(ref, () => {
             const methods = {
-                validate: () => validateInput(internalValue, true),
-                forceValidate: () => forceValidate(),
-                checkValidity: () => checkValidity(),
+                validate,
+                forceValidate,
+                checkValidity,
                 getValidationError: () => error,
                 setCustomValidity: (message: string) => {
                     setError(message);
-                    setShowError(true);
+                    setShouldShowError(true);
                     onValidityChange?.(false);
                 },
                 markAsTouched: () => {
                     setIsTouched(true);
                     onMarkAsTouched?.();
-                    validateInput(internalValue, true, true);
+                    validateInput(internalValue, true);
                 },
                 clearError: () => {
                     setError(null);
-                    setShowError(false);
+                    setShouldShowError(false);
                     onValidityChange?.(true);
                 },
                 reset: () => {
                     setError(null);
-                    setShowError(false);
+                    setShouldShowError(false);
                     setIsTouched(false);
                     setInternalValue('');
                     onReset?.();
-                },
-                // 添加动态属性
-                get required() {
-                    return required || false;
-                },
-                set required(value) {
-                    // 允许外部设置 required，但通常不建议
-                    console.log('尝试设置 required:', value);
                 }
             };
 
-            // 合并到 input 元素
-            Object.assign(inputElement, methods);
-
-            return inputElement;
-        }, [
-            internalValue, error, isTouched, showError, onMarkAsTouched, onReset,
-            onValidityChange, validateInput, forceValidate, checkValidity, required
-        ]);
-
-        // 验证状态回调
-        useEffect(() => {
-            onValidityChange?.(!error);
-        }, [error, onValidityChange]);
-
-        // 同步外部 value
-        useEffect(() => {
-            if (value !== undefined) {
-                setInternalValue(value);
+            if (inputRef.current) {
+                Object.assign(inputRef.current, methods);
             }
-        }, [value]);
 
-        // 当 required 改变时，重新验证状态
-        useEffect(() => {
-            if (isTouched) {
-                validateInput(internalValue, true, true);
-            } else {
-                // 即使未触摸，也需要更新验证状态（用于整体表单验证）
-                validateInput(internalValue, false, false);
-            }
-        }, [required]);
+            return inputRef.current as any;
+        }, [internalValue, error, validate, forceValidate, checkValidity]);
 
         return (
             <div className="relative">
@@ -929,7 +771,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                     className={cn(
                         "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
                         className,
-                        (error && showError) && "border-red-500 focus-visible:ring-red-500"
+                        (error && shouldShowError) && "border-red-500 focus-visible:ring-red-500"
                     )}
                     ref={inputRef}
                     name={name}
@@ -941,7 +783,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                     maxLength={maxLength}
                     {...props}
                 />
-                {error && showError && (
+                {error && shouldShowError && (
                     <div className="absolute top-full left-0 w-full z-10">
                         <p className="mt-1 text-xs text-red-500 bg-red-50 px-2 py-1 rounded-md border border-red-200 shadow-sm">
                             {error}
@@ -954,10 +796,6 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 );
 
 Input.displayName = "Input";
-
-// ============================ 默认导出 ============================
-
-export default FormValidator;
 
 // ============================ Textarea 组件 ============================
 
@@ -984,144 +822,143 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         const [error, setError] = useState<string | null>(null);
         const [isTouched, setIsTouched] = useState(false);
         const [internalValue, setInternalValue] = useState(value || '');
-        const [showError, setShowError] = useState(false);
+        const [shouldShowError, setShouldShowError] = useState(false);
 
-        const {registerInput, unregisterInput} = useFormValidator();
+        const { registerInput, unregisterInput } = useFormValidator();
 
-        // 验证函数
-        const validateTextarea = (value: string, forceValidation = false, forceShowError = false): boolean => {
-            const trimmedValue = value.trim();
+        // 默认错误消息
+        const getDefaultErrorMessage = (): string => {
+            if (errorMessage) return errorMessage;
+            return required ? '此字段为必填项' : '请填写正确的信息';
+        };
 
-            const shouldShowError = forceShowError || isTouched || error;
+        // 简化验证函数
+        const validateTextarea = useCallback((forceShowError = false): boolean => {
+            const trimmedValue = internalValue.trim();
+            const showErrorNow = forceShowError || isTouched;
 
-            if (!shouldShowError && !forceValidation && !trimmedValue) {
-                setError(null);
-                setShowError(false);
-                onValidityChange?.(!required);
-                return !required;
-            }
-
+            // 1. 检查必填字段
             if (required && !trimmedValue) {
-                const errorMsg = errorMessage || '此字段为必填项';
-                setError(errorMsg);
-                setShowError(true);
+                if (showErrorNow) {
+                    setError(getDefaultErrorMessage());
+                    setShouldShowError(true);
+                }
                 onValidityChange?.(false);
                 return false;
             }
 
+            // 2. 非必填字段为空时直接通过
             if (!required && !trimmedValue) {
                 setError(null);
-                setShowError(false);
+                setShouldShowError(false);
                 onValidityChange?.(true);
                 return true;
             }
 
+            // 3. 自定义验证
             if (validationType === 'custom' && customValidation) {
                 const result = customValidation(trimmedValue);
-                if (result === true) {
-                    // 继续后续验证
-                } else if (result === false) {
-                    const errorMsg = errorMessage || '输入格式不正确';
-                    setError(errorMsg);
-                    setShowError(true);
-                    onValidityChange?.(false);
-                    return false;
-                } else if (typeof result === 'string') {
-                    setError(result);
-                    setShowError(true);
+                if (result !== true) {
+                    if (showErrorNow) {
+                        setError(typeof result === 'string' ? result : getDefaultErrorMessage());
+                        setShouldShowError(true);
+                    }
                     onValidityChange?.(false);
                     return false;
                 }
             }
 
+            // 4. 长度验证（如果有 maxLength）
+            if (maxLength && trimmedValue.length > maxLength) {
+                if (showErrorNow) {
+                    setError(`内容长度不能超过${maxLength}个字符`);
+                    setShouldShowError(true);
+                }
+                onValidityChange?.(false);
+                return false;
+            }
+
+            // 验证通过
             setError(null);
-            setShowError(false);
+            setShouldShowError(false);
             onValidityChange?.(true);
             return true;
-        };
+        }, [internalValue, isTouched, required, validationType, customValidation, maxLength, onValidityChange]);
 
-        const checkValidity = (): boolean => {
-            const value = internalValue;
-            return validateTextarea(value, true);
-        };
+        // 暴露给父组件的方法
+        const validate = useCallback((): boolean => {
+            return validateTextarea(true);
+        }, [validateTextarea]);
 
-        const forceValidate = (): boolean => {
-            const value = internalValue;
+        const forceValidate = useCallback((): boolean => {
             setIsTouched(true);
-            return validateTextarea(value, true, true);
-        };
+            return validateTextarea(true);
+        }, [validateTextarea]);
 
-        // 注册到表单验证器 - 修复：添加方法附加逻辑
+        const checkValidity = useCallback((): boolean => {
+            return validateTextarea(false);
+        }, [validateTextarea]);
+
+        // 注册到表单验证器
         useEffect(() => {
             if (!validateOnSubmit) return;
 
-            console.log('Textarea 组件挂载:', name);
-
-            // 创建代理对象来存储自定义方法
             const proxyMethods = {
-                validate: () => validateTextarea(internalValue, true),
-                forceValidate: () => forceValidate(),
-                checkValidity: () => checkValidity(),
+                validate,
+                forceValidate,
+                checkValidity,
                 getValidationError: () => error,
                 setCustomValidity: (message: string) => {
                     setError(message);
-                    setShowError(true);
+                    setShouldShowError(true);
                     onValidityChange?.(false);
                 },
                 markAsTouched: () => {
                     setIsTouched(true);
                     onMarkAsTouched?.();
-                    validateTextarea(internalValue, true, true);
+                    validateTextarea(true);
                 },
                 clearError: () => {
                     setError(null);
-                    setShowError(false);
+                    setShouldShowError(false);
                     onValidityChange?.(true);
                 },
                 reset: () => {
                     setError(null);
-                    setShowError(false);
+                    setShouldShowError(false);
                     setIsTouched(false);
                     setInternalValue('');
                     onReset?.();
                 },
                 value: internalValue,
                 name: name || '',
-                id: props.id || '',
                 required: required || false,
-                isTouched: isTouched,
-                showError: showError,
-                isPasswordConfirm: false, // Textarea 不支持密码确认
-                passwordRef: undefined
             };
 
-            // 将方法附加到 textarea 元素
             if (textareaRef.current) {
                 Object.assign(textareaRef.current, proxyMethods);
-                console.log('方法附加到 textarea 元素:', name, Object.keys(proxyMethods));
             }
 
-            // 注册到表单验证器
             registerInput(textareaRef);
 
             return () => {
-                console.log('Textarea 组件卸载:', name);
                 unregisterInput(textareaRef);
             };
-        }, [validateOnSubmit, name, internalValue, error, isTouched, showError, required, onMarkAsTouched, onReset, onValidityChange, registerInput, unregisterInput, props.id]);
+        }, [
+            validateOnSubmit, name, internalValue, error, required,
+            validate, forceValidate, checkValidity, registerInput,
+            unregisterInput, onMarkAsTouched, onReset, onValidityChange,
+            validateTextarea
+        ]);
 
+        // 事件处理
         const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-            let value = e.target.value;
-            setInternalValue(value);
+            const newValue = e.target.value;
+            setInternalValue(newValue);
 
-            if (maxLength && value.length > maxLength) {
-                value = value.slice(0, maxLength);
-                e.target.value = value;
-                setInternalValue(value);
-            }
-
-            if (isTouched || error) {
-                validateTextarea(value, false, !!error);
+            // 只在有错误或已触摸时实时验证
+            if (error || isTouched) {
+                validateTextarea(true);
             }
 
             onChange?.(e);
@@ -1129,8 +966,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
 
         const handleBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
             setIsTouched(true);
-            onMarkAsTouched?.();
-            validateTextarea(e.target.value, true, true);
+            validateTextarea(true);
             onBlur?.(e);
         };
 
@@ -1138,61 +974,53 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             onFocus?.(e);
         };
 
-        // 暴露方法给父组件
-        useImperativeHandle(ref, () => {
-            const textareaElement = textareaRef.current;
-
-            if (!textareaElement) {
-                return null as any;
+        // 同步外部 value
+        useEffect(() => {
+            if (value !== undefined && value !== internalValue) {
+                setInternalValue(value);
+                // 值改变时重新验证
+                if (isTouched) {
+                    validateTextarea(true);
+                }
             }
+        }, [value]);
 
-            // 创建方法对象
+        useImperativeHandle(ref, () => {
             const methods = {
-                validate: () => validateTextarea(internalValue, true),
-                forceValidate: () => forceValidate(),
-                checkValidity: () => checkValidity(),
+                validate,
+                forceValidate,
+                checkValidity,
                 getValidationError: () => error,
                 setCustomValidity: (message: string) => {
                     setError(message);
-                    setShowError(true);
+                    setShouldShowError(true);
                     onValidityChange?.(false);
                 },
                 markAsTouched: () => {
                     setIsTouched(true);
                     onMarkAsTouched?.();
-                    validateTextarea(internalValue, true, true);
+                    validateTextarea(true);
                 },
                 clearError: () => {
                     setError(null);
-                    setShowError(false);
+                    setShouldShowError(false);
                     onValidityChange?.(true);
                 },
                 reset: () => {
                     setError(null);
-                    setShowError(false);
+                    setShouldShowError(false);
                     setIsTouched(false);
                     setInternalValue('');
                     onReset?.();
                 }
             };
 
-            // 合并到 textarea 元素
-            Object.assign(textareaElement, methods);
-
-            return textareaElement;
-        }, [internalValue, error, isTouched, showError, onMarkAsTouched, onReset, onValidityChange]);
-
-        // 验证状态回调
-        useEffect(() => {
-            onValidityChange?.(!error);
-        }, [error, onValidityChange]);
-
-        // 同步外部 value
-        useEffect(() => {
-            if (value !== undefined) {
-                setInternalValue(value);
+            if (textareaRef.current) {
+                Object.assign(textareaRef.current, methods);
             }
-        }, [value]);
+
+            return textareaRef.current as any;
+        }, [internalValue, error, validate, forceValidate, checkValidity]);
 
         return (
             <div className="relative">
@@ -1200,19 +1028,19 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             className={cn(
                 "flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
                 className,
-                (error && showError) && "border-red-500 focus-visible:ring-red-500"
+                (error && shouldShowError) && "border-red-500 focus-visible:ring-red-500"
             )}
             ref={textareaRef}
             name={name}
             value={internalValue}
             onChange={handleChange}
             onBlur={handleBlur}
-            onFocus={handleFocus}
+            onFocus={onFocus}
             required={required}
             maxLength={maxLength}
             {...props}
         />
-                {error && showError && (
+                {error && shouldShowError && (
                     <div className="absolute top-full left-0 w-full z-10">
                         <p className="mt-1 text-xs text-red-500 bg-red-50 px-2 py-1 rounded-md border border-red-200 shadow-sm">
                             {error}
@@ -1232,20 +1060,6 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
 );
 
 Textarea.displayName = "Textarea";
-
-interface ValidatedSelectProps {
-    value?: string
-    onValueChange?: (value: string) => void
-    children: React.ReactNode
-    className?: string
-    required?: boolean
-    name?: string
-    id?: string
-    placeholder?: string
-    validateOnSubmit?: boolean
-    errorMessage?: string
-    disabled?: boolean
-}
 
 // ============================ ValidatedSelect 组件 ============================
 
@@ -1287,232 +1101,168 @@ export const ValidatedSelect = forwardRef<HTMLButtonElement, ValidatedSelectProp
         },
         ref
     ) => {
-        const selectRef = useRef<HTMLButtonElement>(null)
-        const [error, setError] = useState<string | null>(null)
-        const [isTouched, setIsTouched] = useState(false)
-        const [showError, setShowError] = useState(false)
-        const {registerInput, unregisterInput} = useFormValidator()
+        const selectRef = useRef<HTMLButtonElement>(null);
+        const [error, setError] = useState<string | null>(null);
+        const [isTouched, setIsTouched] = useState(false);
+        const [shouldShowError, setShouldShowError] = useState(false);
+        const { registerInput, unregisterInput } = useFormValidator();
 
-        // 验证函数 - 修复：使用 useCallback 并添加 required 依赖
-        const validateSelect = useCallback((forceValidation = false, forceShowError = false): boolean => {
-            const currentValue = value || ''
-            const trimmedValue = currentValue.trim()
+        // 默认错误消息
+        const getDefaultErrorMessage = (): string => {
+            return errorMessage || '请选择此项';
+        };
 
-            // 强制显示错误或已触摸或已有错误
-            const shouldShowError = forceShowError || isTouched || error
-
-            if (!shouldShowError && !forceValidation && !trimmedValue) {
-                setError(null)
-                setShowError(false)
-                onValidityChange?.(!required)
-                return !required
-            }
+        // 简化验证函数
+        const validateSelect = useCallback((forceShowError = false): boolean => {
+            const currentValue = value || '';
+            const showErrorNow = forceShowError || isTouched;
 
             // 必填字段验证
-            if (required && !trimmedValue) {
-                const errorMsg = errorMessage || '请选择此项'
-                setError(errorMsg)
-                setShowError(true)
-                onValidityChange?.(false)
-                return false
+            if (required && !currentValue.trim()) {
+                if (showErrorNow) {
+                    setError(getDefaultErrorMessage());
+                    setShouldShowError(true);
+                }
+                onValidityChange?.(false);
+                return false;
             }
 
-            // 非必填字段为空时跳过其他验证
-            if (!required && !trimmedValue) {
-                setError(null)
-                setShowError(false)
-                onValidityChange?.(true)
-                return true
-            }
+            // 验证通过
+            setError(null);
+            setShouldShowError(false);
+            onValidityChange?.(true);
+            return true;
+        }, [value, isTouched, required, onValidityChange]);
 
-            setError(null)
-            setShowError(false)
-            onValidityChange?.(true)
-            return true
-        }, [value, isTouched, error, required, errorMessage, onValidityChange])
+        // 暴露给父组件的方法
+        const validate = useCallback((): boolean => {
+            return validateSelect(true);
+        }, [validateSelect]);
 
-        const checkValidity = (): boolean => {
-            return validateSelect(true)
-        }
+        const forceValidate = useCallback((): boolean => {
+            setIsTouched(true);
+            return validateSelect(true);
+        }, [validateSelect]);
 
-        const forceValidate = (): boolean => {
-            setIsTouched(true)
-            return validateSelect(true, true)
-        }
-
-        // 当 required 或 value 改变时，重新验证
-        useEffect(() => {
-            if (isTouched) {
-                validateSelect(true, true)
-            }
-        }, [required, value, validateSelect, isTouched])
-
-        // 更新注册的方法对象中的 required 值
-        useEffect(() => {
-            if (selectRef.current && typeof selectRef.current === 'object') {
-                Object.assign(selectRef.current, {
-                    required: required || false,
-                    validate: () => validateSelect(true),
-                    forceValidate: () => forceValidate(),
-                    checkValidity: () => checkValidity(),
-                })
-            }
-        }, [required, validateSelect])
+        const checkValidity = useCallback((): boolean => {
+            return validateSelect(false);
+        }, [validateSelect]);
 
         // 注册到表单验证器
         useEffect(() => {
-            if (!validateOnSubmit || !selectRef.current) return
+            if (!validateOnSubmit || !selectRef.current) return;
 
-            console.log('ValidatedSelect 注册:', name, 'required:', required)
-
-            // 创建代理对象来存储自定义方法
             const proxyMethods = {
-                validate: () => validateSelect(true),
-                forceValidate: () => forceValidate(),
-                checkValidity: () => checkValidity(),
+                validate,
+                forceValidate,
+                checkValidity,
                 getValidationError: () => error,
                 setCustomValidity: (message: string) => {
-                    setError(message)
-                    setShowError(true)
-                    onValidityChange?.(false)
+                    setError(message);
+                    setShouldShowError(true);
+                    onValidityChange?.(false);
                 },
                 markAsTouched: () => {
-                    setIsTouched(true)
-                    onMarkAsTouched?.()
-                    validateSelect(true, true)
+                    setIsTouched(true);
+                    onMarkAsTouched?.();
+                    validateSelect(true);
                 },
                 clearError: () => {
-                    setError(null)
-                    setShowError(false)
-                    onValidityChange?.(true)
+                    setError(null);
+                    setShouldShowError(false);
+                    onValidityChange?.(true);
                 },
                 reset: () => {
-                    setError(null)
-                    setShowError(false)
-                    setIsTouched(false)
-                    onReset?.()
+                    setError(null);
+                    setShouldShowError(false);
+                    setIsTouched(false);
+                    onReset?.();
                 },
                 value: value || '',
                 name: name || '',
-                id: id || '',
                 required: required || false,
-                isTouched: isTouched,
-                showError: showError
-            }
+            };
 
-            // 将方法附加到 select 元素
-            if (selectRef.current) {
-                Object.assign(selectRef.current, proxyMethods)
-                console.log('方法附加到 ValidatedSelect 元素:', name, 'required:', required)
-            }
-
-            // 注册到表单验证器
-            registerInput({ current: selectRef.current })
+            Object.assign(selectRef.current, proxyMethods);
+            registerInput({ current: selectRef.current });
 
             return () => {
-                console.log('ValidatedSelect 注销:', name)
-                unregisterInput({ current: selectRef.current })
-            }
+                unregisterInput({ current: selectRef.current });
+            };
         }, [
             registerInput, unregisterInput, validateOnSubmit, name, required,
-            errorMessage, id, value, error, isTouched, showError, onValidityChange,
-            onMarkAsTouched, onReset, validateSelect, forceValidate, checkValidity
-        ])
+            value, error, onValidityChange, onMarkAsTouched, onReset,
+            validate, forceValidate, checkValidity, validateSelect
+        ]);
 
         const handleValueChange = (newValue: string) => {
             // 更新 data-value 属性
             if (selectRef.current) {
-                selectRef.current.setAttribute('data-value', newValue)
+                selectRef.current.setAttribute('data-value', newValue);
             }
 
             // 标记为已触摸（当用户选择值时）
-            if (!isTouched && newValue) {
-                setIsTouched(true)
+            if (!isTouched) {
+                setIsTouched(true);
             }
 
-            onValueChange?.(newValue)
+            onValueChange?.(newValue);
 
             // 值改变时进行验证
-            if (isTouched) {
-                validateSelect(true, true)
-            }
-        }
+            validateSelect(true);
+        };
 
         // 处理 blur 事件
         const handleBlur = () => {
             if (!isTouched) {
-                setIsTouched(true)
-                onMarkAsTouched?.()
-                validateSelect(true, true)
+                setIsTouched(true);
+                onMarkAsTouched?.();
+                validateSelect(true);
             }
-        }
+        };
 
-        // 合并 ref
-        useImperativeHandle(ref, () => {
-            const selectElement = selectRef.current
-
-            if (!selectElement) {
-                return null as any
-            }
-
-            // 创建方法对象
-            const methods = {
-                validate: () => validateSelect(true),
-                forceValidate: () => forceValidate(),
-                checkValidity: () => checkValidity(),
-                getValidationError: () => error,
-                setCustomValidity: (message: string) => {
-                    setError(message)
-                    setShowError(true)
-                    onValidityChange?.(false)
-                },
-                markAsTouched: () => {
-                    setIsTouched(true)
-                    onMarkAsTouched?.()
-                    validateSelect(true, true)
-                },
-                clearError: () => {
-                    setError(null)
-                    setShowError(false)
-                    onValidityChange?.(true)
-                },
-                reset: () => {
-                    setError(null)
-                    setShowError(false)
-                    setIsTouched(false)
-                    onReset?.()
-                },
-                // 添加动态属性
-                get required() {
-                    return required || false
-                },
-                get value() {
-                    return value || ''
-                }
-            }
-
-            // 合并到 select 元素
-            Object.assign(selectElement, methods)
-
-            return selectElement
-        }, [
-            value, error, isTouched, showError, onMarkAsTouched, onReset,
-            onValidityChange, validateSelect, forceValidate, checkValidity, required
-        ])
-
-        // 验证状态回调
-        useEffect(() => {
-            onValidityChange?.(!error)
-        }, [error, onValidityChange])
-
-        // 当 required 改变时，重新验证状态
+        // 当值或必填状态改变时重新验证
         useEffect(() => {
             if (isTouched) {
-                validateSelect(true, true)
-            } else {
-                validateSelect(false, false)
+                validateSelect(true);
             }
-        }, [required])
+        }, [value, required, validateSelect, isTouched]);
+
+        useImperativeHandle(ref, () => {
+            const methods = {
+                validate,
+                forceValidate,
+                checkValidity,
+                getValidationError: () => error,
+                setCustomValidity: (message: string) => {
+                    setError(message);
+                    setShouldShowError(true);
+                    onValidityChange?.(false);
+                },
+                markAsTouched: () => {
+                    setIsTouched(true);
+                    onMarkAsTouched?.();
+                    validateSelect(true);
+                },
+                clearError: () => {
+                    setError(null);
+                    setShouldShowError(false);
+                    onValidityChange?.(true);
+                },
+                reset: () => {
+                    setError(null);
+                    setShouldShowError(false);
+                    setIsTouched(false);
+                    onReset?.();
+                }
+            };
+
+            if (selectRef.current) {
+                Object.assign(selectRef.current, methods);
+            }
+
+            return selectRef.current as any;
+        }, [value, error, onMarkAsTouched, onReset, onValidityChange, validate, forceValidate, checkValidity, required]);
 
         return (
             <div className="relative">
@@ -1527,18 +1277,18 @@ export const ValidatedSelect = forwardRef<HTMLButtonElement, ValidatedSelectProp
                         ref={selectRef}
                         className={cn(
                             className,
-                            (error && showError) && "border-red-500 focus-visible:ring-red-500"
+                            (error && shouldShowError) && "border-red-500 focus-visible:ring-red-500"
                         )}
                         name={name}
                         id={id}
                         data-value={value || ''}
                         onBlur={handleBlur}
                     >
-                        <SelectValue placeholder={placeholder}/>
+                        <SelectValue placeholder={placeholder} />
                     </SelectTrigger>
                     {children}
                 </Select>
-                {error && showError && (
+                {error && shouldShowError && (
                     <div className="absolute top-full left-0 w-full z-10">
                         <p className="mt-1 text-xs text-red-500 bg-red-50 px-2 py-1 rounded-md border border-red-200 shadow-sm">
                             {error}
@@ -1546,14 +1296,8 @@ export const ValidatedSelect = forwardRef<HTMLButtonElement, ValidatedSelectProp
                     </div>
                 )}
             </div>
-        )
+        );
     }
-)
+);
 
-ValidatedSelect.displayName = 'ValidatedSelect'
-
-// 重新导出 Select 子组件
-export {
-    SelectContent as ValidatedSelectContent,
-    SelectItem as ValidatedSelectItem,
-}
+ValidatedSelect.displayName = 'ValidatedSelect';

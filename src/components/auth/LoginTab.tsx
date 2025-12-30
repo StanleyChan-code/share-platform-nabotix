@@ -2,14 +2,14 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { api, ApiError } from "@/integrations/api/client";
+import { ApiError } from "@/integrations/api/client";
 import { login, sendVerificationCode } from "@/integrations/api/authApi";
-import { Phone, Lock, Shield, Mail, Eye, EyeOff } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Phone, Lock, Shield, Eye, EyeOff, User, Mail } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { FormValidator, Input } from "@/components/ui/FormValidator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import {refreshUserInfo} from "@/lib/authUtils.ts";
+import { refreshUserInfo, setAccessToken, setRefreshToken, isAuthenticated, clearTokens } from "@/lib/authUtils";
 
 interface LoginTabProps {
   phone: string;
@@ -18,6 +18,9 @@ interface LoginTabProps {
 }
 
 type LoginType = "PASSWORD" | "VERIFICATION_CODE";
+
+// 手机号正则表达式
+const PHONE_REGEX = /^1[3-9]\d{9}$/;
 
 const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
   const [password, setPassword] = useState("");
@@ -28,14 +31,17 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
   const [countdown, setCountdown] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const [isFormValid, setIsFormValid] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const phoneInputRef = useRef<any>(null);
   const passwordInputRef = useRef<any>(null);
   const verificationCodeInputRef = useRef<any>(null);
+  const submitAttempted = useRef(false);
 
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // 清理定时器
   useEffect(() => {
@@ -60,64 +66,83 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
     };
   }, [countdown]);
 
-  // 验证表单是否可提交
-  useEffect(() => {
-    const validateForm = () => {
-      if (!phone) return false;
+  // 验证手机号格式
+  const validatePhone = useCallback((phone: string): string => {
+    if (!phone) return "请输入手机号";
+    if (!PHONE_REGEX.test(phone)) return "请输入有效的11位手机号码";
+    return "";
+  }, []);
 
-      // 验证手机号格式
-      const phoneRegex = /^1[3-9]\d{9}$/;
-      if (!phoneRegex.test(phone)) return false;
+  // 验证密码格式
+  const validatePassword = useCallback((password: string): string => {
+    if (!password) return "请输入密码";
+    if (password.length < 6) return "密码长度不能少于6位";
+    return "";
+  }, []);
 
-      if (loginType === "PASSWORD") {
-        return password.length >= 6;
-      } else {
-        return verificationCode.length === 6;
-      }
+  // 验证验证码格式
+  const validateVerificationCode = useCallback((code: string): string => {
+    if (!code) return "请输入验证码";
+    if (code.length !== 6) return "验证码必须为6位数字";
+    if (!/^\d+$/.test(code)) return "验证码必须为数字";
+    return "";
+  }, []);
+
+  // 验证整个表单
+  const validateForm = useCallback((): { isValid: boolean; errors: Record<string, string> } => {
+    const errors: Record<string, string> = {};
+
+    const phoneError = validatePhone(phone);
+    if (phoneError) errors.phone = phoneError;
+
+    if (loginType === "PASSWORD") {
+      const passwordError = validatePassword(password);
+      if (passwordError) errors.password = passwordError;
+    } else {
+      const codeError = validateVerificationCode(verificationCode);
+      if (codeError) errors.verificationCode = codeError;
+    }
+
+    return {
+      isValid: Object.keys(errors).length === 0,
+      errors
     };
+  }, [phone, password, verificationCode, loginType, validatePhone, validatePassword, validateVerificationCode]);
 
-    setIsFormValid(validateForm());
-  }, [phone, password, verificationCode, loginType]);
+  // 实时验证表单
+  useEffect(() => {
+    if (submitAttempted.current || phone) {
+      const { isValid, errors } = validateForm();
+      setIsFormValid(isValid);
+      setFormErrors(errors);
+    }
+  }, [phone, password, verificationCode, loginType, validateForm]);
 
   // 发送验证码前的验证
   const validateBeforeSendCode = useCallback((): boolean => {
-    if (!phone) {
-      toast({
-        title: "请输入手机号",
-        description: "请先输入您的手机号码",
-        variant: "destructive",
-      });
-      return false;
-    }
-
-    // 验证手机号格式
-    const phoneRegex = /^1[3-9]\d{9}$/;
-    if (!phoneRegex.test(phone)) {
+    const phoneError = validatePhone(phone);
+    if (phoneError) {
       toast({
         title: "手机号格式错误",
-        description: "请输入有效的11位手机号码",
+        description: phoneError,
         variant: "destructive",
       });
       return false;
     }
 
-    return true;
-  }, [phone, toast]);
-
-  const handleSendVerificationCode = async () => {
-    // 先进行验证
-    if (!validateBeforeSendCode()) {
-      return;
-    }
-
-    // 检查倒计时
     if (countdown > 0) {
       toast({
         title: "请稍后重试",
         description: `${countdown}秒后可重新发送验证码`,
       });
-      return;
+      return false;
     }
+
+    return true;
+  }, [phone, countdown, validatePhone, toast]);
+
+  const handleSendVerificationCode = async () => {
+    if (!validateBeforeSendCode()) return;
 
     setSendCodeLoading(true);
     try {
@@ -129,18 +154,27 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
           description: "请注意查收短信，验证码5分钟内有效",
         });
         setCountdown(60);
+
+        // 自动聚焦到验证码输入框
+        setTimeout(() => {
+          verificationCodeInputRef.current?.focus();
+        }, 100);
       } else {
-        toast({
-          title: "发送失败",
-          description: response.data.message || "请稍后重试",
-          variant: "destructive",
-        });
+        throw new Error(response.data.message || "发送验证码失败");
       }
     } catch (error: unknown) {
       const apiError = error as ApiError;
+      let errorMessage = "网络错误，请检查网络连接";
+
+      if (apiError.response?.data?.message) {
+        errorMessage = apiError.response.data.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
       toast({
         title: "发送失败",
-        description: apiError.response?.data?.message || "网络错误，请检查网络连接",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -151,19 +185,30 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
   // 处理登录类型切换
   const handleLoginTypeChange = (type: LoginType) => {
     setLoginType(type);
+    setFormErrors({});
+
     // 切换时清空另一个字段
     if (type === "PASSWORD") {
       setVerificationCode("");
+      setTimeout(() => passwordInputRef.current?.focus(), 100);
     } else {
       setPassword("");
+      setTimeout(() => verificationCodeInputRef.current?.focus(), 100);
     }
   };
 
+  // 处理登录
   const handleSubmit = async (e: React.FormEvent) => {
-    if (!isFormValid) {
+    submitAttempted.current = true;
+
+    const { isValid, errors } = validateForm();
+    setIsFormValid(isValid);
+    setFormErrors(errors);
+
+    if (!isValid) {
       toast({
         title: "请完善信息",
-        description: "请检查手机号和登录信息的格式",
+        description: "请检查表单中的错误信息",
         variant: "destructive",
       });
       return;
@@ -185,7 +230,12 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
       const response = await login(requestData);
 
       if (response.data.success) {
-        // 登录API已经在内部处理了token的存储
+        const { accessToken, refreshToken } = response.data.data;
+
+        // 存储token
+        setAccessToken(accessToken);
+        setRefreshToken(refreshToken);
+
         // 获取用户信息
         await fetchUserInfo();
 
@@ -199,6 +249,10 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
 
       if (apiError.response?.data?.message) {
         errorMessage = apiError.response.data.message;
+      } else if (apiError.response?.status === 401) {
+        errorMessage = "手机号或密码错误";
+      } else if (apiError.response?.status === 403) {
+        errorMessage = "账号已被禁用，请联系管理员";
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
@@ -217,7 +271,9 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
   const fetchUserInfo = async () => {
     try {
       const userProfile = await refreshUserInfo();
-      if (!userProfile) return;
+      if (!userProfile) {
+        throw new Error("获取用户信息失败");
+      }
 
       toast({
         title: "登录成功",
@@ -225,28 +281,47 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
       });
 
       onLoginSuccess();
-      
-      // 检查是否有记录的重定向路径
-      const redirectPath = sessionStorage.getItem('redirectAfterLogin');
-      if (redirectPath && redirectPath !== '/auth') {
-        // 清除重定向路径
-        sessionStorage.removeItem('redirectAfterLogin');
-        // 跳转到记录的路径
-        navigate(redirectPath);
-      } else {
-        // 如果没有记录的路径或路径为auth页面，则跳转到首页
-        navigate('/');
-      }
+
+      // 处理重定向逻辑
+      await handleRedirect();
 
     } catch (error: any) {
       console.error("获取用户信息失败:", error);
+      // 清除可能已存储的token
+      clearTokens();
       throw new Error(error?.message || "获取用户信息失败");
+    }
+  };
+
+  // 处理登录后重定向
+  const handleRedirect = async () => {
+    // 优先使用location.state中的重定向路径
+    const from = (location.state as any)?.from;
+
+    if (from && from !== '/auth' && from !== location.pathname) {
+      navigate(from, { replace: true });
+    } else {
+      // 回退到sessionStorage中的路径或首页
+      const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+      if (redirectPath && redirectPath !== '/auth') {
+        sessionStorage.removeItem('redirectAfterLogin');
+        navigate(redirectPath, { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
+    }
+  };
+
+  // 处理键盘事件
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSubmit(e as any);
     }
   };
 
   return (
       <FormValidator onSubmit={handleSubmit}>
-        <div className="space-y-4">
+        <div className="space-y-4" onKeyPress={handleKeyPress}>
           {/* 手机号输入 */}
           <div className="space-y-2">
             <Label htmlFor="login-phone" className="text-sm font-medium">手机号 *</Label>
@@ -258,14 +333,27 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
                   type="tel"
                   placeholder="请输入手机号"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="pl-10 h-11"
+                  onChange={(e) => {
+                    setPhone(e.target.value.replace(/\D/g, '').slice(0, 11));
+                    setFormErrors(prev => ({ ...prev, phone: '' }));
+                  }}
+                  className={cn(
+                      "pl-10 h-11",
+                      formErrors.phone && "border-red-500 focus:border-red-500"
+                  )}
                   maxLength={11}
                   ref={phoneInputRef}
                   required
                   validationType="phone"
+                  autoComplete="tel"
               />
             </div>
+            {formErrors.phone && (
+                <p className="text-sm text-red-500 flex items-center gap-1">
+                  <span>⚠</span>
+                  {formErrors.phone}
+                </p>
+            )}
           </div>
 
           {/* 登录方式切换 */}
@@ -275,7 +363,7 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
               <TabsTrigger value="VERIFICATION_CODE">验证码登录</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="PASSWORD" className="space-y-4">
+            <TabsContent value="PASSWORD" className="space-y-4 pt-4">
               <div className="space-y-2">
                 <Label htmlFor="login-password" className="text-sm font-medium">密码 *</Label>
                 <div className="relative">
@@ -286,11 +374,18 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
                       type={showPassword ? "text" : "password"}
                       placeholder="请输入密码"
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10 pr-10 h-11"
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        setFormErrors(prev => ({ ...prev, password: '' }));
+                      }}
+                      className={cn(
+                          "pl-10 pr-10 h-11",
+                          formErrors.password && "border-red-500 focus:border-red-500"
+                      )}
                       ref={passwordInputRef}
                       required
                       validationType="password"
+                      autoComplete="current-password"
                   />
                   <Button
                       type="button"
@@ -306,10 +401,16 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
                     )}
                   </Button>
                 </div>
+                {formErrors.password && (
+                    <p className="text-sm text-red-500 flex items-center gap-1">
+                      <span>⚠</span>
+                      {formErrors.password}
+                    </p>
+                )}
               </div>
             </TabsContent>
 
-            <TabsContent value="VERIFICATION_CODE" className="space-y-4">
+            <TabsContent value="VERIFICATION_CODE" className="space-y-4 pt-4">
               <div className="space-y-2">
                 <Label htmlFor="login-verification-code" className="text-sm font-medium">验证码 *</Label>
                 <div className="flex gap-2">
@@ -321,21 +422,30 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
                         type="text"
                         placeholder="请输入6位验证码"
                         value={verificationCode}
-                        onChange={(e) => setVerificationCode(e.target.value)}
-                        className="pl-10 h-11"
+                        onChange={(e) => {
+                          setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                          setFormErrors(prev => ({ ...prev, verificationCode: '' }));
+                        }}
+                        className={cn(
+                            "pl-10 h-11",
+                            formErrors.verificationCode && "border-red-500 focus:border-red-500"
+                        )}
                         maxLength={6}
                         ref={verificationCodeInputRef}
                         required
                         validationType="verificationCode"
+                        autoComplete="one-time-code"
                     />
                   </div>
                   <Button
                       type="button"
                       onClick={handleSendVerificationCode}
-                      disabled={sendCodeLoading || countdown > 0 || !phone}
+                      disabled={sendCodeLoading || countdown > 0 || !phone || !!validatePhone(phone)}
                       className={cn(
-                          "whitespace-nowrap px-4 h-11",
-                          countdown > 0 ? "bg-gray-100 text-gray-400" : "bg-blue-500 text-white"
+                          "whitespace-nowrap px-4 h-11 min-w-[120px]",
+                          countdown > 0 || !!validatePhone(phone)
+                              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                              : "bg-blue-500 hover:bg-blue-600 text-white"
                       )}
                       variant={countdown > 0 ? "outline" : "default"}
                   >
@@ -351,6 +461,12 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
                     )}
                   </Button>
                 </div>
+                {formErrors.verificationCode && (
+                    <p className="text-sm text-red-500 flex items-center gap-1">
+                      <span>⚠</span>
+                      {formErrors.verificationCode}
+                    </p>
+                )}
               </div>
             </TabsContent>
           </Tabs>
@@ -358,8 +474,9 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
           {/* 登录按钮 */}
           <Button
               type="submit"
-              className="w-full h-11 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium transition-all duration-200"
+              className="w-full h-11 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium transition-all duration-200 shadow-lg"
               disabled={loading || !isFormValid}
+              size="lg"
           >
             {loading ? (
                 <>

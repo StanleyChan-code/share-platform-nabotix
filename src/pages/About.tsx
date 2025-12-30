@@ -18,13 +18,13 @@ const About = () => {
                 <div className="text-center space-y-6 py-8">
                     <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 rounded-full text-sm font-semibold shadow-sm">
                         <Database className="h-5 w-5"/>
-                        华西临床研究数据共享平台
+                        临床科研数据共享平台
                     </div>
                     <h1 className="text-5xl font-bold bg-gradient-to-r from-gray-900 to-blue-800 bg-clip-text text-transparent">
-                        推动临床研究数据开放共享
+                        推动临床科研数据开放共享
                     </h1>
                     <p className="text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
-                        基于OMOP CDM标准的安全、标准化、协作式临床研究数据共享平台，
+                        基于OMOP CDM标准的安全、标准化、协作式临床科研数据共享平台，
                         严格遵循数据去标识化规范，为医学研究创新提供高质量数据支撑。
                     </p>
                 </div>
@@ -47,7 +47,7 @@ const About = () => {
                                     我们的使命
                                 </h4>
                                 <p className="text-muted-foreground leading-relaxed">
-                                    建立安全可信的临床研究数据共享生态，打破数据孤岛，
+                                    建立安全可信的临床科研数据共享生态，打破数据孤岛，
                                     促进跨机构协作，推动循证医学发展和精准医疗创新。
                                 </p>
                             </div>
@@ -57,7 +57,7 @@ const About = () => {
                                     我们的愿景
                                 </h4>
                                 <p className="text-muted-foreground leading-relaxed">
-                                    成为国内领先的临床研究数据共享平台，为医学研究者提供
+                                    成为国内领先的临床科研数据共享平台，为医学研究者提供
                                     高质量数据资源，加速医学科学发现和临床应用转化。
                                 </p>
                             </div>
@@ -224,25 +224,57 @@ const About = () => {
 
                     <Card className="bg-gradient-to-br from-white to-orange-50/20 border-orange-200/50 shadow-lg hover:shadow-xl transition-shadow duration-300">
                         <CardContent className="p-8">
-                            <div className="grid gap-8 lg:grid-cols-4">
-                                {[
-                                    { icon: Database, title: "数据上传", desc: "数据提供方上传标准化数据集，通过去标识化检查", color: "blue" },
-                                    { icon: Shield, title: "审核验证", desc: "平台管理员审核数据质量，导师验证提供方身份", color: "green" },
-                                    { icon: Users, title: "申请使用", desc: "研究人员提交数据申请，经多级审核后获得访问权限", color: "purple" },
-                                    { icon: Award, title: "成果产出", desc: "研究人员上传基于数据产生的论文、专利等成果", color: "orange" }
-                                ].map((step, index) => (
-                                    <div key={index} className="text-center space-y-4 relative">
-                                        {/* 连接线 */}
-                                        {index < 3 && (
-                                            <div className="hidden lg:block absolute top-6 left-1/2 w-full h-0.5 bg-gradient-to-r from-blue-200 to-green-200 -z-10"/>
-                                        )}
+                            <div className="grid gap-8 lg:grid-cols-4 relative">
+                                {/* 连接线容器 */}
+                                <div className="hidden lg:block absolute top-8 left-0 w-full h-0.5 -z-10">
+                                    <div className="w-full h-full bg-gradient-to-r from-blue-200 via-green-200 to-purple-200"></div>
+                                </div>
 
-                                        <div className={`w-16 h-16 bg-${step.color}-100 text-${step.color}-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg`}>
+                                {[
+                                    {
+                                        icon: Database,
+                                        title: "数据上传",
+                                        desc: "数据提供方上传标准化数据集，通过去标识化检查",
+                                        color: "blue",
+                                        bgColor: "bg-blue-100",
+                                        textColor: "text-blue-600",
+                                        dotColor: "bg-blue-500"
+                                    },
+                                    {
+                                        icon: Shield,
+                                        title: "审核验证",
+                                        desc: "平台管理员审核数据质量，导师验证提供方身份",
+                                        color: "green",
+                                        bgColor: "bg-green-100",
+                                        textColor: "text-green-600",
+                                        dotColor: "bg-green-500"
+                                    },
+                                    {
+                                        icon: Users,
+                                        title: "申请使用",
+                                        desc: "研究人员提交数据申请，经多级审核后获得访问权限",
+                                        color: "purple",
+                                        bgColor: "bg-purple-100",
+                                        textColor: "text-purple-600",
+                                        dotColor: "bg-purple-500"
+                                    },
+                                    {
+                                        icon: Award,
+                                        title: "成果产出",
+                                        desc: "研究人员上传基于数据产生的论文、专利等成果",
+                                        color: "orange",
+                                        bgColor: "bg-orange-100",
+                                        textColor: "text-orange-600",
+                                        dotColor: "bg-orange-500"
+                                    }
+                                ].map((step, index) => (
+                                    <div key={index} className="text-center h-full flex flex-col items-center">
+                                        <div className={`w-16 h-16 ${step.bgColor} ${step.textColor} rounded-2xl flex items-center justify-center mx-auto shadow-lg relative z-10`}>
                                             <step.icon className="h-8 w-8"/>
                                         </div>
-                                        <div className="space-y-2">
+                                        <div className="space-y-2 mt-4">
                                             <div className="flex items-center justify-center gap-2">
-                                                <div className={`w-3 h-3 bg-${step.color}-500 rounded-full`}></div>
+                                                <div className={`w-3 h-3 ${step.dotColor} rounded-full`}></div>
                                                 <h4 className="font-semibold text-lg">{step.title}</h4>
                                             </div>
                                             <p className="text-sm text-muted-foreground leading-relaxed">

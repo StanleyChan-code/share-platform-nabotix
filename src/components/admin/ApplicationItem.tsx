@@ -25,7 +25,7 @@ import {
 import {Button} from "@/components/ui/button";
 import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
 import {useToast} from '@/components/ui/use-toast';
-import {canMangageApplication, hasPermissionRole, PermissionRoles} from "@/lib/permissionUtils.ts";
+import {hasPermissionRole, PermissionRoles} from "@/lib/permissionUtils";
 import ApprovalActions from "@/components/ui/ApprovalActions.tsx";
 import {
     AlertDialog,
@@ -37,7 +37,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {getCurrentUserFromSession} from "@/lib/authUtils.ts";
+import {getCurrentUserFromSession} from "@/lib/authUtils";
 
 interface ApplicationItemProps {
     application: Application;
@@ -125,19 +125,19 @@ const getTimelineItems = (application: Application) => {
         reviewer: null
     }];
 
-    // 提供者审核
+    // 提供者审核 - 始终显示
     if (application.providerReviewedAt) {
         const isProviderApproved = application.providerReviewResult === true;
         items.push({
             id: 'provider-reviewed', // 添加唯一标识符
             status: isProviderApproved ? '提供者审核通过' : '提供者审核拒绝',
             date: application.providerReviewedAt,
-            completed: true,
-            icon: <User className="h-4 w-4"/>,
+            completed: isProviderApproved,
+            icon: <User color={isProviderApproved ? 'white' : 'red'} className="h-4 w-4"/>,
             notes: application.providerNotes,
             reviewer: null
         });
-    } else if (['PENDING_PROVIDER_REVIEW', 'PENDING_INSTITUTION_REVIEW', 'APPROVED', 'DENIED'].includes(application.status)) {
+    } else {
         items.push({
             id: 'pending-provider', // 添加唯一标识符
             status: '待提供者审核',
@@ -149,19 +149,19 @@ const getTimelineItems = (application: Application) => {
         });
     }
 
-    // 机构审核
+    // 机构审核 - 始终显示
     if (application.institutionReviewedAt) {
         const isFinalApproved = application.institutionReviewResult === true;
         items.push({
             id: 'institution-reviewed', // 添加唯一标识符
             status: isFinalApproved ? '机构审核通过' : '机构审核拒绝',
             date: application.institutionReviewedAt,
-            completed: true,
-            icon: <Building className="h-4 w-4"/>,
+            completed: isFinalApproved,
+            icon: <Building color={isFinalApproved ? 'white' : 'red'} className="h-4 w-4"/>,
             notes: application.adminNotes,
             reviewer: null
         });
-    } else if (['PENDING_INSTITUTION_REVIEW', 'APPROVED', 'DENIED'].includes(application.status)) {
+    } else {
         items.push({
             id: 'pending-institution', // 添加唯一标识符
             status: '待机构审核',
@@ -173,40 +173,28 @@ const getTimelineItems = (application: Application) => {
         });
     }
 
-    // 最终状态
-    if (application.status === 'APPROVED' || application.status === 'DENIED') {
-        const isApproved = application.status === 'APPROVED';
-        items.push({
-            id: 'final-status', // 添加唯一标识符
-            status: isApproved ? '审批完成' : '审批结束',
-            date: application.approvedAt || application.institutionReviewedAt,
-            completed: true,
-            icon: isApproved ? <CheckCircle className="h-4 w-4"/> : <XCircle className="h-4 w-4"/>,
-            notes: null,
-            reviewer: null
-        });
-    }
+    // 最终状态 - 始终显示
+    const isApproved = application.status !== 'DENIED';
+    items.push({
+        id: 'final-status', // 添加唯一标识符
+        status: isApproved ? '审批完成' : '审批结束',
+        date: application.approvedAt,
+        completed: application.status === 'APPROVED',
+        icon: isApproved ? <CheckCircle className="h-4 w-4"/> : <XCircle className="h-4 w-4"/>,
+        notes: null,
+        reviewer: null
+    });
 
     return items;
 };
 
 // 是否能审核
 const canApproveApplication = (application: Application, role: 'provider' | 'institution') => {
-    if (hasPermissionRole(PermissionRoles.PLATFORM_ADMIN)) {
-        return true;
-    }
-
-    if (role === 'provider' && application.providerId === getCurrentUserFromSession().id) {
-        return true;
-    }
-
-    if (role === 'institution' &&
-        (hasPermissionRole(PermissionRoles.INSTITUTION_SUPERVISOR) || hasPermissionRole(PermissionRoles.DATASET_APPROVER)) &&
-        application.datasetInstitutionId === getCurrentUserFromSession().institutionId) {
-        return true;
-    }
-
-    return false;
+    // 平台管理员始终有权审核；提供者在 providerId 匹配时有权限；机构审核在机构匹配并具有相应角色时有权限
+    return hasPermissionRole(PermissionRoles.PLATFORM_ADMIN) ||
+        (role === 'provider' && application.providerId === getCurrentUserFromSession().id) ||
+        (role === 'institution' && application.datasetInstitutionId === getCurrentUserFromSession().institutionId &&
+            (hasPermissionRole(PermissionRoles.INSTITUTION_SUPERVISOR) || hasPermissionRole(PermissionRoles.DATASET_APPROVER)));
 }
 
 const ApplicationItem: React.FC<ApplicationItemProps> = ({
@@ -320,7 +308,7 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
     return (
         <>
             <Card key={application.id} className="hover:shadow-md transition-shadow border-l-4 border-l-primary">
-                <CardHeader className="pb-3">
+                <CardHeader>
                     <div className="flex justify-between items-start gap-4">
                         <div className="space-y-2 flex-1 min-w-0">
                             <CardTitle className="text-lg flex items-center gap-2">
@@ -344,13 +332,13 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                                 className="flex items-center whitespace-nowrap min-w-[100px] justify-center"
                             >
                                 {getStatusIcon(application.status)}
-                                {getStatusText(application.status)}
+                                <span className={"text-sm"}>{getStatusText(application.status)}</span>
                             </Badge>
                             <div className="flex gap-1">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button
-                                            className="h-8 w-8 p-0"
+                                            className="h-10 w-10 p-2"
                                             variant="outline"
                                             size="sm"
                                             onClick={() => onViewDetails(application)}
@@ -369,7 +357,7 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                                className="h-10 w-10 p-2 text-destructive hover:text-destructive"
                                                 onClick={() => setDeleteDialogOpen(true)}
                                             >
                                                 <Trash2 className="h-4 w-4"/>
@@ -546,7 +534,7 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                                         <div
                                             className={`flex flex-col items-center ${item.completed ? 'text-primary' : 'text-muted-foreground'}`}>
                                             <div
-                                                className={`p-1 rounded-full ${item.completed ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                                                className={`p-1 rounded-full ${item.completed ? 'bg-green-800 text-primary-foreground' : 'bg-muted '}`}>
                                                 {item.icon}
                                             </div>
                                             <span className="mt-1 text-center whitespace-nowrap">{item.status}</span>
@@ -586,3 +574,4 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
 };
 
 export default ApplicationItem;
+

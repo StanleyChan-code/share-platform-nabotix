@@ -6,7 +6,7 @@ import { PermissionRoles, getPermissionRoleDisplayName } from "@/lib/permissionU
 import { userApi } from "@/integrations/api/userApi.ts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { AdminInstitutionSelector } from "@/components/admin/institution/AdminInstitutionSelector.tsx";
-import { getCurrentUserInfoFromSession } from "@/lib/authUtils.ts";
+import { getCurrentUserInfoFromSession } from "@/lib/authUtils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
 import { Asterisk, User, Mail, Phone, IdCard, GraduationCap, Briefcase, Target, Shield, Key, Info, AlertCircle } from "lucide-react";
@@ -204,7 +204,7 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
         realName: formData.realName.trim(),
         email: formData.email?.trim() || null,
         phone: formData.phone.trim(),
-        password: "123456",
+        password: "",
         institutionId: effectiveInstitutionId,
         idType: formData.idType,
         idNumber: formData.idNumber.trim(),
@@ -219,7 +219,7 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
 
       toast({
         title: "成功",
-        description: `用户 ${formData.realName} 已成功创建。初始密码为：123456`,
+        description: `用户 ${formData.realName} 已成功创建。首次登录须使用手机验证码。`,
       });
 
       resetForm();
@@ -533,3 +533,4 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
 };
 
 export default AddUserToInstitutionForm;
+

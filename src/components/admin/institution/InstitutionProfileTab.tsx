@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast.ts";
 import { institutionApi, Institution } from "@/integrations/api/institutionApi.ts";
 import { Loader2, Building, User, Mail, Phone, IdCard, Briefcase, Shield, Asterisk, Info } from "lucide-react";
 import { InstitutionTypes, ID_TYPES } from "@/lib/enums.ts";
-import { getCurrentUserRolesFromSession } from "@/lib/authUtils.ts";
+import { getCurrentUserRolesFromSession } from "@/lib/authUtils";
 import { Separator } from "@/components/ui/separator.tsx";
 import {FormValidator, Input, ValidatedSelect} from "@/components/ui/FormValidator";
 

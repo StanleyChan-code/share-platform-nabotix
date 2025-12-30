@@ -114,7 +114,7 @@ export const OutputCard = ({ output }: OutputCardProps) => {
                 <Database className="h-3.5 w-3.5 text-purple-500 flex-shrink-0" />
                 <span className="font-medium flex-shrink-0">基于数据集:</span>
                 <span
-                    className="truncate break-words flex-1 min-w-0 max-w-96"
+                    className="truncate break-words flex-1 min-w-0 max-w-72"
                     title={`基于数据集: ${output.dataset.titleCn}`}
                 >
               {output.dataset.titleCn}

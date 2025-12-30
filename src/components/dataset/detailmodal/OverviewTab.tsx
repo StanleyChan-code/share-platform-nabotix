@@ -1,7 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table.tsx";
-import { Users, Database, Calendar, TrendingUp, Building, Link, Pen, User, Mail, MapPin, Share } from "lucide-react";
+import {
+  Users,
+  Database,
+  Calendar,
+  TrendingUp,
+  Building,
+  Link,
+  Pen,
+  User,
+  Mail,
+  MapPin,
+  Share,
+  Layers2, SwatchBook
+} from "lucide-react";
 import { formatDate } from "@/lib/utils.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { useState, useEffect } from "react";
@@ -239,19 +252,36 @@ export function OverviewTab({
               </div>
 
               <div className="space-y-3">
+
                 {dataset.subjectArea && (
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">学科分类</p>
-                      <Badge variant="secondary" className="text-sm">
-                        {dataset.subjectArea.name}
-                      </Badge>
-                    </div>
+                    <InfoItem
+                        icon={Layers2}
+                        label="学科分类"
+                        value={dataset.subjectArea.name}
+                    />
                 )}
 
                 {dataset.samplingMethod && (
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">抽样方法</p>
-                      <p className="text-sm font-medium">{dataset.samplingMethod}</p>
+                    <InfoItem
+                        icon={SwatchBook}
+                        label="抽样方法"
+                        value={dataset.samplingMethod}
+                    />
+                )}
+
+                {parentDataset && (
+                    <div className="flex items-start gap-2">
+                      <Link className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">基线数据集</p>
+                        <Button
+                            variant="link"
+                            className="p-0 h-auto font-medium justify-start text-left"
+                            onClick={() => setIsParentDatasetModalOpen(true)}
+                        >
+                          {parentDataset.titleCn}
+                        </Button>
+                      </div>
                     </div>
                 )}
               </div>
@@ -306,13 +336,13 @@ export function OverviewTab({
                   {isEditing ? (
                       <>
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">联系人</p>
+                          <p className="text-xs text-muted-foreground mb-1">数据集联系人</p>
                           <input
                               type="text"
                               value={editableFields.contactPerson}
                               onChange={(e) => setEditableFields(prev => ({...prev, contactPerson: e.target.value}))}
                               className="w-full p-2 border rounded text-sm"
-                              placeholder="请输入联系人"
+                              placeholder="请输入数据集联系人"
                               maxLength={100}
                           />
                         </div>
@@ -333,7 +363,7 @@ export function OverviewTab({
                         {dataset.contactPerson && (
                             <InfoItem
                                 icon={User}
-                                label="联系人"
+                                label="数据集联系人"
                                 value={dataset.contactPerson}
                             />
                         )}
@@ -377,22 +407,6 @@ export function OverviewTab({
                           icon={Mail}
                         />
                       </>
-                  )}
-
-                  {parentDataset && (
-                      <div className="flex items-start gap-2">
-                        <Link className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">基线数据集</p>
-                          <Button
-                              variant="link"
-                              className="p-0 h-auto font-medium justify-start text-left"
-                              onClick={() => setIsParentDatasetModalOpen(true)}
-                          >
-                            {parentDataset.titleCn}
-                          </Button>
-                        </div>
-                      </div>
                   )}
                 </div>
               </div>

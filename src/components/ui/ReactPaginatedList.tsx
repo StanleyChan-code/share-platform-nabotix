@@ -22,7 +22,7 @@ interface ReactPaginatedListProps<T> {
   onRefetch?: (refetch: () => void) => void;
 }
 
-interface ReactPaginatedListRef {
+export interface ReactPaginatedListRef {
   refresh: () => void;
 }
 

@@ -14,7 +14,6 @@ import { RecentOutputsSection } from "@/components/home/RecentOutputsSection";
 import { OutputCard } from "@/components/home/OutputCard";
 import { outputApi } from "@/integrations/api/outputApi.ts";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 // 定义平台统计数据结构
 interface PlatformStatistics {
@@ -178,10 +177,10 @@ const Index = () => {
                 {/* Hero Section */}
                 <div className="text-center space-y-6 py-8">
                     <h1 className="text-5xl font-bold bg-gradient-to-r from-gray-900 to-blue-800 bg-clip-text text-transparent">
-                        临床研究数据共享平台
+                        临床科研数据共享平台
                     </h1>
                     <p className="text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
-                        基于OMOP CDM标准的安全、标准化、协作式临床研究数据共享平台，
+                        基于OMOP CDM标准的安全、标准化、协作式临床科研数据共享平台，
                         严格遵循数据去标识化规范，为医学研究创新提供高质量数据支撑。
                     </p>
                 </div>

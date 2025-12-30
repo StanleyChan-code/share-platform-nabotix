@@ -25,7 +25,7 @@ import {canUploadDataset, hasPermissionRole, PermissionRoles} from "@/lib/permis
 import ApprovalActions from "@/components/ui/ApprovalActions.tsx";
 import {Dataset, datasetApi} from "@/integrations/api/datasetApi.ts";
 import {toast} from "@/hooks/use-toast.ts";
-import {getCurrentUserFromSession} from "@/lib/authUtils.ts";
+import {getCurrentUserFromSession} from "@/lib/authUtils";
 
 interface VersionsTabProps {
     versions: any[];

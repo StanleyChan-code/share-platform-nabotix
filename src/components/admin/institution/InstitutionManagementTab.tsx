@@ -23,7 +23,7 @@ import {InstitutionTypes} from "@/lib/enums.ts";
 import { ApiResponse, Page } from "@/integrations/api/client";
 import { useDebounce } from "@/hooks/useDebounce";
 import {Input} from "@/components/ui/FormValidator.tsx";
-import { getCurrentUserRolesFromSession } from "@/lib/authUtils.ts";
+import { getCurrentUserRolesFromSession } from "@/lib/authUtils";
 import { PermissionRoles } from "@/lib/permissionUtils.ts";
 
 const InstitutionManagementTab = () => {
@@ -349,3 +349,4 @@ const InstitutionManagementTab = () => {
 };
 
 export default InstitutionManagementTab;
+

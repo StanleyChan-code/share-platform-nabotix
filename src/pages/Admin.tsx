@@ -1,4 +1,4 @@
-import {useState, useEffect} from "react";
+import {useState, useEffect, useCallback, useRef} from "react";
 import {useNavigate} from "react-router-dom";
 import {Navigation} from "@/components/Navigation";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
@@ -11,13 +11,8 @@ import {
     Database,
     FileText,
     Building2,
-    Loader2,
     Target,
     Award,
-    BookOpen,
-    UserCheck,
-    BarChart3,
-    Settings
 } from "lucide-react";
 import UserManagementTab from "@/components/admin/user/UserManagementTab.tsx";
 import ApplicationReviewTab from "@/components/admin/ApplicationReviewTab";
@@ -25,10 +20,14 @@ import InstitutionManagementTab from "@/components/admin/institution/Institution
 import InstitutionProfileTab from "@/components/admin/institution/InstitutionProfileTab.tsx";
 import ResearchSubjectManagementTab from "@/components/admin/researchsubject/ResearchSubjectManagementTab.tsx";
 import {institutionApi} from "@/integrations/api/institutionApi";
-import {getCurrentUserInfoFromSession} from "@/lib/authUtils.ts";
-import {getPermissionRoleDisplayName, hasPermissionRole, PermissionRoles} from "@/lib/permissionUtils.ts";
+import {getCurrentUserInfoFromSession} from "@/lib/authUtils";
+import {getPermissionRoleDisplayName, hasPermissionRole, PermissionRoles} from "@/lib/permissionUtils";
 import DatasetsTab from "@/components/admin/dataset/DatasetsTab.tsx";
 import ResearchOutputsManagementTab from "@/components/admin/researchoutput/ResearchOutputsManagementTab.tsx";
+import {
+    getCounts,
+    pendingCountsController
+} from "@/lib/pendingCountsController";
 
 const UnifiedDashboard = () => {
     const [activeTab, setActiveTab] = useState("institutions");
@@ -38,8 +37,29 @@ const UnifiedDashboard = () => {
     const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
     const [availableTabs, setAvailableTabs] = useState<any>([]);
     const [currentUserInfo, setCurrentUserInfo] = useState<any | null>(null);
+    // 使用全局控制器获取待审核数量
+    const [pendingCounts, setPendingCounts] = useState(getCounts());
     const {toast} = useToast();
     const navigate = useNavigate();
+
+    // mounted guard to prevent state updates on unmounted component
+    const mountedRef = useRef(true);
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
+        };
+    }, []);
+
+    // 刷新所有待审核数量的函数
+    const fetchAllPendingCounts = useCallback(async () => {
+        try {
+            // 更新本地状态
+            setPendingCounts(getCounts());
+        } catch (error) {
+            console.error('获取待审核数量失败:', error);
+        }
+    }, []);
 
     // 定义所有可用的标签页
     const getAllTabs = (institutionId: string) => {
@@ -131,7 +151,7 @@ const UnifiedDashboard = () => {
                 setCurrentUserInfo(userInfo);
 
                 if (!userInfo) {
-                    navigate("/auth");
+                    if (mountedRef.current) navigate("/auth");
                     return;
                 }
 
@@ -143,7 +163,7 @@ const UnifiedDashboard = () => {
                         description: "您没有权限访问管理面板",
                         variant: "destructive",
                     });
-                    navigate("/");
+                    if (mountedRef.current) navigate("/");
                     return;
                 }
 
@@ -159,10 +179,11 @@ const UnifiedDashboard = () => {
                         description: "您没有管理权限",
                         variant: "destructive",
                     });
-                    navigate("/");
+                    if (mountedRef.current) navigate("/");
                     return;
                 }
 
+                if (!mountedRef.current) return;
                 setAvailableTabs(allTabs.filter(tab =>
                     tab.allowRoles.some(role => hasPermissionRole(role))
                 ));
@@ -174,7 +195,7 @@ const UnifiedDashboard = () => {
                 if (!platformAdmin && userInfo.institution?.id) {
                     try {
                         const institutionResponse = await institutionApi.getInstitutionById(userInfo.institution.id);
-                        if (institutionResponse.success) {
+                        if (institutionResponse.success && mountedRef.current) {
                             setUserInstitution(institutionResponse.data);
                         }
                     } catch (error) {
@@ -182,6 +203,7 @@ const UnifiedDashboard = () => {
                     }
                 }
 
+                if (!mountedRef.current) return;
                 setIsAuthorized(true);
 
                 // 设置默认激活的标签页
@@ -193,6 +215,9 @@ const UnifiedDashboard = () => {
                     setActiveTab(availableTabs[0].value);
                 }
 
+                // 获取待审核数量
+                await fetchAllPendingCounts();
+
             } catch (error: any) {
                 console.error("检查授权时出错:", error);
                 toast({
@@ -200,14 +225,35 @@ const UnifiedDashboard = () => {
                     description: error.message || "检查用户权限时发生错误",
                     variant: "destructive",
                 });
-                navigate("/");
+                if (mountedRef.current) navigate("/");
             } finally {
-                setIsCheckingAuth(false);
+                if (mountedRef.current) setIsCheckingAuth(false);
             }
         };
 
         checkAuthorization();
-    }, [navigate, toast]);
+    }, [navigate, toast, fetchAllPendingCounts]);
+
+    // 监听全局控制器的更新事件
+    useEffect(() => {
+        const handleUpdate = () => {
+            setPendingCounts(getCounts());
+        };
+
+        setTimeout(handleUpdate, 500);
+
+        // 添加事件监听器
+        pendingCountsController.addEventListener('refetchOutputPendingCount', handleUpdate);
+        pendingCountsController.addEventListener('refetchApplicationPendingCount', handleUpdate);
+        pendingCountsController.addEventListener('refetchDatasetPendingCount', handleUpdate);
+
+        // 清理函数
+        return () => {
+            pendingCountsController.removeEventListener('refetchOutputPendingCount', handleUpdate);
+            pendingCountsController.removeEventListener('refetchApplicationPendingCount', handleUpdate);
+            pendingCountsController.removeEventListener('refetchDatasetPendingCount', handleUpdate);
+        };
+    }, []);
 
     if (isCheckingAuth) {
         return (
@@ -268,7 +314,6 @@ const UnifiedDashboard = () => {
                         </CardContent>
                     </Card>
                 </div>
-
                 {/* Management Tabs - 美化后的部分 */}
                 <Card className="bg-white/80 backdrop-blur-sm border-blue-200/50 shadow-xl overflow-hidden">
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -292,6 +337,9 @@ const UnifiedDashboard = () => {
                                             const isActive = activeTab === tab.value;
                                             const isFirst = index === 0;
                                             const isLast = index === availableTabs.length - 1;
+                                            // 获取当前标签页的待审核数量
+                                            const pendingCount = pendingCounts[tab.value as keyof typeof pendingCounts] || 0;
+                                            const showBadge = pendingCount > 0;
 
                                             return (
                                                 <TabsTrigger
@@ -308,6 +356,7 @@ const UnifiedDashboard = () => {
         ${isFirst ? 'rounded-tl-xl' : ''}
         ${isLast ? 'rounded-tr-xl' : ''}
         min-w-0 flex-shrink-0
+        overflow-visible
     `}
                                                     style={{flexBasis: `${100 / availableTabs.length}%`}}
                                                 >
@@ -322,12 +371,26 @@ const UnifiedDashboard = () => {
                                                             isActive ? 'scale-110 text-white' : 'group-hover:scale-110 text-current'
                                                         }`}/>
 
-                                                    <span
-                                                        className={`font-semibold text-base whitespace-nowrap truncate text-center ${
+                                                    {/* 将标签文本和红圆点包装在一个相对定位的容器中 */}
+                                                    <div className="inline-flex items-center relative">
+                                                        <span className={`font-semibold text-base whitespace-nowrap ${
                                                             isActive ? 'text-white' : 'text-current'
                                                         }`}>
-        {tab.label}
-    </span>
+                                                            {tab.label}
+                                                        </span>
+
+                                                        {showBadge && (
+                                                            <span className={`
+                                                                absolute -top-2.5 -right-4 bg-red-500 text-white rounded-full 
+                                                                min-w-[18px] h-4.5 px-1 flex items-center justify-center 
+                                                                font-bold leading-none text-xs border-2  overflow-visible
+                                                                ${isActive ? 'border-white' : 'border-gray-200'}
+                                                                shadow-sm
+                                                            `}>
+                                                                {pendingCount > 99 ? '99+' : pendingCount}
+                                                            </span>
+                                                        )}
+                                                    </div>
 
                                                     {/* 悬停效果装饰 */}
                                                     <div
@@ -365,9 +428,11 @@ const UnifiedDashboard = () => {
                         </div>
                     </Tabs>
                 </Card>
+
             </main>
         </div>
     );
 };
 
 export default UnifiedDashboard;
+

@@ -35,6 +35,7 @@ export function DatasetDetailModal({
     const [versions, setVersions] = useState<any[]>([]);
     const [parentDataset, setParentDataset] = useState<Dataset>(null);
     const [followUpModals, setFollowUpModals] = useState<{ [key: string]: boolean }>({}); // 管理随访数据集对话框
+    const [defaultTab, setDefaultTab] = useState<string>('overview');
 
     // Fetch detailed dataset with timeline when modal opens
     useEffect(() => {
@@ -59,14 +60,9 @@ export function DatasetDetailModal({
                         setError('获取数据集详情失败');
                     }
 
-                    datasetResponse = response.data.data;
+                    datasetResponse = response.data;
                 }
-
-                // Fetch dataset versions
-                const versionsResponse = await api.get(`/datasets/${dataset.id}/versions`);
-                if (versionsResponse.data.success) {
-                    setVersions(versionsResponse.data.data);
-                }
+                setVersions(datasetResponse?.data?.versions);
 
                 // 加载基线数据集
                 if (datasetResponse?.data?.parentDatasetId) {
@@ -84,6 +80,17 @@ export function DatasetDetailModal({
                         }
                     } catch (err) {
                         console.error('Error fetching parent dataset:', err);
+                    }
+                }
+
+                // 检查是否有待审核的版本，如果是高级查询模式，则默认跳转到版本标签页
+                if (useAdvancedQuery && datasetResponse?.data?.versions) {
+                    const hasPendingVersion = datasetResponse?.data?.versions.some(
+                        (version: any) => version.approved === null);
+                    if (hasPendingVersion) {
+                        setDefaultTab('versions');
+                    } else {
+                        setDefaultTab('overview');
                     }
                 }
             } catch (err) {
@@ -194,10 +201,10 @@ export function DatasetDetailModal({
             <Dialog open={open} onOpenChange={onOpenChange}>
                 <DialogContent className="max-w-5xl h-[85vh] overflow-hidden flex flex-col">
                     <DialogHeader>
-                        <DialogTitle className="text-2xl flex items-center gap-2">
+                        <DialogTitle className="text-2xl flex items-start gap-2">
                             {currentDataset.titleCn}
                             {currentDataset.parentDatasetId && (
-                                <span className="text-sm text-muted-foreground">（随访数据集）</span>
+                                <span className="text-sm text-muted-foreground">随访数据集</span>
                             )}
                         </DialogTitle>
 
@@ -228,7 +235,7 @@ export function DatasetDetailModal({
 
                     <div className="flex-1 overflow-hidden overflow-y-auto">
                         <ScrollArea className="h-full w-full pr-4">
-                            <Tabs defaultValue="overview" className="w-full">
+                            <Tabs defaultValue={defaultTab} className="w-full">
                                 <TabsList className="grid w-full grid-cols-5">
                                     <TabsTrigger value="overview" className="gap-2">
                                         <Info className="h-4 w-4"/>
@@ -250,9 +257,13 @@ export function DatasetDetailModal({
                                         <Shield className="h-4 w-4"/>
                                         条款与文件
                                     </TabsTrigger>
-                                    <TabsTrigger value="versions" className="gap-2">
+                                    <TabsTrigger value="versions" className="gap-2 relative">
                                         <Clock className="h-4 w-4"/>
                                         版本信息
+                                        {useAdvancedQuery && versions.some(version => version.approved === null) && (
+                                            <span
+                                                className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500"></span>
+                                        )}
                                     </TabsTrigger>
                                 </TabsList>
 
@@ -275,17 +286,18 @@ export function DatasetDetailModal({
 
                                 {/* (3) Statistics Tab */}
                                 <TabsContent value="statistics" className="space-y-4 mt-4">
-                                    <StatisticsTab useAdvancedQuery={useAdvancedQuery} versions={currentDataset.versions} />
+                                    <StatisticsTab useAdvancedQuery={useAdvancedQuery}
+                                                   versions={currentDataset.versions}/>
                                 </TabsContent>
 
                                 {/* Research Outputs Tab */}
                                 <TabsContent value="researchOutputs" className="space-y-4 mt-4">
-                                    <ResearchOutputsTab datasetId={currentDataset.id} />
+                                    <ResearchOutputsTab datasetId={currentDataset.id}/>
                                 </TabsContent>
 
                                 {/* Terms and Files Tab */}
                                 <TabsContent value="termsandfiles" className="space-y-4 mt-4">
-                                    <TermsAndFilesTab dataset={currentDataset} useAdvancedQuery={useAdvancedQuery} />
+                                    <TermsAndFilesTab dataset={currentDataset} useAdvancedQuery={useAdvancedQuery}/>
                                 </TabsContent>
 
                                 {/* (4) Versions Tab */}
@@ -297,14 +309,35 @@ export function DatasetDetailModal({
                                         useAdvancedQuery={useAdvancedQuery} // 传递参数控制是否使用高级查询
                                         dataset={currentDataset} // 传递数据集
                                         onVersionAdded={() => {
-                                            // 重新加载版本信息
-                                            api.get(`/datasets/${dataset.id}/versions`).then(response => {
-                                                if (response.data.success) {
-                                                    setVersions(response.data.data);
+                                            // 重新加载数据集和版本信息
+                                            const reloadDatasetAndVersions = async () => {
+                                                try {
+                                                    let datasetResponse: ApiResponse<Dataset>;
+                                                    if (useAdvancedQuery) {
+                                                        // 使用高级查询接口获取数据集详情
+                                                        datasetResponse = await datasetApi.getManageableDatasetById(dataset.id);
+                                                        setDetailDataset(datasetResponse.data || datasetResponse);
+                                                    } else {
+                                                        // Fetch dataset details
+                                                        const response = await api.get(`/datasets/${dataset.id}?loadTimeline=true`);
+                                                        if (response.data.success) {
+                                                            setDetailDataset(response.data.data);
+                                                        } else {
+                                                            setError('获取数据集详情失败');
+                                                        }
+                                                    }
+
+                                                    // Fetch dataset versions
+                                                    const versionsResponse = await api.get(`/datasets/${dataset.id}/versions`);
+                                                    if (versionsResponse.data.success) {
+                                                        setVersions(versionsResponse.data.data);
+                                                    }
+                                                } catch (err) {
+                                                    console.error('Error reloading dataset and versions:', err);
                                                 }
-                                            }).catch(err => {
-                                                console.error('Error reloading versions:', err);
-                                            });
+                                            };
+
+                                            reloadDatasetAndVersions();
 
                                             // 调用回调通知数据集已更新
                                             onDatasetUpdated?.();

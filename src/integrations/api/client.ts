@@ -1,8 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import {
   getRefreshToken,
-  setAccessToken,
-  setRefreshToken,
+  setAuthTokens,
   clearTokens,
   isAuthenticated as isTokenAuthenticated,
     isTokenExpired,
@@ -34,31 +33,46 @@ export interface Page<T> {
   };
 }
 
+// 单-flight guard 避免重复处理认证失败
+let _isHandlingAuthFailure = false;
+
 // 辅助函数：根据路径决定跳转还是刷新
 function handleAuthFailure() {
-  const currentPath = window.location.pathname;
-  if (currentPath.startsWith('/admin') || currentPath.startsWith('/profile')) {
-    // 记录原始路径，以便登录后返回
-    sessionStorage.setItem('redirectAfterLogin', currentPath);
-    clearTokens();
-    // 等待缓存清除完成后再跳转
-    setTimeout(() => {
-      window.location.href = '/auth';
-    }, 100);
-  } else {
-    // 刷新页面前也要清除token，避免刷新后仍使用过期的token
-    clearTokens();
-    // 等待缓存清除完成后再刷新
-    setTimeout(() => {
-      window.location.reload();
-    }, 100);
+  if (_isHandlingAuthFailure) return; // already handling
+  _isHandlingAuthFailure = true;
+
+  try {
+    const currentPath = window.location.pathname;
+    if (currentPath.startsWith('/admin') || currentPath.startsWith('/profile')) {
+      // 记录原始路径，以便登录后返回
+      sessionStorage.setItem('redirectAfterLogin', currentPath);
+      // 只清除token但抑制事件，避免多个listener重复触发
+      clearTokens(true);
+      // 等待缓存清除完成后再跳转
+      setTimeout(() => {
+        window.location.href = '/auth';
+        _isHandlingAuthFailure = false;
+      }, 100);
+    } else {
+      // 清除token并抑制事件
+      clearTokens(true);
+      // 等待缓存清除完成后再刷新
+      setTimeout(() => {
+        window.location.reload();
+        _isHandlingAuthFailure = false;
+      }, 100);
+    }
+  } catch (err) {
+    // 确保状态被重置
+    _isHandlingAuthFailure = false;
+    throw err;
   }
 }
 
 // 创建axios实例
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -100,6 +114,11 @@ apiClient.interceptors.response.use(
       if (getIsRefreshing()) {
         // 如果正在刷新，将当前请求加入队列等待
         return addRequestToQueue(originalRequest).then(() => {
+          // 重试时让请求拦截器重新注入最新token
+          // 清理原始请求的 Authorization，以保证拦截器可以覆盖
+          if (originalRequest.headers) {
+            delete originalRequest.headers.Authorization;
+          }
           return apiClient(originalRequest);
         });
       }
@@ -114,9 +133,8 @@ apiClient.interceptors.response.use(
         });
         const { accessToken, refreshToken: newRefreshToken } = refreshResponse.data.data;
 
-        // 更新本地存储的Token
-        setAccessToken(accessToken);
-        setRefreshToken(newRefreshToken);
+        // 更新本地存储的Token（通过单一入口）
+        setAuthTokens(accessToken, newRefreshToken);
 
         // 更新后续请求的Authorization头
         apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
@@ -125,7 +143,10 @@ apiClient.interceptors.response.use(
         clearRequestQueue();
         setIsRefreshing(false);
 
-        // 重试最初的请求
+        // 重试最初的请求（清理原始请求的 Authorization，以便拦截器注入最新)
+        if (originalRequest.headers) {
+          delete originalRequest.headers.Authorization;
+        }
         return apiClient(originalRequest);
       } catch (refreshError) {
         // 刷新Token失败，使用统一的认证失败处理
@@ -174,8 +195,7 @@ class ApiClient {
 
   // 设置认证token
   setAuthToken(accessToken: string, refreshToken: string) {
-    setAccessToken(accessToken);
-    setRefreshToken(refreshToken);
+    setAuthTokens(accessToken, refreshToken);
   }
 
   // 清除认证token
@@ -196,6 +216,7 @@ interface ApiError extends Error {
     data?: {
       message?: string;
     };
+    status?: number;
   };
 }
 

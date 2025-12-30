@@ -1,9 +1,7 @@
-import { useState, useEffect } from "react";
-import { Label } from "@/components/ui/label.tsx";
-import { Loader2 } from 'lucide-react';
+import { useState } from "react";
 import { DatasetSelector } from '@/components/dataset/DatasetSelector.tsx';
-import { Dataset, datasetApi } from '@/integrations/api/datasetApi.ts';
-import { getCurrentUserFromSession } from '@/lib/authUtils.ts';
+import { Dataset } from '@/integrations/api/datasetApi.ts';
+import { getCurrentUserFromSession } from '@/lib/authUtils';
 
 interface BaselineDatasetSelectorProps {
   value: string;

@@ -34,7 +34,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog.tsx";
-import {getCurrentUserInfoFromSession, getCurrentUserRolesFromSession} from '@/lib/authUtils.ts';
+import {getCurrentUserInfoFromSession, getCurrentUserRolesFromSession, getOrFetchUserInfo} from '@/lib/authUtils';
 import {canUploadDataset, hasPermissionRole, PermissionRoles} from '@/lib/permissionUtils.ts';
 import {DatasetTypes} from "@/lib/enums.ts";
 import {DatasetUploadForm} from "@/components/admin/dataset/DatasetUploadForm.tsx";
@@ -43,6 +43,7 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/c
 import {AdminInstitutionSelector} from "@/components/admin/institution/AdminInstitutionSelector.tsx";
 import {useDebounce} from "@/hooks/useDebounce";
 import {Input} from "@/components/ui/FormValidator.tsx";
+import {refreshDatasetPendingCount} from "@/lib/pendingCountsController";
 
 interface DatasetsTabProps {
     filterByCurrentUser?: boolean;
@@ -63,8 +64,8 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
     // 添加筛选相关状态
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedSubject, setSelectedSubject] = useState<string>("all");
-    const [selectedType, setSelectedType] = useState<string>("all"); // 新增数据集类型筛选状态
-    const [hasPendingVersion, setHasPendingVersion] = useState<boolean | "all">("all");
+    const [selectedType, setSelectedType] = useState<string>("all"); // 数据集类型筛选状态
+    const [hasPendingVersion, setHasPendingVersion] = useState<boolean | "all">(true);
     const [isTopLevel, setIsTopLevel] = useState<boolean | "all">("all");
     const [institutionId, setInstitutionId] = useState<string | null>(null);
     const [subjects, setSubjects] = useState<ResearchSubject[]>([]);
@@ -191,10 +192,11 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
 
     const hasDeletionPermission = (dataset: Dataset) => {
         // 只有数据集创建者或平台管理员可以删除数据集
-        if (!getCurrentUserInfoFromSession()) {
+        const userInfo = getCurrentUserInfoFromSession();
+        if (!userInfo) {
             return false;
         }
-        return dataset.provider?.id === getCurrentUserInfoFromSession().user.id || hasPermissionRole(PermissionRoles.PLATFORM_ADMIN);
+        return dataset.provider?.id === userInfo.user.id || hasPermissionRole(PermissionRoles.PLATFORM_ADMIN);
     };
 
     const fetchDatasets = useCallback(async (page: number, size: number) => {
@@ -237,7 +239,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
         const hasApprovedVersion = dataset.versions.some(version => version.approved === true);
 
         if (hasApprovedVersion) {
-            return 'default';
+            return 'outline';
         } else if (dataset.versions.length > 0) {
             return 'secondary';
         } else {
@@ -259,6 +261,20 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
         }
     };
 
+    const getStatusColor = (dataset: Dataset) => {
+        // 检查是否有已批准的版本
+        const hasApprovedVersion = dataset.versions.some(version => version.approved === true);
+        const hasRejectedVersion = dataset.versions.some(version => version.approved === false);
+
+        if (hasApprovedVersion) {
+            return 'text-green-700 bg-green-100';
+        } else if (hasRejectedVersion) {
+            return 'text-red-700 bg-red-100';
+        } else {
+            return 'text-yellow-800 bg-yellow-100';
+        }
+    }
+
     const getStatusText = (dataset: Dataset) => {
         // 检查是否有已批准的版本
         const hasApprovedVersion = dataset.versions.some(version => version.approved === true);
@@ -269,7 +285,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
         } else if (hasRejectedVersion) {
             return '已拒绝';
         } else if (dataset.versions.length > 0) {
-            return '审核中';
+            return '待审核';
         } else {
             return '未提交数据集版本';
         }
@@ -318,6 +334,8 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
             if (!filterByCurrentUser) {
                 fetchDatasetList(currentPage);
             }
+            // 刷新待审核数量
+            refreshDatasetPendingCount();
         } catch (error) {
             toast({
                 title: "删除失败",
@@ -366,14 +384,15 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                         <div className="flex flex-col items-end gap-1">
                             <Badge
                                 variant={getStatusBadgeVariant(dataset)}
-                                className="flex items-center whitespace-nowrap min-w-[80px] justify-center"
+                                className={"flex items-center whitespace-nowrap min-w-[100px] justify-center " + getStatusColor(dataset)}
                             >
                                 {getStatusIcon(dataset)}
-                                {getStatusText(dataset)}
+                                <span className={"text-sm"}>{getStatusText(dataset)}</span>
                             </Badge>
                             {getPendingVersionCount(dataset) > 0 && (
-                                <Badge variant="secondary" className="text-xs">
-                                    存在待审核版本
+
+                                <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800 border-yellow-200">
+                                    有版本待审核
                                 </Badge>
                             )}
                         </div>
@@ -381,6 +400,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Button
+                                        className="h-10 w-10 p-2"
                                         variant="outline"
                                         size="sm"
                                         onClick={() => handleViewDataset(dataset)}
@@ -397,6 +417,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                                     <TooltipTrigger asChild>
                                         <Button
                                             variant="outline"
+                                            className="h-10 w-10 p-2 text-destructive hover:text-destructive"
                                             size="sm"
                                             onClick={() => handleDeleteClick(dataset)}
                                         >
@@ -613,6 +634,8 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                                     if (!filterByCurrentUser) {
                                         fetchDatasetList(currentPage);
                                     }
+                                    // 刷新待审核数量
+                                    refreshDatasetPendingCount();
                                 }}/>
                             </div>
                         )}
@@ -699,6 +722,8 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                             if (!filterByCurrentUser) {
                                 fetchDatasetList(currentPage);
                             }
+                            // 刷新待审核数量
+                            refreshDatasetPendingCount();
                         }}
                     />
                 )}
@@ -742,3 +767,4 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
 };
 
 export default DatasetsTab;
+

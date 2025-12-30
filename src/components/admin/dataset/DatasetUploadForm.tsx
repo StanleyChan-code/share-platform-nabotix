@@ -14,7 +14,7 @@ import { InstitutionSelector } from "@/components/dataset/InstitutionSelector.ts
 import { AdminInstitutionSelector } from "@/components/admin/institution/AdminInstitutionSelector.tsx";
 import { datasetApi } from "@/integrations/api/datasetApi.ts";
 import { institutionApi } from "@/integrations/api/institutionApi.ts";
-import { getCurrentUserRolesFromSession } from "@/lib/authUtils.ts";
+import { getCurrentUserRolesFromSession } from "@/lib/authUtils";
 import { PermissionRoles } from "@/lib/permissionUtils.ts";
 import { FileInfo } from "@/integrations/api/fileApi.ts";
 import { toast } from "sonner";
@@ -1287,3 +1287,4 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
       </>
   );
 }
+
