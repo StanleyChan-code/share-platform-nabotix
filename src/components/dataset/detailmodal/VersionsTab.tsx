@@ -1,6 +1,7 @@
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card.tsx";
 import {Badge} from "@/components/ui/badge.tsx";
 import {Button} from "@/components/ui/button.tsx";
+import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip.tsx";
 import {
     CheckCircle,
     XCircle,
@@ -14,7 +15,8 @@ import {
     Layers,
     MessageSquare,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    User
 } from "lucide-react";
 import {useState} from "react";
 import {Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger} from "@/components/ui/dialog.tsx";
@@ -26,6 +28,9 @@ import ApprovalActions from "@/components/ui/ApprovalActions.tsx";
 import {Dataset, datasetApi} from "@/integrations/api/datasetApi.ts";
 import {toast} from "@/hooks/use-toast.ts";
 import {getCurrentUserFromSession} from "@/lib/authUtils";
+import RelatedUsersDialog from "@/components/profile/RelatedUsersDialog.tsx";
+import {RelatedUsersDto} from "@/integrations/api/userApi.ts";
+import {QADialog, QAItem} from "@/components/ui/QADialog.tsx";
 
 interface VersionsTabProps {
     versions: any[];
@@ -46,6 +51,16 @@ export function VersionsTab({
                             }: VersionsTabProps) {
     const [isAddVersionDialogOpen, setIsAddVersionDialogOpen] = useState(false);
     const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set());
+    
+    // 新增：相关用户对话框状态
+    const [isRelatedUsersDialogOpen, setIsRelatedUsersDialogOpen] = useState(false);
+    const [relatedUsers, setRelatedUsers] = useState<RelatedUsersDto | null>(null);
+    const [relatedUsersLoading, setRelatedUsersLoading] = useState(false);
+    const [highlightedUserIds, setHighlightedUserIds] = useState<string[]>([]);
+    
+    // 新增：Q&A对话框状态
+    const [isQADialogOpen, setIsQADialogOpen] = useState(false);
+    
     const datasetId = dataset?.id;
 
     // 检查用户是否有审核权限
@@ -75,7 +90,7 @@ export function VersionsTab({
         } else {
             return {
                 icon: HelpCircle,
-                text: "待审核",
+                text: "待机构审核",
                 variant: "secondary" as const,
                 color: "text-amber-600",
                 bgColor: "bg-amber-50 border-amber-200"
@@ -145,6 +160,37 @@ export function VersionsTab({
         }
     };
 
+    // 新增：获取数据集相关用户信息
+    const handleOpenRelatedUsersDialog = async (version: any) => {
+        if (!datasetId) return;
+
+        try {
+            setRelatedUsersLoading(true);
+            setHighlightedUserIds([]);
+            
+            // 调用 API 获取数据集相关用户
+            const response = await datasetApi.getDatasetRelatedUsers(datasetId);
+            setRelatedUsers(response.data);
+            
+            // 如果版本已经审核，高亮审核员
+            if (version.approved !== null && version.supervisor) {
+               setHighlightedUserIds([version.supervisor.id]);
+            }
+            
+            // 打开对话框
+            setIsRelatedUsersDialogOpen(true);
+        } catch (error: any) {
+            console.error("获取相关用户失败:", error);
+            toast({
+                title: "获取失败",
+                description: error.response?.data?.message || "获取相关用户信息失败，请稍后重试",
+                variant: "destructive"
+            });
+        } finally {
+            setRelatedUsersLoading(false);
+        }
+    };
+
     return (
         <Card className="border shadow-sm">
             <CardHeader className="pb-4">
@@ -161,6 +207,67 @@ export function VersionsTab({
                                 </div>
                             )}
                         </div>
+                        {/* Q&A对话框 */}
+                        {useAdvancedQuery && (
+                            <QADialog
+                                isOpen={isQADialogOpen}
+                                onOpenChange={setIsQADialogOpen}
+                                title="数据集版本审核说明"
+                                content={
+                                    <div className="space-y-6">
+                                        <QAItem
+                                            number={1}
+                                            title="版本创建"
+                                            description="数据集上传员在创建数据集时，系统会自动创建第一个数据集版本。"
+                                        />
+                                        
+                                        <QAItem
+                                            number={2}
+                                            title="审核权限"
+                                            description="只有机构数据集审核员或机构管理员有权限审核数据集版本。"
+                                        />
+                                        
+                                        <QAItem
+                                            number={3}
+                                            title="公开展示条件"
+                                            description="当且仅当数据集存在至少一个已批准的版本时，该数据集才能在平台公开展示。"
+                                        />
+                                        
+                                        <QAItem
+                                            number={4}
+                                            title="版本提交限制"
+                                            description="当数据集存在待审核的版本时，无法提交新的版本，需等待当前版本审核完成。"
+                                        />
+                                        
+                                        <QAItem
+                                            number={5}
+                                            title="随访数据集处理"
+                                            description="对于随访数据集，请上传新的数据集并关联基线数据集，而不是通过新增数据集版本的方式处理。"
+                                        />
+                                        
+                                        <QAItem
+                                            number={6}
+                                            title="数据获取规则"
+                                            description="平台公开展示和用户申请下载的数据集数据及文件，均为该数据集最新的已审核通过的版本。"
+                                        />
+                                        
+                                        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                            <div className="flex items-start gap-3">
+                                                <div className="flex-shrink-0 h-6 w-6 rounded-full bg-blue-200 text-blue-800 flex items-center justify-center font-medium">
+                                                    <span className="text-xs">!</span>
+                                                </div>
+                                                <div className="text-sm">
+                                                    <p className="font-medium text-blue-800 mb-1">提示</p>
+                                                    <p className="text-blue-700">
+                                                        在数据集版本列表中，每个版本右侧的用户图标按钮可以点击查看该版本的相关审核人员信息。
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            />
+                        )}
                     </CardTitle>
 
                     {useAdvancedQuery && canUploadDataset() && !hasPendingVersion && datasetId && (
@@ -213,7 +320,7 @@ export function VersionsTab({
                                                 <div className="flex flex-col items-center gap-2">
                                                     <div className="flex items-center gap-2">
                                                         <div className="text-2xl font-bold text-blue-600">
-                                                            v{version.versionNumber}
+                                                            {version.versionNumber}
                                                         </div>
                                                         {isCurrentVersion && (
                                                             <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200">
@@ -223,7 +330,7 @@ export function VersionsTab({
                                                     </div>
                                                     <Badge
                                                         variant={statusInfo.variant}
-                                                        className={`gap-1.5 px-3 py-1.5 ${statusInfo.bgColor} ${statusInfo.color} border`}
+                                                        className={`gap-1.5 px-3 py-1.5 ${statusInfo.bgColor} ${statusInfo.color} border transition-all duration-200`}
                                                     >
                                                         <StatusIcon className="h-3.5 w-3.5"/>
                                                         {statusInfo.text}
@@ -258,8 +365,29 @@ export function VersionsTab({
                                                 </div>
                                             </div>
 
-                                            {/* 审核操作 */}
-                                            {canApproveDataset && (
+                                            {/* 操作按钮 */}
+                                            <div className="flex items-center gap-2">
+                                                {/* 查看审核员按钮 */}
+                                                {useAdvancedQuery && (
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button
+                                                                className="h-10 w-10 p-2"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => handleOpenRelatedUsersDialog(version)}
+                                                            >
+                                                                <User className="h-4 w-4"/>
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>查看审核员</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                )}
+
+                                                {/* 审核操作 */}
+                                                {canApproveDataset && (
                                                 <div className="flex-shrink-0">
                                                     {version.approved === null && (
                                                         <ApprovalActions
@@ -296,6 +424,7 @@ export function VersionsTab({
                                                     )}
                                                 </div>
                                             )}
+                                            </div>
                                         </div>
 
                                         {/* 版本说明 */}
@@ -352,10 +481,10 @@ export function VersionsTab({
                                             <div className="border-t pt-4">
                                                 <div className="flex items-center gap-2 mb-3">
                                                     <XCircle className="h-4 w-4 text-destructive"/>
-                                                    <span className="font-medium text-sm text-destructive">拒绝理由</span>
+                                                    <span className="font-medium text-sm text-destructive">拒绝原因</span>
                                                 </div>
                                                 <div className="text-sm text-muted-foreground">
-                                                    {version.rejectReason}
+                                                    {version.rejectReason || '无'}
                                                 </div>
                                             </div>
                                         )}
@@ -378,6 +507,15 @@ export function VersionsTab({
                     </div>
                 )}
             </CardContent>
+            
+            {/* 新增：相关用户对话框 */}
+            <RelatedUsersDialog
+                open={isRelatedUsersDialogOpen}
+                onOpenChange={setIsRelatedUsersDialogOpen}
+                relatedUsers={relatedUsers}
+                loading={relatedUsersLoading}
+                highlightedUserIds={highlightedUserIds}
+            />
         </Card>
     );
 }

@@ -1,10 +1,10 @@
 // 教育程度枚举
 export const EducationLevels = {
-  BACHELOR: "本科",
+  BACHELOR: "学士",
   MASTER: "硕士",
   PHD: "博士",
   POSTDOC: "博士后",
-  PROFESSOR: "教授",
+  // PROFESSOR: "教授",
   OTHER: "其他"
 } as const;
 

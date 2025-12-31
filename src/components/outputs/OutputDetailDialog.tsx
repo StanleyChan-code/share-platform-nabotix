@@ -543,7 +543,7 @@ const OutputDetailDialog = ({
                                             {currentOutput.approved === false && currentOutput.rejectionReason && (
                                                 <InfoCard
                                                     title="拒绝原因"
-                                                    value={<span className="text-destructive">{currentOutput.rejectionReason}</span>}
+                                                    value={<span className="text-destructive">{currentOutput.rejectionReason || "无"}</span>}
                                                     className="col-span-2"
                                                 />
                                             )}

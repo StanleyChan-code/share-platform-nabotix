@@ -21,6 +21,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import {useState} from "react";
 import {api} from "@/integrations/api/client.ts";
+import RelatedUsersDialog from "./RelatedUsersDialog";
+import {RelatedUsersDto} from "@/integrations/api/userApi.ts";
+import {outputApi} from "@/integrations/api/outputApi.ts";
 
 interface OutputItemProps {
     output: ResearchOutput;
@@ -40,6 +43,9 @@ const OutputItem = ({
     managementMode = false
 }: OutputItemProps) => {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [relatedUsersDialogOpen, setRelatedUsersDialogOpen] = useState(false);
+    const [relatedUsers, setRelatedUsers] = useState<RelatedUsersDto | null>(null);
+    const [relatedUsersLoading, setRelatedUsersLoading] = useState(false);
     const {toast} = useToast();
 
     const getTypeIcon = (type: string) => {
@@ -47,11 +53,38 @@ const OutputItem = ({
         return <IconComponent className="h-4 w-4"/>;
     };
 
+    const getHighlightedUserIds = () => {
+        const ids: string[] = [];
+        // 如果成果已审核，添加审核人的ID
+        if (output.approver?.id) {
+            ids.push(output.approver.id);
+        }
+        return ids;
+    };
+
+    const handleOpenRelatedUsersDialog = async () => {
+        setRelatedUsersLoading(true);
+        try {
+            const response = await outputApi.getRelatedUsers(output.id);
+            setRelatedUsers(response.data);
+            setRelatedUsersDialogOpen(true);
+        } catch (error) {
+            console.error("Failed to fetch related users:", error);
+            toast({
+                title: "获取用户信息失败",
+                description: "无法加载相关用户信息",
+                variant: "destructive"
+            });
+        } finally {
+            setRelatedUsersLoading(false);
+        }
+    };
+
     const getStatusBadge = (approved: boolean | null) => {
         const statusConfig = {
             approved: { variant: "default" as const, icon: CheckCircle, text: "已审核" },
             rejected: { variant: "destructive" as const, icon: XCircle, text: "已拒绝" },
-            pending: { variant: "secondary" as const, icon: Clock, text: "待审核" }
+            pending: { variant: "secondary" as const, icon: Clock, text: "待机构审核" }
         };
         
         let statusKey: keyof typeof statusConfig;
@@ -66,8 +99,10 @@ const OutputItem = ({
         const { variant, icon: Icon, text } = statusConfig[statusKey];
         
         return (
-            <Badge variant={variant}
-                   className="flex items-center whitespace-nowrap min-w-[100px] justify-center">
+            <Badge 
+                variant={variant}
+                className="flex items-center whitespace-nowrap min-w-[100px] justify-center"
+            >
                 <Icon className="h-3 w-3 mr-1"/>
                 <span className="text-sm">{text}</span>
             </Badge>
@@ -180,6 +215,26 @@ const OutputItem = ({
                                             </Tooltip>
                                         )}
 
+                                        {/* 查看审核员按钮 */}
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleOpenRelatedUsersDialog();
+                                                    }}
+                                                    className="h-10 w-10 p-2"
+                                                >
+                                                    <User className="h-4 w-4"/>
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>查看审核员</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+
                                         {hasDeletionPermission(output) && (
                                             <Tooltip>
                                                 <TooltipTrigger asChild>
@@ -280,6 +335,15 @@ const OutputItem = ({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* 相关用户信息对话框 */}
+            <RelatedUsersDialog
+                open={relatedUsersDialogOpen}
+                onOpenChange={setRelatedUsersDialogOpen}
+                relatedUsers={relatedUsers}
+                loading={relatedUsersLoading}
+                highlightedUserIds={getHighlightedUserIds()}
+            />
         </Card>
     );
 };

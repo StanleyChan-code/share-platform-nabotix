@@ -87,6 +87,11 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
   };
 
   const isRoleDisabled = (role: string) => {
+    // 如果是机构管理员角色，只有平台管理员可以选择
+    if (role === PermissionRoles.INSTITUTION_SUPERVISOR && !isPlatformAdmin) {
+      return true;
+    }
+
     if (selectedRoles.includes(PermissionRoles.PLATFORM_ADMIN) || selectedRoles.includes(PermissionRoles.INSTITUTION_SUPERVISOR)) {
       return !selectedRoles.includes(role);
     }
@@ -256,13 +261,22 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
   };
 
   // 定义可用的角色选项
-  const roleOptions: { id: string; name: string }[] = [
-    { id: PermissionRoles.INSTITUTION_SUPERVISOR, name: getPermissionRoleDisplayName(PermissionRoles.INSTITUTION_SUPERVISOR) },
+  const roleOptions: { id: string; name: string }[] = [];
+  
+  // 只有平台管理员可以看到机构管理员选项
+  if (isPlatformAdmin) {
+    roleOptions.push({ id: PermissionRoles.INSTITUTION_SUPERVISOR, name: getPermissionRoleDisplayName(PermissionRoles.INSTITUTION_SUPERVISOR) });
+  }
+  
+  // 添加普通角色选项
+  roleOptions.push(
     { id: PermissionRoles.INSTITUTION_USER_MANAGER, name: getPermissionRoleDisplayName(PermissionRoles.INSTITUTION_USER_MANAGER) },
     { id: PermissionRoles.DATASET_UPLOADER, name: getPermissionRoleDisplayName(PermissionRoles.DATASET_UPLOADER) },
     { id: PermissionRoles.DATASET_APPROVER, name: getPermissionRoleDisplayName(PermissionRoles.DATASET_APPROVER) },
-    { id: PermissionRoles.RESEARCH_OUTPUT_APPROVER, name: getPermissionRoleDisplayName(PermissionRoles.RESEARCH_OUTPUT_APPROVER) },
-  ];
+    { id: PermissionRoles.RESEARCH_OUTPUT_APPROVER, name: getPermissionRoleDisplayName(PermissionRoles.RESEARCH_OUTPUT_APPROVER) }
+  );
+  
+  // 如果是平台管理员，添加平台管理员选项到最前面
   if (isPlatformAdmin) {
     roleOptions.unshift({ id: PermissionRoles.PLATFORM_ADMIN, name: getPermissionRoleDisplayName(PermissionRoles.PLATFORM_ADMIN) });
   }
@@ -533,4 +547,3 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
 };
 
 export default AddUserToInstitutionForm;
-

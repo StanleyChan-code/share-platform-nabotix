@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { userApi } from "@/integrations/api/userApi";
-import {getPermissionRoleDisplayName, PERMISSION_ROLE_DISPLAY_NAMES, PermissionRoles} from "@/lib/permissionUtils";
+import {getPermissionRoleDisplayName, PermissionRoles} from "@/lib/permissionUtils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -121,7 +121,13 @@ const EditUserAuthoritiesDialog = ({ open, onOpenChange, user, onAuthoritiesUpda
         const hasAdmin = hasAdminRoleSelected();
         const hasNormal = hasNormalRoleSelected();
         const isRoleAdmin = isAdminRole(roleId);
-        const isRoleNormal = isNormalRole(roleId);
+        const currentUserRoles = getCurrentUserRolesFromSession();
+        const isCurrentUserPlatformAdmin = currentUserRoles.includes(PermissionRoles.PLATFORM_ADMIN);
+
+        // 如果是机构管理员角色，只有平台管理员可以选择
+        if (roleId === PermissionRoles.INSTITUTION_SUPERVISOR && !isCurrentUserPlatformAdmin) {
+            return false;
+        }
 
         // 如果已经选择了管理员角色
         if (hasAdmin) {
@@ -135,8 +141,8 @@ const EditUserAuthoritiesDialog = ({ open, onOpenChange, user, onAuthoritiesUpda
             return !isRoleAdmin;
         }
 
-        // 如果没有任何选择，所有角色都可选
-        return true;
+        // 如果没有任何选择，所有角色都可选（除了机构管理员，只有平台管理员可以选）
+        return roleId !== PermissionRoles.INSTITUTION_SUPERVISOR || isCurrentUserPlatformAdmin;
     };
 
     const handleSave = async () => {

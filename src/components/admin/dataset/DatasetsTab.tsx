@@ -285,7 +285,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
         } else if (hasRejectedVersion) {
             return '已拒绝';
         } else if (dataset.versions.length > 0) {
-            return '待审核';
+            return '待机构审核';
         } else {
             return '未提交数据集版本';
         }
@@ -392,7 +392,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                             {getPendingVersionCount(dataset) > 0 && (
 
                                 <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800 border-yellow-200">
-                                    有版本待审核
+                                    版本待机构审核
                                 </Badge>
                             )}
                         </div>

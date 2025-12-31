@@ -1,5 +1,5 @@
 import { api, Page } from './client';
-import { FileInfo } from './fileApi';
+import {RelatedUsersDto} from "@/integrations/api/userApi.ts";
 
 // 申请记录接口定义
 export interface Application {
@@ -158,3 +158,12 @@ export async function getAllApplications(
   const response = await api.get<Page<Application>>(`/manage/applications?${params.toString()}`);
   return response.data;
 }
+
+/**
+ * 根据申请ID获取相关用户信息
+ */
+export async function getApplicationRelatedUsers(applicationId: string) {
+  const response = await api.get<RelatedUsersDto>(`/applications/related-users/${applicationId}`);
+  return response.data;
+}
+

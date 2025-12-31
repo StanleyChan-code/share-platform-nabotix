@@ -20,6 +20,15 @@ export interface User {
   authorities?: string[];
 }
 
+export interface UserDto {
+  id: string;
+  name: string;
+  phone: string;
+  realName: string;
+  title: string;
+  username: string;
+}
+
 // 创建用户请求
 export interface CreateUserRequest {
   username: string;
@@ -59,6 +68,21 @@ export interface UpdateUserAuthoritiesRequest {
 export interface UpdatePhoneRequest {
   newPhone: string;
 }
+
+// 机构相关用户信息
+export interface RelatedUsersDto {
+  datasetApprovers?: UserDto[];
+
+  datasetProviders?: UserDto[];
+
+  researchOutputApprovers?: UserDto[];
+
+  institutionUserManagers?: UserDto[];
+
+  institutionSupervisors: UserDto[];
+}
+
+
 
 // 用户API函数
 export const userApi = {
@@ -124,5 +148,12 @@ export const userApi = {
   async updatePhone(userId: string, request: UpdatePhoneRequest) {
     const response = await api.put<User>(`/manage/users/${userId}/phone`, request);
     return response.data;
+  },
+
+  // 获取当前用户所属机构的相关用户信息（用户管理员和机构管理员）
+  async getInstitutionRelatedUsers() {
+    const response = await api.get<RelatedUsersDto>('/users/institution-related-users');
+    return response.data;
   }
+
 };

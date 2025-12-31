@@ -319,9 +319,9 @@ export function DatasetDetailModal({
                                                         setDetailDataset(datasetResponse.data || datasetResponse);
                                                     } else {
                                                         // Fetch dataset details
-                                                        const response = await api.get(`/datasets/${dataset.id}?loadTimeline=true`);
-                                                        if (response.data.success) {
-                                                            setDetailDataset(response.data.data);
+                                                        const response = await datasetApi.getDatasetById(dataset.id);
+                                                        if (response.success) {
+                                                            setDetailDataset(response.data);
                                                         } else {
                                                             setError('获取数据集详情失败');
                                                         }

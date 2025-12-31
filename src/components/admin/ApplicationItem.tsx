@@ -5,7 +5,8 @@ import {
     Application,
     deleteApplication,
     reviewApplicationByProvider,
-    reviewApplicationByApprover
+    reviewApplicationByApprover,
+    getApplicationRelatedUsers
 } from '@/integrations/api/applicationApi';
 import {formatDateTime} from '@/lib/utils';
 import {
@@ -38,6 +39,8 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {getCurrentUserFromSession} from "@/lib/authUtils";
+import RelatedUsersDialog from "@/components/profile/RelatedUsersDialog";
+import {RelatedUsersDto} from "@/integrations/api/userApi";
 
 interface ApplicationItemProps {
     application: Application;
@@ -208,6 +211,39 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                                                          }) => {
     const {toast} = useToast();
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [relatedUsersDialogOpen, setRelatedUsersDialogOpen] = useState(false);
+    const [relatedUsers, setRelatedUsers] = useState<RelatedUsersDto | null>(null);
+    const [relatedUsersLoading, setRelatedUsersLoading] = useState(false);
+
+    const handleOpenRelatedUsersDialog = async () => {
+        setRelatedUsersLoading(true);
+        try {
+            const response = await getApplicationRelatedUsers(application.id);
+            setRelatedUsers(response.data);
+        } catch (error) {
+            toast({
+                title: "操作失败",
+                description: "获取相关用户信息失败: " + (error instanceof Error ? error.message : "未知错误"),
+                variant: "destructive",
+            });
+        } finally {
+            setRelatedUsersLoading(false);
+        }
+        setRelatedUsersDialogOpen(true);
+    };
+
+    const getHighlightedUserIds = (): string[] => {
+        const userIds: string[] = [];
+        // 添加数据集提供者ID
+        if (application.providerId) {
+            userIds.push(application.providerId);
+        }
+        // 如果已审核，添加机构审核者ID
+        if (application.institutionReviewedAt && application.supervisorId) {
+            userIds.push(application.supervisorId);
+        }
+        return userIds;
+    };
 
     const handleApproveApplication = async (role: 'provider' | 'institution', applicationId: string, notes: string = "") => {
         try {
@@ -327,13 +363,13 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                             </div>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
-                            <Badge
-                                variant={getStatusBadgeVariant(application.status)}
-                                className="flex items-center whitespace-nowrap min-w-[100px] justify-center"
-                            >
-                                {getStatusIcon(application.status)}
-                                <span className={"text-sm"}>{getStatusText(application.status)}</span>
-                            </Badge>
+                                <Badge
+                                    variant={getStatusBadgeVariant(application.status)}
+                                    className="flex items-center whitespace-nowrap min-w-[120px] justify-center"
+                                >
+                                    {getStatusIcon(application.status)}
+                                    <span className={"text-sm"}>{getStatusText(application.status)}</span>
+                                </Badge>
                             <div className="flex gap-1">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
@@ -350,6 +386,24 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                                         <p>查看详情</p>
                                     </TooltipContent>
                                 </Tooltip>
+
+                                {/* 查看审核员按钮 */}
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            className="h-10 w-10 p-2"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleOpenRelatedUsersDialog}
+                                        >
+                                            <User className="h-4 w-4"/>
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>查看审核员</p>
+                                    </TooltipContent>
+                                </Tooltip>
+
                                 {/* 显示删除按钮 */}
                                 {hasDeletionPermission(application) && (
                                     <Tooltip>
@@ -508,18 +562,15 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                             <div className="flex-1 min-w-0">
                                 <span className="text-sm font-medium text-muted-foreground">审核意见</span>
                                 <div className="text-sm mt-1 space-y-1">
-                                    {application.providerReviewResult !== null && (
-                                        <p className="break-words">
-                                                <span
-                                                    className="font-medium text-blue-600">数据集提供者:</span> {application.providerNotes || "无"}
+                                        <p className="break-words gap-2">
+                                            <span className="font-medium text-blue-600">数据集提供者：</span>
+                                            <span>{application.providerReviewResult !== null ? application.providerNotes || "无" : "待审核"}</span>
                                         </p>
-                                    )}
-                                    {application.institutionReviewedAt !== null && (
-                                        <p className="break-words">
-                                                <span
-                                                    className="font-medium text-purple-600">机构管理员:</span> {application.adminNotes || "无"}
-                                        </p>
-                                    )}
+
+                                    <p className="break-words gap-2">
+                                        <span className="font-medium text-purple-600">机构管理员：</span>
+                                        <span>{application.institutionReviewResult !== null ? application.adminNotes || "无" : "待审核"}</span>
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -569,9 +620,17 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* 相关用户对话框 */}
+            <RelatedUsersDialog
+                open={relatedUsersDialogOpen}
+                onOpenChange={setRelatedUsersDialogOpen}
+                relatedUsers={relatedUsers}
+                loading={relatedUsersLoading}
+                highlightedUserIds={getHighlightedUserIds()}
+            />
         </>
     );
 };
 
 export default ApplicationItem;
-

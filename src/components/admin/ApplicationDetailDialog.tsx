@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast.ts';
 import { Clock, User, Building, CheckCircle, XCircle, Plus, FileText, Download, Eye, AlertCircle } from 'lucide-react';
 import { formatDateTime, formatFileSize } from '@/lib/utils.ts';
 import { fileApi, FileInfo } from '@/integrations/api/fileApi.ts';
-import {Application, downloadApplicationFile} from '@/integrations/api/applicationApi.ts';
+import {Application, downloadApplicationFile, getApplicationRelatedUsers} from '@/integrations/api/applicationApi.ts';
 import PDFPreview from '@/components/ui/pdf-preview.tsx'
 
 interface ApplicationDetailDialogProps {

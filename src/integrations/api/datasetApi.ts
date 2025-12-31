@@ -1,15 +1,7 @@
 import {api} from "@/integrations/api/client";
 import {Page} from "@/integrations/api/client";
 import {formatISOString} from "@/lib/utils.ts";
-
-interface UserDto {
-    id: string;
-    name: string;
-    phone: string;
-    realName: string;
-    title: string;
-    username: string;
-}
+import {RelatedUsersDto, UserDto} from "@/integrations/api/userApi.ts";
 
 // 定义数据集相关接口
 export interface Dataset {
@@ -72,11 +64,7 @@ export interface DatasetVersion {
     approved: boolean | null;
     approvedAt: string | null; // ISO格式日期时间或null
     rejectReason: string | null;
-    supervisor: {
-        id: string;
-        username: string;
-        realName: string;
-    } | null;
+    supervisor: UserDto | null;
 
     // 文件记录ID（管理接口中使用）
     fileRecordId?: string;
@@ -377,5 +365,12 @@ export const datasetApi = {
     async getApprovedResearchOutputs(datasetId: string, page: number = 0, size: number = 10) {
         const response = await api.get<Page<any>>(`/datasets/${datasetId}/approved-research-outputs?page=${page}&size=${size}`);
         return response.data;
+    },
+
+    // 获取数据集关联的用户（审核员、机构管理员、数据集提供者）
+    async getDatasetRelatedUsers(id: string) {
+        const response = await api.get<RelatedUsersDto>(`/datasets/${id}/related-users`);
+        return response.data;
     }
+
 };
