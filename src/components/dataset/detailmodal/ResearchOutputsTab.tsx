@@ -21,58 +21,6 @@ const formatDate = (dateString: string) => {
     });
 };
 
-// 单个研究成果卡片组件
-const ResearchOutputCard = ({ output }: { output: ResearchOutput }) => (
-    <Card className="flex flex-col h-full">
-        <CardHeader className="pb-3">
-            <div className="flex justify-between items-start">
-                <CardTitle className="text-lg line-clamp-2">
-                    {output.title}
-                </CardTitle>
-                <Badge variant="secondary" className="ml-2 whitespace-nowrap">
-                    {getOutputTypeDisplayName(output.type)}
-                </Badge>
-            </div>
-            {output.outputNumber && (
-                <p className="text-sm text-muted-foreground mt-1">
-                    编号: {output.outputNumber}
-                </p>
-            )}
-        </CardHeader>
-        <CardContent className="flex-1 flex flex-col">
-            <div className="flex-1">
-                {output.abstractText && (
-                    <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
-                        {output.abstractText}
-                    </p>
-                )}
-
-                <div className="flex items-center text-xs text-muted-foreground mb-3">
-                    <span>{output.submitter.realName}</span>
-                    {output.approvedAt && (
-                        <span className="mx-2">•</span>
-                    )}
-                    {output.approvedAt && (
-                        <span>{formatDate(output.approvedAt)}</span>
-                    )}
-                </div>
-            </div>
-
-            <div className="flex justify-between items-center mt-4">
-                <div className="flex space-x-2">
-                    {output.publicationUrl && (
-                        <Button variant="outline" size="sm" asChild>
-                            <a href={output.publicationUrl} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="h-4 w-4" />
-                            </a>
-                        </Button>
-                    )}
-                </div>
-            </div>
-        </CardContent>
-    </Card>
-);
-
 // 空状态组件
 const EmptyState = () => (
     <div className="flex justify-center items-center h-64">

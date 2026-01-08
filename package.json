@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "build:dev": "vite build --mode development",
+    "build": "vite build --env-file .env.production",
+    "build:dev": "vite build --mode development --env-file .env.development",
     "preview": "vite preview"
   },
   "dependencies": {

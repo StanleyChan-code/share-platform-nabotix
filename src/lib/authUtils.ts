@@ -57,11 +57,22 @@ export const setAuthTokens = (accessToken: string | null, refreshToken: string |
 
   // 触发认证状态变化事件（减少噪声，仅在必要时触发）
   if (!suppressEvent) {
-    window.dispatchEvent(new CustomEvent('authStatusChanged', { detail: { isAuthenticated: !!refreshToken } }));
-    // 也通过 BroadcastChannel 通知其他标签页
+    // 触发统一的认证状态变化事件，包含用户信息
+    const event = new CustomEvent('authStatusChanged', {
+      detail: {
+        isAuthenticated: !!refreshToken,
+        userInfo: refreshToken ? getCurrentUserInfoFromSession() : null
+      }
+    });
+    window.dispatchEvent(event);
+    
+    // 跨标签页通知
     if (authChannel) {
       try {
-        authChannel.postMessage({ type: 'authStatusChanged', isAuthenticated: !!refreshToken });
+        authChannel.postMessage({ 
+          type: 'authStatusChanged', 
+          isAuthenticated: !!refreshToken
+        });
       } catch (e) {
         // ignore
       }
@@ -211,6 +222,61 @@ export const getOrFetchUserInfo = async (): Promise<any | null> => {
   }
 
   return null;
+};
+
+// 统一处理登录成功后的所有操作
+export const handleLoginSuccess = async (accessToken: string, refreshToken: string, loginData: any): Promise<any> => {
+  // 先保存token到内存但不触发事件
+  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  
+  // 直接使用登录接口返回的完整信息
+  const { user, roles, institution } = loginData;
+  
+  // 构建用户信息对象
+  const userInfo = {
+    user,
+    roles,
+    institution
+  };
+  
+  // 将用户信息存储到localStorage
+  localStorage.setItem(USER_INFO_KEY, JSON.stringify(userInfo));
+  
+  // 通过 BroadcastChannel 通知其他 tab 用户信息已更新
+  if (authChannel) {
+    try {
+      authChannel.postMessage({ type: 'userInfoUpdated' });
+    } catch (e) {
+      // ignore
+    }
+  }
+  
+  // 刷新待审核数量
+  await import('./pendingCountsController').then(({ refreshAfterLogin }) => refreshAfterLogin());
+  
+  // 用户信息获取完成后，触发认证状态变化事件
+  // 创建事件对象
+  const eventDetail = {
+    isAuthenticated: true,
+    accessToken,
+    refreshToken,
+    userInfo
+  };
+  
+  // 触发认证状态变化事件
+  window.dispatchEvent(new CustomEvent('authStatusChanged', { detail: eventDetail }));
+  
+  // 通过 BroadcastChannel 通知其他 tab 页认证状态已更新
+  if (authChannel) {
+    try {
+      authChannel.postMessage({ type: 'authStatusChanged', ...eventDetail });
+    } catch (e) {
+      // ignore
+    }
+  }
+  
+  return userInfo;
 };
 
 /**

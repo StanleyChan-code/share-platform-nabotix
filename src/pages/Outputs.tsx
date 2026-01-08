@@ -113,8 +113,7 @@ const Outputs = () => {
         return (
             <Card
                 key={output.id}
-                className="group hover:cursor-pointer hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-blue-200/50 bg-gradient-to-br from-white to-blue-50/20 relative overflow-hidden shadow-sm hover:shadow-blue-100/30"
-                onClick={() => handleOutputClick(output)}
+                className="group transition-all duration-300 border-2 border-transparent hover:border-blue-200/50 bg-gradient-to-br from-white to-blue-50/20 relative overflow-hidden shadow-sm hover:shadow-blue-100/30"
             >
                 {/* 类型角标 */}
                 <div className={`absolute top-0 right-0 px-3 py-1.5 text-xs font-bold text-white rounded-bl-lg shadow-sm ${
@@ -136,8 +135,9 @@ const Outputs = () => {
                             <div className="flex items-start justify-between gap-4 mb-4 pr-16">
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-start justify-between gap-3 mb-3">
-                                        <h3 className="font-bold text-xl leading-tight text-gray-900 group-hover:text-blue-700 transition-colors line-clamp-2 flex-1 pr-2">
-                                            {output.title}
+                                        <h3 onClick={() => handleOutputClick(output)}
+                                            className="font-bold text-xl leading-tight text-gray-900 transition-colors line-clamp-2 flex-1 pr-2 cursor-pointer hover:text-blue-600">
+                                          {output.title}
                                         </h3>
                                         <div className="flex flex-col items-end gap-2 ml-2 flex-shrink-0">
                                             {isHighQuality && (

@@ -9,7 +9,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { FormValidator, Input } from "@/components/ui/FormValidator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { refreshUserInfo, setAccessToken, setRefreshToken, isAuthenticated, clearTokens } from "@/lib/authUtils";
+import { refreshUserInfo, isAuthenticated, clearTokens, getCurrentUserInfoFromSession } from "@/lib/authUtils";
 
 interface LoginTabProps {
   phone: string;
@@ -114,7 +114,6 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
     if (submitAttempted.current || phone) {
       const { isValid, errors } = validateForm();
       setIsFormValid(isValid);
-      setFormErrors(errors);
     }
   }, [phone, password, verificationCode, loginType, validateForm]);
 
@@ -230,12 +229,6 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
       const response = await login(requestData);
 
       if (response.data.success) {
-        const { accessToken, refreshToken } = response.data.data;
-
-        // 存储token
-        setAccessToken(accessToken);
-        setRefreshToken(refreshToken);
-
         // 获取用户信息
         await fetchUserInfo();
 
@@ -270,7 +263,14 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
   // 获取用户信息函数
   const fetchUserInfo = async () => {
     try {
-      const userProfile = await refreshUserInfo();
+      // 先尝试从localStorage获取用户信息（登录成功后已保存）
+      let userProfile = getCurrentUserInfoFromSession();
+      
+      // 如果localStorage中没有，才调用refreshUserInfo获取
+      if (!userProfile) {
+        userProfile = await refreshUserInfo();
+      }
+      
       if (!userProfile) {
         throw new Error("获取用户信息失败");
       }
@@ -321,7 +321,7 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
 
   return (
       <FormValidator onSubmit={handleSubmit}>
-        <div className="space-y-4" onKeyPress={handleKeyPress}>
+        <div className="space-y-4" onKeyUp={handleKeyPress}>
           {/* 手机号输入 */}
           <div className="space-y-2">
             <Label htmlFor="login-phone" className="text-sm font-medium">手机号 *</Label>
@@ -348,12 +348,6 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
                   autoComplete="tel"
               />
             </div>
-            {formErrors.phone && (
-                <p className="text-sm text-red-500 flex items-center gap-1">
-                  <span>⚠</span>
-                  {formErrors.phone}
-                </p>
-            )}
           </div>
 
           {/* 登录方式切换 */}
@@ -401,12 +395,6 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
                     )}
                   </Button>
                 </div>
-                {formErrors.password && (
-                    <p className="text-sm text-red-500 flex items-center gap-1">
-                      <span>⚠</span>
-                      {formErrors.password}
-                    </p>
-                )}
               </div>
             </TabsContent>
 
@@ -461,12 +449,6 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
                     )}
                   </Button>
                 </div>
-                {formErrors.verificationCode && (
-                    <p className="text-sm text-red-500 flex items-center gap-1">
-                      <span>⚠</span>
-                      {formErrors.verificationCode}
-                    </p>
-                )}
               </div>
             </TabsContent>
           </Tabs>

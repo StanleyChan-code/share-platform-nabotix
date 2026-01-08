@@ -27,12 +27,15 @@ export const OutputCard = ({ output }: OutputCardProps) => {
       >
         {/* 标题和类型标签行 */}
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-3">
-          <h3
-              className="font-semibold text-base md:text-lg leading-tight line-clamp-2 flex-1 group-hover:text-blue-600 transition-colors break-words"
+          <a
+              href={`/outputs?id=${output.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-base md:text-lg leading-tight line-clamp-2 flex-1 group-hover:text-blue-600 transition-colors break-words hover:underline"
               title={output.title}
           >
             {output.title}
-          </h3>
+          </a>
 
           <div className="flex flex-row sm:flex-col items-start sm:items-end gap-2 flex-shrink-0">
             {/* 高质量成果标记 */}

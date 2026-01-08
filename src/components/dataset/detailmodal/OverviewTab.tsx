@@ -276,7 +276,7 @@ export function OverviewTab({
                         <p className="text-xs text-muted-foreground mb-1">基线数据集</p>
                         <Button
                             variant="link"
-                            className="p-0 h-auto font-medium justify-start text-left"
+                            className="p-0 font-medium justify-start text-left line-clamp-2 break-words whitespace-normal"
                             onClick={() => setIsParentDatasetModalOpen(true)}
                         >
                           {parentDataset.titleCn}
@@ -496,7 +496,7 @@ export function OverviewTab({
             <DatasetDetailModal
                 dataset={parentDataset}
                 open={isParentDatasetModalOpen}
-                useAdvancedQuery={true}
+                useAdvancedQuery={useAdvancedQuery}
                 onOpenChange={setIsParentDatasetModalOpen}
                 onDatasetUpdated={onDatasetUpdated}
             />

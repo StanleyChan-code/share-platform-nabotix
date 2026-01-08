@@ -109,7 +109,7 @@ const RelatedUsersDialog: React.FC<RelatedUsersDialogProps> = ({
                 <div key={groupIndex} className="space-y-3">
                   <div className="flex items-center gap-2 text-lg font-semibold text-gray-800 bg-gray-50 p-2 rounded-md">
                     <group.icon className="h-5 w-5 text-primary" />
-                    {group.title} ({group.users.length} 人)
+                    {group.title}
                   </div>
                   <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-2">
                     {group.users.map((user) => (
@@ -130,8 +130,8 @@ const RelatedUsersDialog: React.FC<RelatedUsersDialogProps> = ({
                           )}
                         </CardHeader>
                         <CardContent className="space-y-2 mt-4">
-                          <InfoItem icon={User} label="用户名" value={user.username} />
                           <InfoItem icon={User} label="姓名" value={user.realName} />
+                          <InfoItem icon={User} label="用户名" value={user.username} />
                           {/*<InfoItem icon={Phone} label="电话" value={user.phone} />*/}
                           <InfoItem icon={Mail} label="邮箱" value={user.email} />
                           <InfoItem icon={User} label="职称" value={user.title} />

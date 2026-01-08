@@ -17,12 +17,15 @@ export const DatasetCard = ({ dataset, showRecommendationBadge = false }: Datase
       <div className="group flex flex-col p-5 border border-gray-200 rounded-xl hover:shadow-lg transition-all duration-300 bg-white hover:border-blue-200 h-full">
         {/* 标题和标签行 */}
         <div className="flex items-start justify-between gap-3 mb-3">
-          <h3
-              className="font-semibold text-lg leading-tight line-clamp-2 flex-1 group-hover:text-blue-600 transition-colors"
+          <a
+              href={`/datasets?id=${dataset.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-lg leading-tight line-clamp-2 flex-1 group-hover:text-blue-600 transition-colors hover:underline"
               title={dataset.titleCn}
           >
             {dataset.titleCn}
-          </h3>
+          </a>
           <div className="flex flex-col items-end gap-2 ml-2 flex-shrink-0">
             {showRecommendationBadge && (
                 <span className="bg-gradient-to-r px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap shadow-sm flex items-center gap-1">

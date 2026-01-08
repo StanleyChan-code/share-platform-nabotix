@@ -41,12 +41,9 @@ export interface FormValidatorProps {
     onInvalid?: (errors: ValidationError[]) => void;
     className?: string;
     showAllErrorsOnSubmit?: boolean;
-    validateOnChange?: boolean;
-    validateOnBlur?: boolean;
     disabled?: boolean;
     customValidation?: (formData: Record<string, any>) => ValidationError[] | Promise<ValidationError[]>;
     onValidityChange?: (isValid: boolean, errors: ValidationError[]) => void;
-    validateBeforeSubmit?: boolean;
 }
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -116,12 +113,9 @@ export const FormValidator: React.FC<FormValidatorProps> = ({
                                                                 onInvalid,
                                                                 className,
                                                                 showAllErrorsOnSubmit = false,
-                                                                validateOnChange = true,
-                                                                validateOnBlur = true,
                                                                 disabled = false,
                                                                 customValidation,
                                                                 onValidityChange,
-                                                                validateBeforeSubmit = true,
                                                             }) => {
     const inputRefs = useRef<RegisteredInput[]>([]);
     const passwordPairs = useRef<PasswordPair[]>([]);

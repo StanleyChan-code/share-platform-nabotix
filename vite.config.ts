@@ -10,6 +10,12 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 10025,
   },
+  // 配置环境变量文件加载，构建时不考虑.env.local
+  envFile: {
+    production: false,
+    development: '.env.local',
+    test: '.env.test.local'
+  },
   plugins: [
     react(),
     legacy({

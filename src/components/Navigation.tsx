@@ -81,7 +81,7 @@ export function Navigation() {
     }, [navigate]);
 
     // 检查认证状态的函数
-    const checkAuthStatus = async (forceRefresh = false) => {
+    const checkAuthStatus = async (forceRefresh = false, userInfo?: any) => {
         if (isCheckingRef.current) return;
         isCheckingRef.current = true;
         try {
@@ -95,16 +95,20 @@ export function Navigation() {
                 return;
             }
 
+            // 如果有用户信息，直接使用
+            if (userInfo) {
+                await fetchAndSetAuthStatus(userInfo);
+            } 
             // 如果有强制刷新标志或者localStorage中没有用户信息，重新获取
-            if (forceRefresh || !getCurrentUserInfoFromSession()) {
+            else if (forceRefresh || !getCurrentUserInfoFromSession()) {
                 await fetchAndSetAuthStatus();
             } else {
                 // 使用localStorage中的缓存信息
-                const userInfo = getCurrentUserInfoFromSession();
-                if (userInfo && mountedRef.current) {
-                    setUserProfile(userInfo);
-                    setUser(userInfo.user);
-                    setUserRoles(userInfo.roles || []);
+                const info = getCurrentUserInfoFromSession();
+                if (info && mountedRef.current) {
+                    setUserProfile(info);
+                    setUser(info.user);
+                    setUserRoles(info.roles || []);
                 }
             }
         } catch (error) {
@@ -144,9 +148,8 @@ export function Navigation() {
     };
 
     // 异步函数来获取用户信息
-    const fetchAndSetAuthStatus = async () => {
+    const fetchAndSetAuthStatus = async (userInfo?: any) => {
         try {
-            const userInfo = await getOrFetchUserInfo();
             if (userInfo && mountedRef.current) {
                 setUserProfile(userInfo);
                 setUser(userInfo.user);
@@ -157,8 +160,21 @@ export function Navigation() {
                     const from = (location.state as any)?.from || '/';
                     navigate(from, { replace: true });
                 }
-            } else if (mountedRef.current) {
-                clearAuthState();
+            } else {
+                const info = await getOrFetchUserInfo();
+                if (info && mountedRef.current) {
+                    setUserProfile(info);
+                    setUser(info.user);
+                    setUserRoles(info.roles || []);
+
+                    // 如果当前在认证页面且成功获取用户信息，重定向到之前页面或首页
+                    if (location.pathname === '/auth') {
+                        const from = (location.state as any)?.from || '/';
+                        navigate(from, { replace: true });
+                    }
+                } else if (mountedRef.current) {
+                    clearAuthState();
+                }
             }
         } catch (error) {
             console.error('获取用户信息错误:', error);
@@ -175,8 +191,9 @@ export function Navigation() {
         checkAuthStatus();
 
         // 监听认证状态变化事件
-        const handleAuthStatusChange = () => {
-            checkAuthStatus();
+        const handleAuthStatusChange = (event: CustomEvent) => {
+            // 如果事件中包含用户信息，直接传递给checkAuthStatus
+            checkAuthStatus(false, event.detail?.userInfo);
         };
 
         // 监听storage变化（其他tab页登录/登出）
@@ -374,7 +391,8 @@ export function Navigation() {
                     const isAdminPanel = item.href === '/admin';
                     const showPendingBadge = isAdminPanel && hasPendingItems && canAccess;
 
-                    return (
+                    return ((!isAdminPanel || hasAdminPermission()) &&
+
                         <Link
                             key={item.href}
                             to={canAccess ? item.href : '#'}
@@ -386,10 +404,7 @@ export function Navigation() {
                                         ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg"
                                         : "text-muted-foreground hover:text-blue-700 hover:bg-blue-50/50"
                             } ${mobile ? "justify-start" : "justify-center"} min-w-0`}
-                            title={!canAccess ?
-                                (requiresAuth ? "请先登录" : "无权限") :
-                                item.description
-                            }
+                            title={item.description}
                         >
                             <div className="relative">
                                 <Icon className={`h-5 w-5 ${isActive && canAccess ? "text-white" : "text-current"}`}/>
@@ -446,7 +461,7 @@ export function Navigation() {
                     <Link to="/" className="flex items-center space-x-3 group">
                         <div className="p-1 bg-white rounded-2xl shadow-lg group-hover:shadow-xl transition-shadow duration-300">
                             <RcImageComponent
-                                src="/public/logo.jpeg"
+                                src="/logo.jpeg"
                                 alt="老年疾病国家临床医学研究中心（华西）"
                                 className="h-9 w-9"
                             />
@@ -579,7 +594,7 @@ export function Navigation() {
                                     <Link to="/" className="flex items-center space-x-3 group" onClick={() => setIsOpen(false)}>
                                         <div className="p-1 bg-gradient-to-br rounded-2xl shadow-lg">
                                             <RcImageComponent
-                                                src="/public/logo.jpeg"
+                                                src="/logo.jpeg"
                                                 alt="老年疾病国家临床医学研究中心（华西）"
                                                 className="h-20 w-20"
                                             />

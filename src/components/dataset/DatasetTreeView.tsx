@@ -201,7 +201,10 @@ export function DatasetTreeView({datasets, onDatasetClick}: DatasetTreeViewProps
                                 {/* 标题和标签行 */}
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="min-w-0 flex-1">
-                                        <h3 className="font-semibold text-lg leading-tight text-gray-900 mb-1">
+                                        <h3 
+                                            className="font-semibold text-lg leading-tight text-gray-900 mb-1 cursor-pointer hover:text-blue-600 transition-colors"
+                                            onClick={(e) => handleDetailClick(e, dataset)}
+                                        >
                                             {dataset.titleCn}
                                         </h3>
 

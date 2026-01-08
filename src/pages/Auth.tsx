@@ -43,7 +43,7 @@ const Auth = () => {
                     <CardHeader className="text-center">
                         <div className="flex justify-center mb-1">
                             <RcImageComponent
-                                src="/public/logo.jpeg"
+                                src="/logo.jpeg"
                                 alt="老年疾病国家临床医学研究中心（华西）"
                                 className="h-24 w-24"
                             />

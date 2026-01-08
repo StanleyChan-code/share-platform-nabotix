@@ -1154,7 +1154,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                         </div>
                     ) : (
                         <p className="text-xs text-muted-foreground">
-                          支持 PDF、Word 格式，最大 20MB。数据使用的条款和协议文档。
+                          支持 PDF 格式，最大 20MB。数据使用的条款和协议文档。
                         </p>
                     )}
                   </div>
