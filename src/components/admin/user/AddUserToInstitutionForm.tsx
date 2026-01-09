@@ -103,12 +103,12 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
 
   const getRoleDescription = (role: string) => {
     const descriptions = {
-      [PermissionRoles.PLATFORM_ADMIN]: "系统最高权限，可以管理所有机构和用户",
-      [PermissionRoles.INSTITUTION_SUPERVISOR]: "机构管理员，可以管理本机构的所有用户和数据",
-      [PermissionRoles.INSTITUTION_USER_MANAGER]: "机构用户管理员，可以管理本机构的用户",
-      [PermissionRoles.DATASET_UPLOADER]: "可以上传数据集",
-      [PermissionRoles.DATASET_APPROVER]: "可以审核和批准数据集",
-      [PermissionRoles.RESEARCH_OUTPUT_APPROVER]: "可以审核和批准研究成果"
+      [PermissionRoles.PLATFORM_ADMIN]: "系统最高权限，可以管理所有机构、用户、学科、数据集及其申请和研究成果",
+      [PermissionRoles.INSTITUTION_SUPERVISOR]: "可以管理本机构的所有用户和数据",
+      [PermissionRoles.INSTITUTION_USER_MANAGER]: "可以管理本机构的用户信息和权限",
+      [PermissionRoles.DATASET_UPLOADER]: "可以上传数据集和审核自己上传的数据集的申请",
+      [PermissionRoles.DATASET_APPROVER]: "可以审核机构用户上传的数据集和相关数据集申请",
+      [PermissionRoles.RESEARCH_OUTPUT_APPROVER]: "可以审核机构用户上传的研究成果"
     };
     return descriptions[role as keyof typeof descriptions] || "暂无描述";
   };

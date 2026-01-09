@@ -65,7 +65,7 @@ export function DatasetAnnualChart({ data }: DatasetAnnualChartProps) {
             <Bar
               dataKey="count"
               fill="hsl(var(--primary))"
-              name="年度数量"
+              name="年度发布"
               maxBarSize={75}
             />
             <Line
@@ -74,7 +74,7 @@ export function DatasetAnnualChart({ data }: DatasetAnnualChartProps) {
                 stroke="hsl(var(--chart-2))"
                 strokeWidth={2}
                 dot={{ fill: "hsl(var(--chart-2))", r: 4 }}
-                name="累计总数"
+                name="累计发布"
             />
           </ComposedChart>
         </ResponsiveContainer>

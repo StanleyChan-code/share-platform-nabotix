@@ -80,10 +80,6 @@ export const setAuthTokens = (accessToken: string | null, refreshToken: string |
   }
 };
 
-// 保持向后兼容的单独 setter（仍导出以兼容现有调用）
-export const setAccessToken = (token: string): void => setAuthTokens(token, getRefreshToken());
-export const setRefreshToken = (token: string): void => setAuthTokens(getAccessToken(), token);
-
 /**
  * 清除所有令牌
  */
@@ -180,6 +176,47 @@ export const getIsRefreshing = (): boolean => {
 };
 
 /**
+ * 清除所有Cookies
+ */
+export const clearCookies = (): void => {
+  if (typeof document !== 'undefined') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i];
+      const eqPos = cookie.indexOf('=');
+      const name = eqPos > -1 ? cookie.slice(0, eqPos).trim() : cookie.trim();
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+    }
+  }
+};
+
+/**
+ * 统一跳转到认证页面
+ * @param from 来源页面路径，用于登录后返回
+ */
+export const redirectToAuth = (from?: string): void => {
+  // 记录来源页面路径
+  if (from && from !== '/auth') {
+    sessionStorage.setItem('redirectAfterLogin', from);
+  } else {
+    // 如果没有提供来源路径，使用当前路径
+    const currentPath = window.location.pathname;
+    if (currentPath !== '/auth') {
+      sessionStorage.setItem('redirectAfterLogin', currentPath);
+    }
+  }
+
+  // 清除令牌和用户信息
+  clearTokens(true);
+  
+  // 清除Cookies
+  clearCookies();
+  
+  // 跳转到认证页面
+  window.location.href = '/auth';
+};
+
+/**
  * 获取当前用户信息（从 localStorage，这样可以触发 storage 事件进行跨tab同步）
  */
 export const getCurrentUserInfoFromSession = (): any | null => {
@@ -251,9 +288,6 @@ export const handleLoginSuccess = async (accessToken: string, refreshToken: stri
       // ignore
     }
   }
-  
-  // 刷新待审核数量
-  await import('./pendingCountsController').then(({ refreshAfterLogin }) => refreshAfterLogin());
   
   // 用户信息获取完成后，触发认证状态变化事件
   // 创建事件对象

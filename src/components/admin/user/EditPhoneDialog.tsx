@@ -70,6 +70,15 @@ const EditPhoneDialog = ({
   }, [open, user, form]);
 
   const onSubmit = async (values: { newPhone: string }) => {
+    if (user.phone === values.newPhone) {
+      toast({
+        title: "提醒",
+        description: "手机号未改变",
+      });
+      onOpenChange(false);
+      return;
+    }
+
     try {
       await userApi.updatePhone(user.id, values);
       toast({

@@ -312,16 +312,9 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
     }
   };
 
-  // 处理键盘事件
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSubmit(e as any);
-    }
-  };
-
   return (
       <FormValidator onSubmit={handleSubmit}>
-        <div className="space-y-4" onKeyUp={handleKeyPress}>
+        <div className="space-y-4">
           {/* 手机号输入 */}
           <div className="space-y-2">
             <Label htmlFor="login-phone" className="text-sm font-medium">手机号 *</Label>

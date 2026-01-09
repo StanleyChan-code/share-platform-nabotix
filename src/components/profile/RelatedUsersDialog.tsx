@@ -125,7 +125,7 @@ const RelatedUsersDialog: React.FC<RelatedUsersDialogProps> = ({
                           {isUserHighlighted(user.id) && (
                             <div className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded text-xs font-medium">
                               <CheckCircle className="h-3 w-3" />
-                              <span>当前审核人</span>
+                              <span>审核人</span>
                             </div>
                           )}
                         </CardHeader>

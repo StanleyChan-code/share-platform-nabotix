@@ -348,7 +348,7 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                     <div className="flex justify-between items-start gap-4">
                         <div className="space-y-2 flex-1 min-w-0">
                             <CardTitle className="text-lg flex items-center gap-2">
-                            <span className="truncate" title={application.projectTitle}>
+                            <span className="truncate hover:underline hover:cursor-pointer" onClick={() => onViewDetails(application)}>
                                 {truncateText(application.projectTitle, 30)}
                             </span>
                             </CardTitle>
@@ -357,7 +357,7 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                                 onClick={() => onViewDataset(application)}
                             >
                                 <Database className="h-3 w-3 flex-shrink-0"/>
-                                <span className="truncate" title={application.datasetTitle}>
+                                <span className="truncate">
                                 数据集: {truncateText(application.datasetTitle, 40)}
                             </span>
                             </div>

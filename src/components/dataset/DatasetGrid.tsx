@@ -30,17 +30,13 @@ export const DatasetGrid = ({ datasets, onDatasetClick }: DatasetGridProps) => {
                 <CardHeader>
                   {/* 标题和类型标签 */}
                   <div className="flex items-start justify-between gap-2 mb-3">
-                    <CardTitle
-                        className="text-lg leading-tight line-clamp-2 flex-1 group-hover:text-blue-600 transition-colors"
-                        title={dataset.titleCn}
-                    >
-                        <h3
-                            className="font-semibold text-lg leading-tight text-gray-900 mb-1 cursor-pointer hover:text-blue-600 transition-colors"
-                            onClick={() => onDatasetClick(dataset)}
-                        >
-                            {dataset.titleCn}
-                        </h3>
-                    </CardTitle>
+                      <CardTitle
+                          className="font-semibold text-gray-900 mb-1 cursor-pointer hover:text-blue-600 transition-colors text-lg leading-tight line-clamp-2 flex-1"
+                          title={dataset.titleCn}
+                          onClick={() => onDatasetClick(dataset)}
+                      >
+                          {dataset.titleCn}
+                      </CardTitle>
                     <div className="flex flex-col items-end gap-2 shrink-0">
                       <Badge className="bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200">
                         {typeLabels[dataset.type as keyof typeof typeLabels] || dataset.type}

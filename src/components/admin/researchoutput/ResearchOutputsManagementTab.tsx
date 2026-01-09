@@ -5,8 +5,7 @@ import { ResearchOutput } from "@/integrations/api/outputApi.ts";
 import OutputDetailDialog from "@/components/outputs/OutputDetailDialog.tsx";
 import { AdminInstitutionSelector } from "@/components/admin/institution/AdminInstitutionSelector.tsx";
 import { api } from "@/integrations/api/client.ts";
-import { CheckCircle, XCircle, Clock, Eye, ChevronLeftIcon, ChevronRightIcon, Search } from "lucide-react";
-import { formatDate } from "@/lib/utils.ts";
+import { CheckCircle, XCircle, Clock, Eye, ChevronLeftIcon, ChevronRightIcon, Search, RefreshCw } from "lucide-react";
 import { getOutputTypeDisplayName, getOutputTypeIconComponent, getAllOutputTypes } from "@/lib/outputUtils.ts";
 import ReactPaginate from "react-paginate";
 import { getCurrentUserInfoFromSession } from "@/lib/authUtils";
@@ -22,6 +21,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import {Input} from "@/components/ui/FormValidator.tsx";
 import OutputItem from "@/components/profile/OutputItem.tsx";
 import {refreshOutputPendingCount} from "@/lib/pendingCountsController";
+import {Card, CardContent} from "@/components/ui/card";
 
 const ResearchOutputsManagementTab = () => {
   const [selectedInstitution, setSelectedInstitution] = useState<string | null>(null);
@@ -108,6 +108,9 @@ const ResearchOutputsManagementTab = () => {
       setTotalPages(response.data.data.page.totalPages);
       setTotalElements(response.data.data.page.totalElements || 0);
       setCurrentPage(page);
+
+      // 刷新待审核数量
+      refreshOutputPendingCount();
     } catch (err) {
       console.error('Error fetching research outputs:', err);
       toast({
@@ -169,6 +172,67 @@ const ResearchOutputsManagementTab = () => {
     setDetailDialogOpen(true);
   };
 
+  // 骨架屏组件
+  const OutputItemSkeleton = () => (
+    <Card className="border-l-4 border-l-primary max-w-full">
+      <CardContent className="p-6 max-w-full">
+        <div className="flex flex-col sm:flex-row items-start gap-4 max-w-full">
+          <div className="flex-1 min-w-0 max-w-full">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 max-w-full">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 min-w-0 flex-1 max-w-full">
+                <div className="h-6 w-24 rounded-full bg-muted animate-pulse"></div>
+                <div className="h-6 w-3/4 rounded bg-muted animate-pulse"></div>
+              </div>
+              <div className="flex flex-row items-center gap-2">
+                <div className="h-6 w-24 rounded-full bg-muted animate-pulse flex-shrink-0"></div>
+                <div className="flex gap-1">
+                  <div className="h-10 w-10 rounded-lg border border-gray-200 bg-muted animate-pulse"></div>
+                  <div className="h-10 w-10 rounded-lg border border-gray-200 bg-muted animate-pulse"></div>
+                  <div className="h-10 w-10 rounded-lg border border-gray-200 bg-muted animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* 基本信息行 */}
+            <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-4 text-sm text-muted-foreground mb-2 max-w-full">
+              <div className="flex items-center gap-2 min-w-0 max-w-full">
+                <div className="h-4 w-4 bg-muted animate-pulse rounded flex-shrink-0"></div>
+                <div className="h-4 w-24 rounded bg-muted animate-pulse"></div>
+              </div>
+              <div className="flex items-center gap-2 min-w-0 max-w-full">
+                <div className="h-4 w-4 bg-muted animate-pulse rounded flex-shrink-0"></div>
+                <div className="h-4 w-32 rounded bg-muted animate-pulse"></div>
+              </div>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-6 text-sm text-muted-foreground mb-3 max-w-full">
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-4 bg-muted animate-pulse rounded flex-shrink-0"></div>
+                <div className="h-4 w-32 rounded bg-muted animate-pulse"></div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-4 bg-muted animate-pulse rounded flex-shrink-0"></div>
+                <div className="h-4 w-32 rounded bg-muted animate-pulse"></div>
+              </div>
+            </div>
+
+            {/* 摘要 */}
+            <div className="space-y-2 mb-3 max-w-full">
+              <div className="h-4 w-full rounded bg-muted animate-pulse"></div>
+              <div className="h-4 w-3/4 rounded bg-muted animate-pulse"></div>
+              <div className="h-4 w-1/2 rounded bg-muted animate-pulse"></div>
+            </div>
+
+            {/* 其他关键信息预览 */}
+            <div className="flex flex-wrap gap-2 text-xs">
+              <div className="h-5 w-28 rounded-full bg-muted animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   const renderOutputItem = (output: ResearchOutput) => (
       <OutputItem
         key={output.id}
@@ -176,8 +240,6 @@ const ResearchOutputsManagementTab = () => {
         onDetail={handleOutputClick}
         onDelete={()  => {
             fetchResearchOutputs(currentPage);
-            // 刷新待审核数量
-            refreshOutputPendingCount();
         }}
         managementMode={true}
       />
@@ -252,70 +314,72 @@ const ResearchOutputsManagementTab = () => {
               <div className="flex gap-2">
                 <Button onClick={handleSearch}>搜索</Button>
                 <Button variant="outline" onClick={handleResetSearch}>重置筛选</Button>
+                <Button variant="outline" onClick={() => fetchResearchOutputs(currentPage)} className="gap-2">
+                  <RefreshCw className="h-4 w-4"/>
+                  刷新
+                </Button>
               </div>
             </div>
           </div>
 
-          {loading && outputs.length === 0 ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          {/* 加载状态显示骨架屏 */}
+          {loading ? (
+              <div className="grid grid-cols-1 gap-4">
+                {/* 显示10个骨架屏，与分页大小一致 */}
+                {Array.from({ length: totalElements || 1 }).map((_, index) => (
+                  <OutputItemSkeleton key={`skeleton-${index}`} />
+                ))}
               </div>
-          ) : (
-              <>
-                <div className="space-y-4">
-                  {outputs.length > 0 ? (
-                      <>
-                        <div className="grid grid-cols-1 gap-4">
-                          {outputs.map(renderOutputItem)}
-                        </div>
+          ) : outputs.length > 0 ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-4">
+                  {outputs.map(renderOutputItem)}
+                </div>
 
-                        {/* 分页控件和总数显示 */}
-                        <div className="flex justify-between items-center mt-6">
-                          <div className="text-sm text-muted-foreground">
-                            总计 {totalElements} 条记录
-                          </div>
+                {/* 分页控件和总数显示 */}
+                <div className="flex justify-between items-center mt-6">
+                  <div className="text-sm text-muted-foreground">
+                    总计 {totalElements} 条记录
+                  </div>
 
-                          {totalPages > 1 && (
-                              <ReactPaginate
-                                  breakLabel="..."
-                                  nextLabel={
-                                    <span className="flex items-center gap-1">
-                            下一页 <ChevronRightIcon className="h-4 w-4"/>
-                          </span>
-                                  }
-                                  onPageChange={handlePageClick}
-                                  pageRangeDisplayed={3}
-                                  marginPagesDisplayed={1}
-                                  pageCount={totalPages}
-                                  previousLabel={
-                                    <span className="flex items-center gap-1">
-                            <ChevronLeftIcon className="h-4 w-4"/> 上一页
-                          </span>
-                                  }
-                                  renderOnZeroPageCount={null}
-                                  containerClassName="flex items-center justify-center gap-2"
-                                  pageClassName=""
-                                  pageLinkClassName="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
-                                  previousClassName=""
-                                  previousLinkClassName="flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:hover:border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
-                                  nextClassName=""
-                                  nextLinkClassName="flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:hover:border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
-                                  breakClassName=""
-                                  breakLinkClassName="flex h-10 w-10 items-center justify-center text-gray-500 dark:text-gray-400"
-                                  activeClassName=""
-                                  activeLinkClassName="!border-blue-500 !bg-blue-500 !text-white hover:!bg-blue-600 hover:!border-blue-600 dark:!border-blue-500 dark:!bg-blue-500"
-                                  disabledClassName="opacity-40 cursor-not-allowed"
-                                  disabledLinkClassName="hover:border-gray-200 hover:bg-white hover:text-gray-700 dark:hover:border-gray-700 dark:hover:bg-gray-800"
-                                  forcePage={currentPage}
-                              />
-                          )}
-                        </div>
-                      </>
-                  ) : (
-                      !loading && renderEmptyState()
+                  {totalPages > 1 && (
+                      <ReactPaginate
+                          breakLabel="..."
+                          nextLabel={
+                            <span className="flex items-center gap-1">
+                    下一页 <ChevronRightIcon className="h-4 w-4"/>
+                  </span>
+                          }
+                          onPageChange={handlePageClick}
+                          pageRangeDisplayed={3}
+                          marginPagesDisplayed={1}
+                          pageCount={totalPages}
+                          previousLabel={
+                            <span className="flex items-center gap-1">
+                    <ChevronLeftIcon className="h-4 w-4"/> 上一页
+                  </span>
+                          }
+                          renderOnZeroPageCount={null}
+                          containerClassName="flex items-center justify-center gap-2"
+                          pageClassName=""
+                          pageLinkClassName="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
+                          previousClassName=""
+                          previousLinkClassName="flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:hover:border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
+                          nextClassName=""
+                          nextLinkClassName="flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:hover:border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
+                          breakClassName=""
+                          breakLinkClassName="flex h-10 w-10 items-center justify-center text-gray-500 dark:text-gray-400"
+                          activeClassName=""
+                          activeLinkClassName="!border-blue-500 !bg-blue-500 !text-white hover:!bg-blue-600 hover:!border-blue-600 dark:!border-blue-500 dark:!bg-blue-500"
+                          disabledClassName="opacity-40 cursor-not-allowed"
+                          disabledLinkClassName="hover:border-gray-200 hover:bg-white hover:text-gray-700 dark:hover:border-gray-700 dark:hover:bg-gray-800"
+                          forcePage={currentPage}
+                      />
                   )}
                 </div>
-              </>
+              </div>
+          ) : (
+              renderEmptyState()
           )}
 
           <OutputDetailDialog
@@ -336,4 +400,3 @@ const ResearchOutputsManagementTab = () => {
 };
 
 export default ResearchOutputsManagementTab;
-

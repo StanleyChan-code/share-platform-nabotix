@@ -4,11 +4,12 @@ import {
   setAuthTokens,
   clearTokens,
   isAuthenticated as isTokenAuthenticated,
-    isTokenExpired,
+  isTokenExpired,
   addRequestToQueue,
   clearRequestQueue,
   setIsRefreshing,
   getIsRefreshing, getAccessToken,
+  redirectToAuth,
 } from '../../lib/authUtils';
 
 // 从环境变量获取API基础URL
@@ -44,23 +45,22 @@ function handleAuthFailure() {
   try {
     const currentPath = window.location.pathname;
     if (currentPath.startsWith('/admin') || currentPath.startsWith('/profile')) {
-      // 记录原始路径，以便登录后返回
-      sessionStorage.setItem('redirectAfterLogin', currentPath);
-      // 只清除token但抑制事件，避免多个listener重复触发
-      clearTokens(true);
-      // 等待缓存清除完成后再跳转
-      setTimeout(() => {
-        window.location.href = '/auth';
-        _isHandlingAuthFailure = false;
-      }, 100);
-    } else {
-      // 清除token并抑制事件
+      // 对于管理页和个人中心，跳转到登录页面
+      redirectToAuth(currentPath);
+      // 重置标志
+      _isHandlingAuthFailure = false;
+    } else if (currentPath !== '/auth') {
+      // 对于其他页面（除了/auth），清除token并刷新
       clearTokens(true);
       // 等待缓存清除完成后再刷新
       setTimeout(() => {
         window.location.reload();
         _isHandlingAuthFailure = false;
       }, 100);
+    } else {
+      // 如果当前已经在/auth页面，只清除token，不刷新或跳转
+      clearTokens(true);
+      _isHandlingAuthFailure = false;
     }
   } catch (err) {
     // 确保状态被重置

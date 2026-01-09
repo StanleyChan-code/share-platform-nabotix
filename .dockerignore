@@ -1,5 +1,4 @@
 # 忽略环境配置文件
-.env.local
 .env
 .env.*
 

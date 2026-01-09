@@ -18,6 +18,7 @@ export interface User {
   createdAt?: string;
   updatedAt?: string;
   authorities?: string[];
+  disabled?: boolean;
 }
 
 export interface UserDto {
@@ -153,6 +154,12 @@ export const userApi = {
   // 获取当前用户所属机构的相关用户信息（用户管理员和机构管理员）
   async getInstitutionRelatedUsers() {
     const response = await api.get<RelatedUsersDto>('/users/institution-related-users');
+    return response.data;
+  },
+
+  // 更新用户禁用状态
+  async updateUserDisabledStatus(userId: string, disabled: boolean) {
+    const response = await api.put<User>(`/manage/users/${userId}/disabled`, disabled);
     return response.data;
   }
 

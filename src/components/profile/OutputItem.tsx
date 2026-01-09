@@ -164,7 +164,7 @@ const OutputItem = ({
                                     {getTypeIcon(output.type)}
                                     {getOutputTypeDisplayName(output.type)}
                                 </Badge>
-                                <h3 className="font-semibold text-lg truncate">
+                                <h3 className="font-semibold text-lg truncate hover:underline hover:cursor-pointer" onClick={() => onDetail(output)}>
                                     {output.title}
                                 </h3>
                             </div>

@@ -25,6 +25,7 @@ import {
     getCurrentUserInfoFromSession,
     getOrFetchUserInfo,
     isAuthenticated,
+    redirectToAuth,
 } from "@/lib/authUtils";
 import {getPermissionRoleDisplayName, PermissionRoles} from "@/lib/permissionUtils.ts";
 import RcImageComponent from "./ui/RcImageComponent";
@@ -69,7 +70,7 @@ export function Navigation() {
         (window as any).globalNavigate = (path: string) => {
             // 检查目标页面是否需要认证
             if (AUTH_REQUIRED_PATHS.includes(path) && !isAuthenticated()) {
-                navigate('/auth', { state: { from: path } });
+                redirectToAuth(path);
                 return;
             }
             navigate(path);
@@ -140,11 +141,6 @@ export function Navigation() {
         setUserProfile(null);
         setUser(null);
         setUserRoles([]);
-        localStorage.removeItem(USER_INFO_KEY);
-        // 使用抑制事件的方式清除token，避免触发多个listener导致重复处理
-        clearTokens(true);
-        // 主动通知一次（在需要时）
-        window.dispatchEvent(new CustomEvent('authStatusChanged', { detail: { isAuthenticated: false } }));
     };
 
     // 异步函数来获取用户信息
@@ -259,12 +255,7 @@ export function Navigation() {
 
         // 如果访问需要认证的页面但未登录，重定向到登录页
         if (AUTH_REQUIRED_PATHS.includes(currentPath) && !isAuthenticated()) {
-            navigate('/auth', {
-                state: {
-                    from: currentPath,
-                    message: '请先登录以访问该页面'
-                }
-            });
+            redirectToAuth(currentPath);
             return;
         }
 
@@ -343,12 +334,7 @@ export function Navigation() {
         // 检查访问权限
         if (!hasPageAccess(item.href)) {
             if (!isAuthenticated()) {
-                navigate('/auth', {
-                    state: {
-                        from: item.href,
-                        message: `请先登录以访问${item.name}`
-                    }
-                });
+                redirectToAuth(item.href);
             } else {
                 toast({
                     title: "权限不足",

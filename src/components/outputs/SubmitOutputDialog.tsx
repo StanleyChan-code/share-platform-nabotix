@@ -1,4 +1,4 @@
-import {useState} from "react";
+import {useState, useRef} from "react";
 import {Button} from "@/components/ui/button";
 import {
     Dialog,
@@ -12,11 +12,38 @@ import {useToast} from "@/hooks/use-toast";
 import {outputApi} from "@/integrations/api/outputApi";
 import {Dataset} from "@/integrations/api/datasetApi";
 import {FileInfo} from "@/integrations/api/fileApi";
-import {useRef} from 'react';
 import ResearchOutputForm from "@/components/outputs/ResearchOutputForm";
 import {ApprovedDatasetSelector} from "./ApprovedDatasetSelector.tsx";
 import FileUploader from "@/components/fileuploader/FileUploader.tsx";
 import {getJournalPartitionValue} from "@/lib/outputUtils.ts";
+
+// 定义表单数据接口，提高类型安全性
+export interface OutputFormData {
+    title: string;
+    abstract: string;
+    type: string;
+    journal: string;
+    patentNumber: string;
+    datasetId: string;
+    publicationUrl: string;
+    pubmedId: string;
+    authors: string;
+    value: number;
+    projectId: string;
+    publicationAuthors: string;
+    publicationNumber: string;
+    legalStatus: string;
+    patentCountry: string;
+    softwareName: string;
+    copyrightOwner: string;
+    registrationDate: string;
+    awardRecipient: string;
+    awardIssuingAuthority: string;
+    awardTime: string;
+    competitionLevel: string;
+    fileId: string;
+    journalPartition: string;
+}
 
 interface SubmitOutputDialogProps {
     open: boolean;
@@ -24,33 +51,36 @@ interface SubmitOutputDialogProps {
     onSubmit: () => void;
 }
 
+// 定义表单初始状态常量，提高复用性和可维护性
+const INITIAL_OUTPUT_STATE: OutputFormData = {
+    title: "",
+    abstract: "",
+    type: "", // 默认不选择类型
+    journal: "",
+    patentNumber: "",
+    datasetId: "",
+    publicationUrl: "",
+    pubmedId: "",
+    authors: "",
+    value: 0,
+    projectId: "",
+    publicationAuthors: "",
+    publicationNumber: "",
+    legalStatus: "",
+    patentCountry: "",
+    softwareName: "",
+    copyrightOwner: "",
+    registrationDate: "",
+    awardRecipient: "",
+    awardIssuingAuthority: "",
+    awardTime: "",
+    competitionLevel: "",
+    fileId: "", // 添加文件ID字段
+    journalPartition: "" // 添加期刊分区字段
+};
+
 const SubmitOutputDialog = ({open, onOpenChange, onSubmit}: SubmitOutputDialogProps) => {
-    const [newOutput, setNewOutput] = useState({
-        title: "",
-        abstract: "",
-        type: "", // 默认不选择类型
-        journal: "",
-        patentNumber: "",
-        datasetId: "",
-        publicationUrl: "",
-        pubmedId: "",
-        authors: "",
-        value: 0,
-        projectId: "",
-        publicationAuthors: "",
-        publicationNumber: "",
-        legalStatus: "",
-        patentCountry: "",
-        softwareName: "",
-        copyrightOwner: "",
-        registrationDate: "",
-        awardRecipient: "",
-        awardIssuingAuthority: "",
-        awardTime: "",
-        competitionLevel: "",
-        fileId: "", // 添加文件ID字段
-        journalPartition: "" // 添加期刊分区字段
-    });
+    const [newOutput, setNewOutput] = useState<OutputFormData>(INITIAL_OUTPUT_STATE);
 
     // 添加文件信息状态
     const [uploadedFile, setUploadedFile] = useState<FileInfo | null>(null);
@@ -59,6 +89,13 @@ const SubmitOutputDialog = ({open, onOpenChange, onSubmit}: SubmitOutputDialogPr
         // 调用 FileUploader 的重置方法
         if (!fileUploaderRef.current) return;
         fileUploaderRef.current.handleReset(clearFile);
+    };
+
+    // 统一的表单重置函数
+    const resetForm = () => {
+        setNewOutput(INITIAL_OUTPUT_STATE);
+        setSelectedDataset(null);
+        resetUploadFile(true);
     };
 
 
@@ -122,9 +159,8 @@ const SubmitOutputDialog = ({open, onOpenChange, onSubmit}: SubmitOutputDialogPr
         setNewOutput(prev => ({...prev, datasetId: dataset.id}));
     };
 
-    const handleSubmitOutput = async (e: React.FormEvent) => {
-        e.preventDefault();
-
+    // 表单验证函数，提取验证逻辑以提高可读性
+    const validateForm = (): boolean => {
         // Validate required fields based on type
         if (!newOutput.datasetId || !newOutput.type) {
             toast({
@@ -132,7 +168,7 @@ const SubmitOutputDialog = ({open, onOpenChange, onSubmit}: SubmitOutputDialogPr
                 description: "请填写所有必填字段",
                 variant: "destructive"
             });
-            return;
+            return false;
         }
 
         // Validate fields based on output类型
@@ -142,7 +178,7 @@ const SubmitOutputDialog = ({open, onOpenChange, onSubmit}: SubmitOutputDialogPr
                 description: "请输入项目编号/课题编号和项目/课题成员",
                 variant: "destructive"
             });
-            return;
+            return false;
         }
 
         if (newOutput.type === 'PAPER' && (!newOutput.title || !newOutput.abstract || !newOutput.authors)) {
@@ -151,7 +187,7 @@ const SubmitOutputDialog = ({open, onOpenChange, onSubmit}: SubmitOutputDialogPr
                 description: "请输入论文标题、摘要和作者",
                 variant: "destructive"
             });
-            return;
+            return false;
         }
 
         if (newOutput.type === 'PUBLICATION' && (!newOutput.title || !newOutput.abstract || !newOutput.publicationNumber || !newOutput.authors)) {
@@ -160,7 +196,7 @@ const SubmitOutputDialog = ({open, onOpenChange, onSubmit}: SubmitOutputDialogPr
                 description: "请输入出版物标题、摘要、作者和出版物编号",
                 variant: "destructive"
             });
-            return;
+            return false;
         }
 
         if ((newOutput.type === 'INVENTION_PATENT' || newOutput.type === 'UTILITY_PATENT') && (!newOutput.title || !newOutput.abstract || !newOutput.patentNumber || !newOutput.legalStatus || !newOutput.authors)) {
@@ -169,7 +205,7 @@ const SubmitOutputDialog = ({open, onOpenChange, onSubmit}: SubmitOutputDialogPr
                 description: "请输入专利标题、摘要、专利识别号、法律状态和发明人",
                 variant: "destructive"
             });
-            return;
+            return false;
         }
 
         if (newOutput.type === 'SOFTWARE_COPYRIGHT' && (!newOutput.title || !newOutput.abstract || !newOutput.patentNumber || !newOutput.softwareName || !newOutput.authors)) {
@@ -178,7 +214,7 @@ const SubmitOutputDialog = ({open, onOpenChange, onSubmit}: SubmitOutputDialogPr
                 description: "请输入软件著作权标题、摘要、登记号、软件名称和著作权人",
                 variant: "destructive"
             });
-            return;
+            return false;
         }
 
         if (newOutput.type === 'OTHER_AWARD' && (!newOutput.title || !newOutput.abstract || !newOutput.awardRecipient || !newOutput.awardIssuingAuthority || !newOutput.awardTime)) {
@@ -187,45 +223,90 @@ const SubmitOutputDialog = ({open, onOpenChange, onSubmit}: SubmitOutputDialogPr
                 description: "请输入奖项名称、成果简介、获奖人/单位、颁发单位和获奖时间",
                 variant: "destructive"
             });
+            return false;
+        }
+
+        return true;
+    };
+
+    // 构建API提交数据的函数，提取复杂的逻辑
+    const buildOutputData = () => {
+        // Determine output number based on type
+        const getOutputNumber = () => {
+            switch (newOutput.type) {
+                case 'PROJECT':
+                    return newOutput.projectId;
+                case 'PAPER':
+                    return newOutput.pubmedId;
+                case 'PUBLICATION':
+                    return newOutput.publicationNumber;
+                case 'INVENTION_PATENT':
+                case 'UTILITY_PATENT':
+                case 'SOFTWARE_COPYRIGHT':
+                    return newOutput.patentNumber;
+                default:
+                    return '';
+            }
+        };
+
+        // Build conditional otherInfo object
+        const buildOtherInfo = () => {
+            const otherInfo: any = {};
+
+            if (newOutput.type === 'PAPER') {
+                otherInfo.pubmedId = newOutput.pubmedId;
+                otherInfo.journal = newOutput.journal;
+                otherInfo.authors = newOutput.authors;
+                otherInfo.journalPartition = newOutput.journalPartition;
+            } else if (newOutput.type === 'PUBLICATION') {
+                otherInfo.authors = newOutput.authors;
+            } else if (['INVENTION_PATENT', 'UTILITY_PATENT'].includes(newOutput.type)) {
+                otherInfo.authors = newOutput.authors;
+                otherInfo.legalStatus = newOutput.legalStatus;
+                otherInfo.patentCountry = newOutput.patentCountry;
+            } else if (newOutput.type === 'PROJECT' || newOutput.type === 'SOFTWARE_COPYRIGHT') {
+                otherInfo.authors = newOutput.authors;
+            }
+
+            if (newOutput.type === 'SOFTWARE_COPYRIGHT') {
+                otherInfo.softwareName = newOutput.softwareName;
+                otherInfo.copyrightOwner = newOutput.copyrightOwner;
+                otherInfo.registrationDate = newOutput.registrationDate;
+            } else if (newOutput.type === 'OTHER_AWARD') {
+                otherInfo.awardRecipient = newOutput.awardRecipient;
+                otherInfo.awardIssuingAuthority = newOutput.awardIssuingAuthority;
+                otherInfo.awardTime = newOutput.awardTime;
+                otherInfo.competitionLevel = newOutput.competitionLevel;
+            }
+
+            return Object.keys(otherInfo).length > 0 ? otherInfo : undefined;
+        };
+
+        return {
+            datasetId: newOutput.datasetId,
+            type: newOutput.type.toUpperCase(),
+            otherType: null,
+            title: newOutput.title,
+            abstractText: newOutput.abstract,
+            outputNumber: getOutputNumber(),
+            value: newOutput.type === 'PAPER' ? getJournalPartitionValue(newOutput.journalPartition) : newOutput.value,
+            publicationUrl: newOutput.publicationUrl || '',
+            fileId: newOutput.fileId || '',
+            otherInfo: buildOtherInfo()
+        };
+    };
+
+    const handleSubmitOutput = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        // Validate form
+        if (!validateForm()) {
             return;
         }
 
         try {
             // Submit the research output via API
-            const outputData = {
-                datasetId: newOutput.datasetId,
-                type: newOutput.type.toUpperCase(),
-                otherType: null,
-                title: newOutput.title,
-                abstractText: newOutput.abstract,
-                outputNumber:
-                    newOutput.type === 'PROJECT' ? newOutput.projectId :
-                        newOutput.type === 'PAPER' && newOutput.pubmedId ? newOutput.pubmedId :
-                            newOutput.type === 'PUBLICATION' ? newOutput.publicationNumber :
-                                (newOutput.type === 'INVENTION_PATENT' || newOutput.type === 'UTILITY_PATENT') ? newOutput.patentNumber :
-                                    newOutput.type === 'SOFTWARE_COPYRIGHT' ? newOutput.patentNumber :
-                                        '',
-                value: newOutput.type === 'PAPER' ? getJournalPartitionValue(newOutput.journalPartition) : newOutput.value,
-                publicationUrl: newOutput.publicationUrl || '',
-                fileId: newOutput.fileId || '',
-                otherInfo: {
-                    pubmedId: newOutput.type === 'PAPER' && newOutput.pubmedId ? newOutput.pubmedId : undefined,
-                    journal: newOutput.type === 'PAPER' ? newOutput.journal : undefined,
-                    authors: newOutput.type === 'PAPER' ? newOutput.authors :
-                        newOutput.type === 'PUBLICATION' ? newOutput.authors :
-                            (newOutput.type === 'INVENTION_PATENT' || newOutput.type === 'UTILITY_PATENT' || newOutput.type === 'PROJECT' || newOutput.type === 'SOFTWARE_COPYRIGHT') ? newOutput.authors : undefined,
-                    legalStatus: (newOutput.type === 'INVENTION_PATENT' || newOutput.type === 'UTILITY_PATENT') ? newOutput.legalStatus : undefined,
-                    patentCountry: (newOutput.type === 'INVENTION_PATENT' || newOutput.type === 'UTILITY_PATENT') ? newOutput.patentCountry : undefined,
-                    softwareName: newOutput.type === 'SOFTWARE_COPYRIGHT' ? newOutput.softwareName : undefined,
-                    copyrightOwner: newOutput.type === 'SOFTWARE_COPYRIGHT' ? newOutput.copyrightOwner : undefined,
-                    registrationDate: newOutput.type === 'SOFTWARE_COPYRIGHT' ? newOutput.registrationDate : undefined,
-                    awardRecipient: newOutput.type === 'OTHER_AWARD' ? newOutput.awardRecipient : undefined,
-                    awardIssuingAuthority: newOutput.type === 'OTHER_AWARD' ? newOutput.awardIssuingAuthority : undefined,
-                    awardTime: newOutput.type === 'OTHER_AWARD' ? newOutput.awardTime : undefined,
-                    competitionLevel: newOutput.type === 'OTHER_AWARD' ? newOutput.competitionLevel : undefined,
-                    journalPartition: newOutput.type === 'PAPER' ? newOutput.journalPartition : undefined // 添加期刊分区信息
-                }
-            };
+            const outputData = buildOutputData();
 
             await outputApi.submitOutput(outputData);
 
@@ -237,35 +318,8 @@ const SubmitOutputDialog = ({open, onOpenChange, onSubmit}: SubmitOutputDialogPr
             onSubmit();
             onOpenChange(false);
 
-            // Reset form
-            setNewOutput({
-                title: "",
-                abstract: "",
-                type: "",
-                journal: "",
-                patentNumber: "",
-                datasetId: "",
-                publicationUrl: "",
-                pubmedId: "",
-                authors: "",
-                value: 0,
-                projectId: "",
-                publicationAuthors: "",
-                publicationNumber: "",
-                legalStatus: "",
-                patentCountry: "",
-                softwareName: "",
-                copyrightOwner: "",
-                registrationDate: "",
-                awardRecipient: "",
-                awardIssuingAuthority: "",
-                awardTime: "",
-                competitionLevel: "",
-                fileId: "",
-                journalPartition: "" // 重置期刊分区
-            });
-            setSelectedDataset(null);
-            resetUploadFile(false); // 重置上传的文件
+            // Reset form using the unified function
+            resetForm();
         } catch (error) {
             console.error('Submission error:', error);
             toast({
@@ -280,35 +334,8 @@ const SubmitOutputDialog = ({open, onOpenChange, onSubmit}: SubmitOutputDialogPr
         <Dialog open={open} onOpenChange={(isOpen) => {
             onOpenChange(isOpen);
             if (!isOpen) {
-                // Reset form when closing
-                setNewOutput({
-                    title: "",
-                    abstract: "",
-                    type: "",
-                    journal: "",
-                    patentNumber: "",
-                    datasetId: "",
-                    publicationUrl: "",
-                    pubmedId: "",
-                    authors: "",
-                    value: 0,
-                    projectId: "",
-                    publicationAuthors: "",
-                    publicationNumber: "",
-                    legalStatus: "",
-                    patentCountry: "",
-                    softwareName: "",
-                    copyrightOwner: "",
-                    registrationDate: "",
-                    awardRecipient: "",
-                    awardIssuingAuthority: "",
-                    awardTime: "",
-                    competitionLevel: "",
-                    fileId: "",
-                    journalPartition: "" // 重置期刊分区
-                });
-                setSelectedDataset(null);
-                resetUploadFile(true);
+                // Reset form when closing using the unified function
+                resetForm();
             }
         }}>
             <DialogContent
@@ -352,7 +379,11 @@ const SubmitOutputDialog = ({open, onOpenChange, onSubmit}: SubmitOutputDialogPr
                             />
                             
                             <div className="flex justify-end space-x-2 pt-4">
-                                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                                <Button type="button" variant="outline" onClick={() => {
+                                    // 先清除表单内容，再关闭对话框
+                                    resetForm();
+                                    onOpenChange(false);
+                                }}>
                                     取消
                                 </Button>
                                 <Button type="submit" disabled={!newOutput.datasetId || !newOutput.type}>

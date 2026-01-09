@@ -21,25 +21,27 @@ class PendingCountsController {
   };
   
   private listeners: Map<PendingCountsEvent, Array<() => void>> = new Map();
+  private intervalId: ReturnType<typeof setInterval> | null = null;
+  private timeoutId: ReturnType<typeof setTimeout> | null = null;
   
   constructor() {
-    // 设置定时刷新，每10分钟刷新一次
-    setInterval(() => {
-      this.refreshAllPendingCounts();
-    }, 10 * 60 * 1000); // 10分钟 = 10 * 60 * 1000毫秒
-    setTimeout(() => {
+    // 刷新所有待审核数量，并设置一个定时任务，每5分钟刷新一次
+    this.timeoutId = setTimeout(() => {
       this.refreshAllPendingCounts()
     }, 100);
+
+    // 设置定时刷新，每5分钟刷新一次
+    this.intervalId = setInterval(() => {
+      this.refreshAllPendingCounts();
+    }, 5 * 60 * 1000); // 5分钟 = 5 * 60 * 1000毫秒
+
+    // 监听登录状态变化事件，登录后立即刷新待审核数量
+    window.addEventListener('authStatusChanged', this.refreshAfterLogin);
   }
 
   // 获取当前所有待审核数量
   getCounts(): PendingCounts {
     return { ...this.counts };
-  }
-
-  // 获取单个类型的待审核数量
-  getCount(type: keyof Omit<PendingCounts, 'total'>): number {
-    return this.counts[type] || 0;
   }
 
   // 获取总数
@@ -49,6 +51,7 @@ class PendingCountsController {
 
   // 刷新成果待审核数量
   async refreshOutputPendingCount(): Promise<void> {
+    if (!isAuthenticated()) return;
     try {
       const response = await api.get('/research-outputs/pending-review-count');
       const oldValue = this.counts['research-outputs'];
@@ -67,6 +70,7 @@ class PendingCountsController {
 
   // 刷新申请待审核数量
   async refreshApplicationPendingCount(): Promise<void> {
+    if (!isAuthenticated()) return;
     try {
       const response = await api.get('/manage/applications/pending-review-count');
       const oldValue = this.counts.applications;
@@ -85,6 +89,7 @@ class PendingCountsController {
 
   // 刷新数据集待审核数量
   async refreshDatasetPendingCount(): Promise<void> {
+    if (!isAuthenticated()) return;
     try {
       const response = await api.get('/manage/datasets/pending-review-count');
       const oldValue = this.counts.datasets;
@@ -193,8 +198,28 @@ class PendingCountsController {
   }
   
   // 在登录后立即刷新所有待审核数量
-  public refreshAfterLogin(): void {
+  public refreshAfterLogin = (): void => {
     this.refreshAllPendingCounts();
+  };
+  
+  // 清理资源，移除事件监听器和定时器
+  public dispose(): void {
+    // 移除事件监听器
+    window.removeEventListener('authStatusChanged', this.refreshAfterLogin);
+    
+    // 清除定时器
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
+    
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+    
+    // 清空内部监听器
+    this.listeners.clear();
   }
 }
 
@@ -203,10 +228,9 @@ export const pendingCountsController = new PendingCountsController();
 
 // 导出便捷方法，确保方法绑定到控制器实例
 export const getCounts = pendingCountsController.getCounts.bind(pendingCountsController);
-export const getCount = pendingCountsController.getCount.bind(pendingCountsController);
 export const getTotalCount = pendingCountsController.getTotalCount.bind(pendingCountsController);
 export const refreshOutputPendingCount = pendingCountsController.refreshOutputPendingCount.bind(pendingCountsController);
 export const refreshApplicationPendingCount = pendingCountsController.refreshApplicationPendingCount.bind(pendingCountsController);
 export const refreshDatasetPendingCount = pendingCountsController.refreshDatasetPendingCount.bind(pendingCountsController);
 export const refreshAllPendingCounts = pendingCountsController.refreshAllPendingCounts.bind(pendingCountsController);
-export const refreshAfterLogin = pendingCountsController.refreshAfterLogin.bind(pendingCountsController);
+export const dispose = pendingCountsController.dispose.bind(pendingCountsController);

@@ -653,7 +653,7 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
         <Alert className="bg-amber-50 border-amber-200">
           <Shield className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-amber-800">
-            <span className="font-semibold">重要提示：</span> 所属机构、证件类型和证件号码注册后无法修改，请仔细核对。
+            <span className="font-semibold">重要提示：</span> 注册后所属机构将无法修改，修改证件类型和证件号码需机构管理员操作，请仔细核对。
           </AlertDescription>
         </Alert>
 

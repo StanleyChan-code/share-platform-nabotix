@@ -1,6 +1,7 @@
 import React, {useCallback, useRef, useState, useEffect} from 'react';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card.tsx';
 import {Badge} from '@/components/ui/badge.tsx';
+import {Skeleton} from '@/components/ui/skeleton.tsx';
 import PaginatedList from '@/components/ui/PaginatedList.tsx';
 import {datasetApi, Dataset, ResearchSubject} from '@/integrations/api/datasetApi.ts';
 import {formatDateTime} from '@/lib/utils.ts';
@@ -18,7 +19,8 @@ import {
     ChevronLeftIcon,
     ChevronRightIcon,
     Search,
-    Filter
+    Filter,
+    RefreshCw
 } from "lucide-react";
 import {Button} from "@/components/ui/button.tsx";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip.tsx";
@@ -44,6 +46,7 @@ import {AdminInstitutionSelector} from "@/components/admin/institution/AdminInst
 import {useDebounce} from "@/hooks/useDebounce";
 import {Input} from "@/components/ui/FormValidator.tsx";
 import {refreshDatasetPendingCount} from "@/lib/pendingCountsController";
+import { ApiResponse, Page } from '@/integrations/api/client';
 
 interface DatasetsTabProps {
     filterByCurrentUser?: boolean;
@@ -70,7 +73,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
     const [institutionId, setInstitutionId] = useState<string | null>(null);
     const [subjects, setSubjects] = useState<ResearchSubject[]>([]);
     const [showFilters, setShowFilters] = useState(true);
-    
+
     // 添加防抖处理，延迟550ms
     const debouncedSearchTerm = useDebounce(searchTerm, 550);
 
@@ -110,18 +113,18 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
     const loadingRef = useRef(false);
 
     // 获取数据集列表（用于react-paginate分页）
-    const fetchDatasetList = useCallback(async (page: number) => {
+    const fetchDatasetList = useCallback(async (page: number, size: number = 10) => {
         if (loadingRef.current) return;
 
         loadingRef.current = true;
         setLoading(true);
+        let response: ApiResponse<Page<Dataset>>;
         try {
             // 如果设置了filterByCurrentUser并且有当前用户，则只获取当前用户的数据集
-            let response;
             if (filterByCurrentUser && currentUser?.user?.id) {
                 response = await datasetApi.advancedSearchDatasets({
                     page,
-                    size: 10,
+                    size,
                     sortBy: 'updatedAt',
                     sortDir: 'desc',
                     providerId: currentUser?.user?.id,
@@ -136,7 +139,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                 // 否则获取所有可管理的数据集
                 response = await datasetApi.advancedSearchDatasets({
                     page,
-                    size: 10,
+                    size,
                     sortBy: 'updatedAt',
                     sortDir: 'desc',
                     titleCnOrKey: debouncedSearchTerm || undefined,
@@ -153,6 +156,9 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
             setTotalPages(response.data.page.totalPages);
             setTotalElements(response.data.page.totalElements || 0);
             setCurrentPage(page);
+
+            // 刷新待审核数量
+            refreshDatasetPendingCount();
         } catch (error) {
             console.error("获取数据集列表失败:", error);
             toast({
@@ -164,6 +170,8 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
             loadingRef.current = false;
             setLoading(false);
         }
+
+        return response?.data;
     }, [currentUser?.user?.id, filterByCurrentUser, toast, debouncedSearchTerm, selectedSubject, selectedType, hasPendingVersion, isTopLevel, institutionId]); // 添加 selectedType 到依赖数组
 
     // 当filterByCurrentUser或currentUser改变时，重新获取数据
@@ -198,41 +206,6 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
         }
         return dataset.provider?.id === userInfo.user.id || hasPermissionRole(PermissionRoles.PLATFORM_ADMIN);
     };
-
-    const fetchDatasets = useCallback(async (page: number, size: number) => {
-        // 如果设置了filterByCurrentUser并且有当前用户，则只获取当前用户的数据集
-        if (filterByCurrentUser && currentUser?.user?.id) {
-            const response = await datasetApi.advancedSearchDatasets({
-                page,
-                size,
-                sortBy: 'updatedAt',
-                sortDir: 'desc',
-                providerId: currentUser?.user?.id,
-                titleCnOrKey: debouncedSearchTerm || undefined,
-                subjectAreaId: selectedSubject !== "all" ? selectedSubject : undefined,
-                type: selectedType !== "all" ? selectedType : undefined, // 添加类型筛选
-                hasPendingVersion: hasPendingVersion !== "all" ? hasPendingVersion : undefined,
-                isTopLevel: isTopLevel !== "all" ? isTopLevel : undefined,
-                institutionId: institutionId || undefined
-            });
-            return response.data;
-        } else {
-            // 否则获取所有可管理的数据集
-            const response = await datasetApi.advancedSearchDatasets({
-                page,
-                size,
-                sortBy: 'updatedAt',
-                sortDir: 'desc',
-                titleCnOrKey: debouncedSearchTerm || undefined,
-                subjectAreaId: selectedSubject !== "all" ? selectedSubject : undefined,
-                type: selectedType !== "all" ? selectedType : undefined, // 添加类型筛选
-                hasPendingVersion: hasPendingVersion !== "all" ? hasPendingVersion : undefined,
-                isTopLevel: isTopLevel !== "all" ? isTopLevel : undefined,
-                institutionId: institutionId || undefined
-            });
-            return response.data;
-        }
-    }, [currentUser?.user?.id, filterByCurrentUser, debouncedSearchTerm, selectedSubject, selectedType, hasPendingVersion, isTopLevel, institutionId]); // 添加 selectedType 到依赖数组
 
     const getStatusBadgeVariant = (dataset: Dataset) => {
         // 检查是否有已批准的版本
@@ -334,8 +307,6 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
             if (!filterByCurrentUser) {
                 fetchDatasetList(currentPage);
             }
-            // 刷新待审核数量
-            refreshDatasetPendingCount();
         } catch (error) {
             toast({
                 title: "删除失败",
@@ -367,9 +338,11 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                 <div className="flex justify-between items-start gap-4">
                     <div className="space-y-2 flex-1 min-w-0">
                         <CardTitle className="text-lg flex items-center gap-2">
-                              <span className="truncate" title={dataset.titleCn}>
+                            <span className="truncate hover:underline hover:cursor-pointer"
+                                  onClick={() => handleViewDataset(dataset)}
+                            >
                                 {dataset.titleCn}
-                              </span>
+                            </span>
                             {dataset.parentDatasetId && (
                                 <Badge variant="secondary" className="text-xs">
                                     随访数据集
@@ -501,6 +474,80 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
         </div>
     );
 
+    // 数据集骨架屏组件
+    const renderDatasetSkeleton = () => (
+        <Card className="border-l-4 border-l-primary">
+            <CardHeader className="pb-3">
+                <div className="flex justify-between items-start gap-4">
+                    <div className="space-y-2 flex-1 min-w-0">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                            <Skeleton className="h-5 w-3/4 rounded"/>
+                        </CardTitle>
+                        <Skeleton className="h-4 w-full rounded mb-2"/>
+                        <Skeleton className="h-4 w-5/6 rounded"/>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="flex flex-col items-end gap-1">
+                            <Skeleton className="h-6 w-28 rounded"/>
+                            <Skeleton className="h-5 w-24 rounded"/>
+                        </div>
+                        <div className="flex gap-1">
+                            <Skeleton className="h-10 w-10 rounded-full"/>
+                            <Skeleton className="h-10 w-10 rounded-full"/>
+                        </div>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                            <Skeleton className="h-4 w-4 rounded"/>
+                            <Skeleton className="h-4 w-20 rounded"/>
+                            <Skeleton className="h-4 w-24 rounded"/>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Skeleton className="h-4 w-4 rounded"/>
+                            <Skeleton className="h-4 w-16 rounded"/>
+                            <Skeleton className="h-4 w-20 rounded"/>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Skeleton className="h-4 w-4 rounded"/>
+                            <Skeleton className="h-4 w-20 rounded"/>
+                            <Skeleton className="h-4 w-28 rounded"/>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                            <Skeleton className="h-4 w-4 rounded"/>
+                            <Skeleton className="h-4 w-20 rounded"/>
+                            <Skeleton className="h-4 w-24 rounded"/>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Skeleton className="h-4 w-4 rounded"/>
+                            <Skeleton className="h-4 w-16 rounded"/>
+                            <Skeleton className="h-4 w-8 rounded"/>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                            <Skeleton className="h-4 w-24 rounded"/>
+                            <Skeleton className="h-4 w-16 rounded"/>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Skeleton className="h-4 w-24 rounded"/>
+                            <Skeleton className="h-4 w-16 rounded"/>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Skeleton className="h-4 w-24 rounded"/>
+                            <Skeleton className="h-4 w-28 rounded"/>
+                        </div>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+
     return (
         <TooltipProvider>
             <>
@@ -517,21 +564,28 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
 
                         {/* 筛选区域 */}
                         {showFilters && (
-                            <div className="mb-6 p-4 border rounded-lg bg-muted/50 space-y-4">
-                                <div className="flex justify-between items-center">
+                            <div className="mb-6 p-4 border rounded-lg bg-muted/50">
+                                {/* 第一行：搜索和操作按钮 */}
+                                <div className="flex flex-col sm:flex-row gap-4 mb-4">
                                     {/* 左侧搜索框 */}
-                                    <div className="flex items-center gap-2 w-1/3">
+                                    <div className="flex-1 min-w-[200px]">
                                         <Input
                                             placeholder="搜索标题或关键词..."
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
                                             maxLength={100}
-                                            className="w-72"
+                                            className="w-full"
                                         />
                                     </div>
 
                                     {/* 右侧按钮组 */}
-                                    <div className="flex justify-end">
+                                    <div className="flex flex-wrap gap-2 justify-end">
+                                        {/* 刷新按钮 */}
+                                        <Button variant="outline" onClick={() => fetchDatasetList(currentPage)} className="gap-2">
+                                            <RefreshCw className="h-4 w-4"/>
+                                            刷新
+                                        </Button>
+
                                         {/* 重置按钮 */}
                                         <Button variant="outline" onClick={resetFilters}>
                                             重置筛选条件
@@ -540,7 +594,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                                         {canUploadDataset() && (
                                             <Button
                                                 onClick={() => showUpload ? handleCancelUploadClick() : setShowUpload(true)}
-                                                className="gap-2 ml-4"
+                                                className="gap-2"
                                             >
                                                 <Upload className="h-4 w-4"/>
                                                 {showUpload ? '取消上传' : '上传数据集'}
@@ -549,7 +603,8 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                {/* 第二行：筛选器 */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                     {/* 学科领域筛选 */}
                                     <div>
                                         <Select value={selectedSubject} onValueChange={setSelectedSubject}>
@@ -634,8 +689,6 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                                     if (!filterByCurrentUser) {
                                         fetchDatasetList(currentPage);
                                     }
-                                    // 刷新待审核数量
-                                    refreshDatasetPendingCount();
                                 }}/>
                             </div>
                         )}
@@ -643,7 +696,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                         {filterByCurrentUser ? (
                             <PaginatedList
                                 ref={paginatedListRef}
-                                fetchData={fetchDatasets}
+                                fetchData={fetchDatasetList}
                                 renderItem={renderDatasetItem}
                                 renderEmptyState={renderEmptyState}
                                 pageSize={10}
@@ -651,8 +704,10 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                         ) : (
                             <div>
                                 {loading ? (
-                                    <div className="text-center py-8 text-muted-foreground">
-                                        加载中...
+                                    <div className="space-y-4">
+                                        {[...Array(totalElements || 1)].map((_, index) => (
+                                            <div key={index}>{renderDatasetSkeleton()}</div>
+                                        ))}
                                     </div>
                                 ) : datasets.length > 0 ? (
                                     <div className="space-y-4">
@@ -722,8 +777,6 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                             if (!filterByCurrentUser) {
                                 fetchDatasetList(currentPage);
                             }
-                            // 刷新待审核数量
-                            refreshDatasetPendingCount();
                         }}
                     />
                 )}
@@ -767,4 +820,3 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
 };
 
 export default DatasetsTab;
-
