@@ -56,6 +56,11 @@ const RelatedUsersDialog: React.FC<RelatedUsersDialogProps> = ({
         title: "机构管理员",
         users: relatedUsers.institutionSupervisors || [],
         icon: Shield
+      },
+      {
+        title: "平台管理员",
+        users: relatedUsers.platformAdmins || [],
+        icon: Shield
       }
     ].filter(group => group.users.length > 0);
   };

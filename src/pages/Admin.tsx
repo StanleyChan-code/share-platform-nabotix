@@ -124,7 +124,7 @@ const UnifiedDashboard = () => {
                 icon: Award,
                 description: "管理研究成果产出",
                 content: <ResearchOutputsManagementTab/>,
-                allowRoles: [PermissionRoles.PLATFORM_ADMIN, PermissionRoles.INSTITUTION_SUPERVISOR, PermissionRoles.RESEARCH_OUTPUT_APPROVER],
+                allowRoles: [PermissionRoles.PLATFORM_ADMIN],
                 color: "amber"
             },
         ]
@@ -435,4 +435,3 @@ const UnifiedDashboard = () => {
 };
 
 export default UnifiedDashboard;
-

@@ -145,7 +145,7 @@ const ApplicationReviewTab: React.FC = () => {
         <div className="text-center py-12 text-muted-foreground">
             <FileText className="h-16 w-16 mx-auto mb-4 opacity-50"/>
             <p className="text-lg font-medium">暂无申请记录</p>
-            <p className="text-sm mt-2">目前没有申请记录</p>
+            <p className="text-sm mt-2">当前筛选条件下没有找到相关申请记录</p>
         </div>
     );
 

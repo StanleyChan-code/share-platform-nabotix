@@ -4,23 +4,30 @@ import { Label } from "@/components/ui/label.tsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
 import { useToast } from "@/hooks/use-toast.ts";
 import { institutionApi, Institution } from "@/integrations/api/institutionApi.ts";
-import { Loader2, Building, User, Mail, Phone, IdCard, Briefcase, Shield, Asterisk, Info } from "lucide-react";
+import { Loader2, Building, User, Mail, Phone, IdCard, Briefcase, Shield, Asterisk, Info, Users } from "lucide-react";
 import { InstitutionTypes, ID_TYPES } from "@/lib/enums.ts";
 import { getCurrentUserRolesFromSession } from "@/lib/authUtils";
 import { Separator } from "@/components/ui/separator.tsx";
 import {FormValidator, Input, ValidatedSelect} from "@/components/ui/FormValidator";
+import RelatedUsersDialog from "@/components/profile/RelatedUsersDialog.tsx";
+import { userApi } from "@/integrations/api/userApi.ts";
 
 interface InstitutionProfileTabProps {
   institutionId: string;
+  onInstitutionUpdated?: () => void;
 }
 
-const InstitutionProfileTab = ({ institutionId }: InstitutionProfileTabProps) => {
+const InstitutionProfileTab = ({ institutionId, onInstitutionUpdated }: InstitutionProfileTabProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [institution, setInstitution] = useState<Institution | null>(null);
   const [formData, setFormData] = useState<Partial<Institution>>({});
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+  // 平台管理员相关状态
+  const [platformAdminsDialogOpen, setPlatformAdminsDialogOpen] = useState(false);
+  const [platformAdminsLoading, setPlatformAdminsLoading] = useState(false);
+  const [platformAdmins, setPlatformAdmins] = useState<any>({});
 
   useEffect(() => {
     const checkUserRole = async () => {
@@ -108,6 +115,11 @@ const InstitutionProfileTab = ({ institutionId }: InstitutionProfileTabProps) =>
         title: "更新成功",
         description: "机构信息已成功更新",
       });
+
+      // 调用回调通知父组件机构信息已更新
+      if (onInstitutionUpdated) {
+        onInstitutionUpdated();
+      }
     } catch (error: any) {
       console.error("更新机构信息失败:", error);
       toast({
@@ -242,6 +254,38 @@ const InstitutionProfileTab = ({ institutionId }: InstitutionProfileTabProps) =>
     );
   }
 
+  // 获取平台管理员列表
+  const fetchPlatformAdmins = async () => {
+    try {
+      setPlatformAdminsLoading(true);
+      const result = await userApi.getPlatformAdmins();
+      if (result.success) {
+        setPlatformAdmins({platformAdmins: result.data});
+      } else {
+        toast({
+          title: "获取平台管理员失败",
+          description: "无法获取平台管理员列表",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error("获取平台管理员失败:", error);
+      toast({
+        title: "错误",
+        description: error.message || "获取平台管理员列表时发生错误",
+        variant: "destructive",
+      });
+    } finally {
+      setPlatformAdminsLoading(false);
+    }
+  };
+
+  // 打开平台管理员对话框并获取数据
+  const handleOpenPlatformAdminsDialog = () => {
+    fetchPlatformAdmins();
+    setPlatformAdminsDialogOpen(true);
+  };
+
   if (!institution) {
     if (isPlatformAdmin) {
       return ;
@@ -340,18 +384,28 @@ const InstitutionProfileTab = ({ institutionId }: InstitutionProfileTabProps) =>
                   </div>
               ))}
 
-              {/* 权限提示 */}
+              {/* 权限提示和查看平台管理员按钮 */}
               {!isPlatformAdmin && (
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 flex justify-between items-start">
                     <div className="flex items-start gap-2">
                       <Shield className="h-4 w-4 text-blue-600 mt-0.5" />
                       <div className="space-y-1">
                         <p className="text-sm font-medium text-blue-800">权限说明</p>
                         <p className="text-xs text-blue-700">
-                          您当前是机构管理员，只能修改机构简称、联系邮箱和联系电话。其他敏感信息需要平台管理员进行修改。
+                          您当前是机构管理员，只能修改机构简称、联系邮箱和联系电话，机构信息不与机构管理员账号关联。如需修改其他敏感信息需要联系平台管理员进行修改。
                         </p>
                       </div>
                     </div>
+                    <Button
+                      type="button"
+                      onClick={handleOpenPlatformAdminsDialog}
+                      variant="outline"
+                      className="gap-2"
+                      size="sm"
+                    >
+                      <Users className="h-3 w-3" />
+                      查看平台管理员
+                    </Button>
                   </div>
               )}
 
@@ -389,6 +443,15 @@ const InstitutionProfileTab = ({ institutionId }: InstitutionProfileTabProps) =>
                 </div>
               </div>
             </FormValidator>
+
+            {/* 平台管理员对话框 */}
+            <RelatedUsersDialog
+              open={platformAdminsDialogOpen}
+              onOpenChange={setPlatformAdminsDialogOpen}
+              relatedUsers={platformAdmins}
+              loading={platformAdminsLoading}
+              highlightedUserIds={[]}
+            />
       </div>
   );
 };

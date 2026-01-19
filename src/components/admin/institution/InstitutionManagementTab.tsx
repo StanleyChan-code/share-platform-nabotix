@@ -324,7 +324,10 @@ const InstitutionManagementTab = () => {
                             <X className="h-4 w-4" />
                         </Button>
                     </div>
-                    <InstitutionProfileTab institutionId={selectedInstitution.id} />
+                    <InstitutionProfileTab 
+                        institutionId={selectedInstitution.id} 
+                        onInstitutionUpdated={() => fetchInstitutions(currentPage, debouncedSearchTerm)} 
+                    />
                 </div>
             )}
             
@@ -349,4 +352,3 @@ const InstitutionManagementTab = () => {
 };
 
 export default InstitutionManagementTab;
-

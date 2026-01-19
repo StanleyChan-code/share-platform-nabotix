@@ -234,8 +234,8 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
 
     const getHighlightedUserIds = (): string[] => {
         const userIds: string[] = [];
-        // 添加数据集提供者ID
-        if (application.providerId) {
+        // 如果数据集提供者已经审核，高亮显示提供者
+        if (application.providerId && application.providerReviewedAt) {
             userIds.push(application.providerId);
         }
         // 如果已审核，添加机构审核者ID

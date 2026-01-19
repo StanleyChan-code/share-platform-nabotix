@@ -81,6 +81,8 @@ export interface RelatedUsersDto {
   institutionUserManagers?: UserDto[];
 
   institutionSupervisors: UserDto[];
+
+  platformAdmins?: UserDto[];
 }
 
 
@@ -154,6 +156,12 @@ export const userApi = {
   // 获取当前用户所属机构的相关用户信息（用户管理员和机构管理员）
   async getInstitutionRelatedUsers() {
     const response = await api.get<RelatedUsersDto>('/users/institution-related-users');
+    return response.data;
+  },
+
+  // 获取平台管理员列表
+  async getPlatformAdmins() {
+    const response = await api.get<{ success: boolean; data: UserDto[] }>('/users/platform-admins');
     return response.data;
   },
 

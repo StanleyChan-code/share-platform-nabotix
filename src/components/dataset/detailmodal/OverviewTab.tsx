@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table.tsx";
 import {
   Users,
   Database,
@@ -13,7 +12,7 @@ import {
   Mail,
   MapPin,
   Share,
-  Layers2, SwatchBook
+  Layers2, SwatchBook, Phone
 } from "lucide-react";
 import { formatDate } from "@/lib/utils.ts";
 import { Button } from "@/components/ui/button.tsx";
@@ -347,7 +346,7 @@ export function OverviewTab({
                           />
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">联系方式</p>
+                          <p className="text-xs text-muted-foreground mb-1">数据集联系方式</p>
                           <input
                               type="text"
                               value={editableFields.contactInfo}
@@ -370,16 +369,23 @@ export function OverviewTab({
                         {dataset.contactInfo && (
                             <InfoItem
                                 icon={Mail}
-                                label="联系方式"
+                                label="数据集联系方式"
                                 value={dataset.contactInfo}
                             />
                         )}
                         {dataset.provider && (
-                            <InfoItem
-                                icon={User}
-                                label="提供者"
-                                value={dataset.provider.realName}
-                            />
+                            <>
+                              <InfoItem
+                                  icon={User}
+                                  label="数据集提供者"
+                                  value={dataset.provider.realName}
+                              />
+                              <InfoItem
+                                  icon={Mail}
+                                  label="数据集提供者邮箱"
+                                  value={dataset.provider.email}
+                              />
+                            </>
                         )}
                       </>
                   )}
@@ -402,9 +408,14 @@ export function OverviewTab({
                             icon={User}
                         />
                         <InfoItem
-                          label={"机构联系方式"}
-                          value={institution.contactPhone || "-"}
-                          icon={Mail}
+                            label={"机构联系电话"}
+                            value={institution.contactPhone || "-"}
+                            icon={Phone}
+                        />
+                        <InfoItem
+                            label={"机构联系邮箱"}
+                            value={institution.contactEmail || "-"}
+                            icon={Mail}
                         />
                       </>
                   )}

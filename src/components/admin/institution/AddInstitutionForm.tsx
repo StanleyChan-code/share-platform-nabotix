@@ -224,7 +224,6 @@ const AddInstitutionForm = ({ open, onOpenChange, onInstitutionAdded }: AddInsti
                     </DialogTitle>
                     <DialogDescription>
                         <div className="space-y-2">
-                            <p>请填写机构信息，创建新的机构账户</p>
                             <div className="flex items-center gap-4 text-xs text-muted-foreground">
                                 <div className="flex items-center gap-1">
                                     <Asterisk className="h-3 w-3 text-red-500" />
@@ -312,8 +311,7 @@ const AddInstitutionForm = ({ open, onOpenChange, onInstitutionAdded }: AddInsti
                             <div className="space-y-1">
                                 <p className="text-sm font-medium text-blue-800">重要提示</p>
                                 <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
-                                    <li>机构创建后，联系电话将作为机构管理员登录账号，后续修改联系电话不会影响机构管理员登录账号。</li>
-                                    <div>机构管理员登录账号须使用手机验证码登录，登录后修改密码后才可以使用密码登录。</div>
+                                    <li>机构创建后，需要为机构添加机构管理员账号。</li>
                                 </ul>
                             </div>
                         </div>

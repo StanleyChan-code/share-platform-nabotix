@@ -287,7 +287,8 @@ export function DatasetDetailModal({
                                 {/* (3) Statistics Tab */}
                                 <TabsContent value="statistics" className="space-y-4 mt-4">
                                     <StatisticsTab useAdvancedQuery={useAdvancedQuery}
-                                                   versions={currentDataset.versions}/>
+                                                   versions={currentDataset.versions}
+                                                   dataset={currentDataset}/>
                                 </TabsContent>
 
                                 {/* Research Outputs Tab */}

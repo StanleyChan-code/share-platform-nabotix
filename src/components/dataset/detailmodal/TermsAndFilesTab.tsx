@@ -4,6 +4,7 @@ import {FileText, Download, Shield, AlertTriangle, CheckCircle, ClockIcon, XCirc
 import {api} from "@/integrations/api/client.ts";
 import {useToast} from "@/hooks/use-toast.ts";
 import {useNavigate} from "react-router-dom";
+import {redirectToAuth} from "@/lib/authUtils.ts";
 import {useEffect, useState} from "react";
 import ApplyDialog from "@/components/application/ApplyDialog.tsx";
 import ApplicationDetailDialog from "@/components/admin/ApplicationDetailDialog.tsx";
@@ -325,11 +326,15 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
                                     请先登录您的账户以访问和下载数据文件、数据字典和使用协议。
                                 </p>
                                 <Button
-                                    onClick={() => navigate('/auth')}
-                                    className="mt-3"
-                                >
-                                    前往登录
-                                </Button>
+                                onClick={() => {
+                                    // 构建包含数据集ID的URL，用于登录后返回
+                                    const currentUrl = '/datasets?id=' + dataset.id;
+                                    redirectToAuth(currentUrl);
+                                }}
+                                className="mt-3"
+                            >
+                                前往登录
+                            </Button>
                             </div>
                         </div>
                     </div>

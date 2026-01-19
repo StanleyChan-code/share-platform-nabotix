@@ -471,6 +471,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
         <div className="text-center py-12 text-muted-foreground">
             <Database className="h-16 w-16 mx-auto mb-4 opacity-50"/>
             <p className="text-lg font-medium">暂无数据集</p>
+            <p className="text-sm mt-2">当前筛选条件下没有找到相关数据集</p>
         </div>
     );
 

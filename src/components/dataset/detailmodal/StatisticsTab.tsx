@@ -11,11 +11,17 @@ import {formatDate} from "@/lib/utils.ts";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
 import InfiniteScroll from 'react-infinite-scroll-component';
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table.tsx";
+import {api} from "@/integrations/api/client.ts";
+import {useNavigate} from "react-router-dom";
+import {Button} from "@/components/ui/button.tsx";
+import {AlertTriangle} from "lucide-react";
+import {redirectToAuth} from "@/lib/authUtils.ts";
 
 interface StatisticsTabProps {
     versions?: DatasetVersion[],
     onVersionChange?: (versionId: string) => void,
-    useAdvancedQuery?: boolean
+    useAdvancedQuery?: boolean,
+    dataset: any
 }
 
 export interface CategoryDistribution {
@@ -46,7 +52,8 @@ interface ColumnStats {
 export function StatisticsTab({
                                   versions,
                                   onVersionChange,
-                                  useAdvancedQuery
+                                  useAdvancedQuery,
+                                  dataset
                               }: StatisticsTabProps) {
     const [stats, setStats] = useState<ColumnStats[]>([]);
     const [totalRows, setTotalRows] = useState<number>(0);
@@ -55,6 +62,10 @@ export function StatisticsTab({
     const [hiddenVariables, setHiddenVariables] = useState<Set<string>>(new Set());
     const [showFilter, setShowFilter] = useState(false);
     const [selectedVersion, setSelectedVersion] = useState<any>(null);
+    const navigate = useNavigate();
+    
+    // 检查用户是否已认证
+    const isAuthenticated = api.isAuthenticated();
 
     // 在 useEffect 中设置选中的版本，避免在渲染过程中设置状态
     useEffect(() => {
@@ -67,6 +78,11 @@ export function StatisticsTab({
     // 当选中的版本发生变化时，重新获取统计数据
     useEffect(() => {
         const fetchStatistics = async () => {
+            // 如果用户未登录，不加载统计数据
+            if (!isAuthenticated) {
+                return;
+            }
+            
             if (!selectedVersion) {
                 setStats([]);
                 setTotalRows(0);
@@ -217,6 +233,16 @@ export function StatisticsTab({
 
 
     const handleDownloadAll = () => {
+        // 检查用户是否已认证
+        if (!isAuthenticated) {
+            toast({
+                title: "需要登录",
+                description: "请先登录以下载分析报告",
+                variant: "destructive",
+            });
+            return;
+        }
+        
         // 获取可见的连续型变量和分类型变量
         const numericStats = visibleStats.filter(s => s.inferredType === 'numeric');
         const catStats = visibleStats.filter(s => s.inferredType !== 'numeric');
@@ -318,6 +344,7 @@ export function StatisticsTab({
         );
     }
 
+
     return (
         <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* 版本选择器 - 仅在提供了版本信息时显示 */}
@@ -384,14 +411,16 @@ export function StatisticsTab({
                     <div className="flex flex-col md:flex-row md:items-center justify-between">
                         <div>
                             <h2 className="text-xl font-bold text-slate-800">分析结果</h2>
-                            <p className="text-sm text-slate-500 mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                            {isAuthenticated && (
+                                <p className="text-sm text-slate-500 mt-1 flex flex-wrap gap-x-4 gap-y-1">
                                 <span>总记录数: <span
                                     className="font-mono font-medium text-slate-900">{totalRows}</span></span>
-                                <span>总变量数: <span
-                                    className="font-mono font-medium text-slate-900">{stats.length}</span></span>
-                                <span>显示变量数: <span
-                                    className="font-mono font-medium text-indigo-600">{visibleStats.length}</span></span>
-                            </p>
+                                    <span>总变量数: <span
+                                        className="font-mono font-medium text-slate-900">{stats.length}</span></span>
+                                    <span>显示变量数: <span
+                                        className="font-mono font-medium text-indigo-600">{visibleStats.length}</span></span>
+                                </p>
+                            )}
                         </div>
                         {/* 当前版本信息展示 */}
                         {selectedVersion && (
@@ -407,217 +436,245 @@ export function StatisticsTab({
 
                 <div className="h-px bg-slate-100 my-2"></div>
 
-                {/* 筛选器开关 */}
-                <div>
-                    <div className="flex justify-between items-center gap-3">
-                        {/* Data Type Filter */}
-                        <div className="flex flex-wrap items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200">
-                            <button
-                                onClick={() => setShowFilter(!showFilter)}
-                                className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-indigo-600 transition-colors mr-2"
-                            >
-                                {showFilter ? <ChevronDown className="w-4 h-4"/> : <ChevronRight className="w-4 h-4"/>}
-                                <Filter className="w-4 h-4"/>
-                                {showFilter ? '隐藏变量筛选' : '筛选显示变量'}
-                            </button>
-                            <div className="flex flex-wrap gap-1">
+                {isAuthenticated ?  (
+                    <div>
+                        {/* 筛选器开关 */}
+                        <div className="flex justify-between items-center gap-3">
+                            {/* Data Type Filter */}
+                            <div className="flex flex-wrap items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200">
                                 <button
-                                    onClick={() => setDataTypeFilter('all')}
-                                    className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${dataTypeFilter === 'all' ? 'bg-indigo-500 text-white' : 'bg-white text-slate-700 hover:bg-slate-100'}`}
+                                    onClick={() => setShowFilter(!showFilter)}
+                                    className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-indigo-600 transition-colors mr-2"
                                 >
-                                    全部
+                                    {showFilter ? <ChevronDown className="w-4 h-4"/> : <ChevronRight className="w-4 h-4"/>}
+                                    <Filter className="w-4 h-4"/>
+                                    {showFilter ? '隐藏变量筛选' : '筛选显示变量'}
                                 </button>
+                                <div className="flex flex-wrap gap-1">
+                                    <button
+                                        onClick={() => setDataTypeFilter('all')}
+                                        className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${dataTypeFilter === 'all' ? 'bg-indigo-500 text-white' : 'bg-white text-slate-700 hover:bg-slate-100'}`}
+                                    >
+                                        全部
+                                    </button>
+                                    <button
+                                        onClick={() => setDataTypeFilter('numeric')}
+                                        className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${dataTypeFilter === 'numeric' ? 'bg-indigo-500 text-white' : 'bg-white text-slate-700 hover:bg-slate-100'}`}
+                                    >
+                                        连续型变量
+                                    </button>
+                                    <button
+                                        onClick={() => setDataTypeFilter('categorical')}
+                                        className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${dataTypeFilter === 'categorical' ? 'bg-indigo-500 text-white' : 'bg-white text-slate-700 hover:bg-slate-100'}`}
+                                    >
+                                        分类型变量
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Download Button */}
+                            <div className="flex flex-wrap gap-2">
                                 <button
-                                    onClick={() => setDataTypeFilter('numeric')}
-                                    className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${dataTypeFilter === 'numeric' ? 'bg-indigo-500 text-white' : 'bg-white text-slate-700 hover:bg-slate-100'}`}
+                                    onClick={handleDownloadAll}
+                                    className="flex items-center justify-center gap-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors flex-1 min-w-[120px]"
                                 >
-                                    连续型变量
-                                </button>
-                                <button
-                                    onClick={() => setDataTypeFilter('categorical')}
-                                    className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${dataTypeFilter === 'categorical' ? 'bg-indigo-500 text-white' : 'bg-white text-slate-700 hover:bg-slate-100'}`}
-                                >
-                                    分类型变量
+                                    <Download className="w-4 h-4"/>
+                                    下载分析报告
                                 </button>
                             </div>
                         </div>
 
-                        {/* Download Button */}
-                        <div className="flex flex-wrap gap-2">
-                            <button
-                                onClick={handleDownloadAll}
-                                className="flex items-center justify-center gap-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors flex-1 min-w-[120px]"
-                            >
-                                <Download className="w-4 h-4"/>
-                                下载分析报告
-                            </button>
-                        </div>
-                    </div>
-
-                    <div>
-                        {showFilter && (
-                            <div className="mt-4 animate-in slide-in-from-top-2 duration-300">
-                                <div className="flex gap-2 mb-3">
-                                    <button onClick={() => toggleAllVariables(true)}
-                                            className="text-xs bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded text-slate-700 font-medium">全选
-                                    </button>
-                                    <button onClick={() => toggleAllVariables(false)}
-                                            className="text-xs bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded text-slate-700 font-medium">全不选
-                                    </button>
-                                </div>
-                                <div
-                                    className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 bg-slate-50 p-4 rounded-lg border border-slate-100 max-h-60 overflow-y-auto">
-                                    {dataTypeFilteredStats.map(s => {
-                                        const isHidden = hiddenVariables.has(s.variable);
-                                        return (
-                                            <label key={s.variable}
-                                                   className="flex items-center gap-2 text-sm cursor-pointer hover:bg-white p-1 rounded transition-colors">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={!isHidden}
-                                                    onChange={() => toggleVariable(s.variable)}
-                                                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                                                />
-                                                <span
-                                                    className={`truncate ${isHidden ? 'text-slate-400' : 'text-slate-700'}`}
-                                                    title={s.variable}>
+                        <div>
+                            {showFilter && (
+                                <div className="mt-4 animate-in slide-in-from-top-2 duration-300">
+                                    <div className="flex gap-2 mb-3">
+                                        <button onClick={() => toggleAllVariables(true)}
+                                                className="text-xs bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded text-slate-700 font-medium">全选
+                                        </button>
+                                        <button onClick={() => toggleAllVariables(false)}
+                                                className="text-xs bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded text-slate-700 font-medium">全不选
+                                        </button>
+                                    </div>
+                                    <div
+                                        className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 bg-slate-50 p-4 rounded-lg border border-slate-100 max-h-60 overflow-y-auto">
+                                        {dataTypeFilteredStats.map(s => {
+                                            const isHidden = hiddenVariables.has(s.variable);
+                                            return (
+                                                <label key={s.variable}
+                                                       className="flex items-center gap-2 text-sm cursor-pointer hover:bg-white p-1 rounded transition-colors">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={!isHidden}
+                                                        onChange={() => toggleVariable(s.variable)}
+                                                        className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                                    />
+                                                    <span
+                                                        className={`truncate ${isHidden ? 'text-slate-400' : 'text-slate-700'}`}
+                                                        title={s.variable}>
                                                 {s.variable}
                                             </span>
-                                            </label>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            <div className="space-y-4">
-                {sortedGroupKeys.map((group) => {
-                    const isCollapsed = collapsedGroups.has(group);
-                    const groupItems = groupedStats[group];
-                    const count = groupItems.length;
-                    const displayLabel = groupLabels[group] || `${group} 变量`;
-
-                    if (count === 0) return null;
-
-                    return (
-                        <div key={group}
-                             className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                            <button
-                                onClick={() => toggleGroup(group)}
-                                className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors border-b border-slate-200"
-                            >
-                                <div className="flex items-center gap-2">
-                                    {isCollapsed ? <ChevronRight className="w-5 h-5 text-slate-400"/> :
-                                        <ChevronDown className="w-5 h-5 text-slate-400"/>}
-                                    <Layers className="w-4 h-4 text-indigo-500"/>
-                                    <span className="font-semibold text-slate-700">{displayLabel}</span>
-                                    <span
-                                        className="bg-slate-200 text-slate-600 text-xs px-2 py-0.5 rounded-full font-medium">{count}</span>
-                                </div>
-                                <span className="text-xs text-slate-400 font-medium">
-                                    {isCollapsed ? '展开' : '收起'}
-                                </span>
-                            </button>
-
-                            {!isCollapsed && (
-                                <div className="overflow-x-auto">
-                                    <InfiniteScroll
-                                        dataLength={groupItems.length}
-                                        next={() => {}}
-                                        hasMore={false}
-                                        loader={<div className="text-center py-4">加载中...</div>}
-                                        scrollThreshold={0.8}
-                                        style={{ overflowX: 'auto' }}
-                                    >
-                                        <Table>
-                                            <TableHeader>
-                                                <tr>
-                                                    <TableHead className="w-[15%] bg-slate-50/50">变量名</TableHead>
-                                                    <TableHead className="w-[15%] bg-slate-50/50">标签</TableHead>
-                                                    <TableHead className="w-[12%] text-right bg-slate-50/50">有效值 (占比)</TableHead>
-                                                    <TableHead className="w-[12%] text-right bg-slate-50/50">缺失值 (占比)</TableHead>
-
-                                                    {group === 'Numeric' ? (
-                                                        <>
-                                                            <TableHead className="text-right bg-slate-50/50">均值</TableHead>
-                                                            <TableHead className="text-right bg-slate-50/50">标准差</TableHead>
-                                                            <TableHead className="text-right bg-slate-50/50">中位数</TableHead>
-                                                            <TableHead className="text-right bg-slate-50/50">最小值</TableHead>
-                                                            <TableHead className="text-right bg-slate-50/50">最大值</TableHead>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <TableHead className="w-[30%] bg-slate-50/50">类别分布 (Top 5)</TableHead>
-                                                            <TableHead className="text-right bg-slate-50/50">众数</TableHead>
-                                                        </>
-                                                    )}
-                                                </tr>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {groupItems.map((row) => (
-                                                    <TableRow key={row.variable} className="hover:bg-slate-50/50 transition-colors align-top">
-                                                        <TableCell className="px-4 py-3 font-mono text-slate-700 font-medium break-words">{row.variable}</TableCell>
-                                                        <TableCell className="px-4 py-3 text-slate-600 break-words" title={row.label}>{row.label || '-'}</TableCell>
-
-                                                        {/* Valid with Percentage */}
-                                                        <TableCell className="px-4 py-3 text-right text-slate-600">
-                                                            <div>{row.count}</div>
-                                                            <div className="text-xs text-slate-400">{row.validPercentage}</div>
-                                                        </TableCell>
-
-                                                        {/* Missing with Percentage */}
-                                                        <TableCell className="px-4 py-3 text-right">
-                                                            <div className={`${row.missing > 0 ? 'text-red-500 font-medium' : 'text-slate-600'}`}>{row.missing}</div>
-                                                            <div className="text-xs text-slate-400">{row.missingPercentage}</div>
-                                                        </TableCell>
-
-                                                        {group === 'Numeric' ? (
-                                                            <>
-                                                                <TableCell className="px-4 py-3 text-right text-slate-600">{formatNumber(row.mean)}</TableCell>
-                                                                <TableCell className="px-4 py-3 text-right text-slate-600">{formatNumber(row.stdDev)}</TableCell>
-                                                                <TableCell className="px-4 py-3 text-right text-slate-600">{formatNumber(row.median)}</TableCell>
-                                                                <TableCell className="px-4 py-3 text-right text-slate-600">{row.min ?? '-'}</TableCell>
-                                                                <TableCell className="px-4 py-3 text-right text-slate-600">{row.max ?? '-'}</TableCell>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <TableCell className="px-4 py-3">
-                                                                    <div className="space-y-1">
-                                                                        {row.categoryDistribution?.map((cat, i) => (
-                                                                            <div key={i} className="flex items-center justify-between text-xs group">
-                                                                                <span className="text-slate-700 truncate max-w-[180px] bg-slate-100 px-1.5 py-0.5 rounded" title={cat.name}>
-                                                                                    {cat.name}
-                                                                                </span>
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <span className="text-slate-400 text-[10px] tabular-nums">({cat.count})</span>
-                                                                                    <span className="font-medium text-indigo-600 w-12 text-right">{cat.percentage}</span>
-                                                                                </div>
-                                                                            </div>
-                                                                        ))}
-                                                                        {(!row.categoryDistribution || row.categoryDistribution.length === 0) && (
-                                                                            <span className="text-slate-400 italic text-xs">无数据</span>
-                                                                        )}
-                                                                    </div>
-                                                                </TableCell>
-                                                                <TableCell className="px-4 py-3 text-right text-slate-600 truncate max-w-[100px]" title={`${row.mode} (频率: ${row.modeFreq})`}>
-                                                                    {row.mode ?? '-'}
-                                                                </TableCell>
-                                                            </>
-                                                        )}
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </InfiniteScroll>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             )}
                         </div>
-                    );
-                })}
+                    </div>
+                ) : (
+                    <div className="w-full space-y-6 p-6">
+                        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <div className="flex items-start gap-2">
+                                <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                                <div>
+                                    <h4 className="font-medium text-yellow-800">需要登录才能查看统计数据</h4>
+                                    <p className="text-sm text-yellow-700 mt-1">
+                                        请先登录您的账户以访问数据集统计数据。
+                                    </p>
+                                    <Button
+                                        onClick={() => {
+                                            // 构建包含数据集ID的路径，用于登录后返回
+                                            const currentUrl = '/datasets?id=' + dataset.id;
+                                            redirectToAuth(currentUrl);
+                                        }}
+                                        className="mt-3"
+                                    >
+                                        前往登录
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
+
+            {isAuthenticated && (
+                <div className="space-y-4">
+                    {sortedGroupKeys.map((group) => {
+                        const isCollapsed = collapsedGroups.has(group);
+                        const groupItems = groupedStats[group];
+                        const count = groupItems.length;
+                        const displayLabel = groupLabels[group] || `${group} 变量`;
+
+                        if (count === 0) return null;
+
+                        return (
+                            <div key={group}
+                                 className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                                <button
+                                    onClick={() => toggleGroup(group)}
+                                    className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors border-b border-slate-200"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        {isCollapsed ? <ChevronRight className="w-5 h-5 text-slate-400"/> :
+                                            <ChevronDown className="w-5 h-5 text-slate-400"/>}
+                                        <Layers className="w-4 h-4 text-indigo-500"/>
+                                        <span className="font-semibold text-slate-700">{displayLabel}</span>
+                                        <span
+                                            className="bg-slate-200 text-slate-600 text-xs px-2 py-0.5 rounded-full font-medium">{count}</span>
+                                    </div>
+                                    <span className="text-xs text-slate-400 font-medium">
+                                    {isCollapsed ? '展开' : '收起'}
+                                </span>
+                                </button>
+
+                                {!isCollapsed && (
+                                    <div className="overflow-x-auto">
+                                        <InfiniteScroll
+                                            dataLength={groupItems.length}
+                                            next={() => {}}
+                                            hasMore={false}
+                                            loader={<div className="text-center py-4">加载中...</div>}
+                                            scrollThreshold={0.8}
+                                            style={{ overflowX: 'auto' }}
+                                        >
+                                            <Table>
+                                                <TableHeader>
+                                                    <tr>
+                                                        <TableHead className="w-[15%] bg-slate-50/50">变量名</TableHead>
+                                                        <TableHead className="w-[15%] bg-slate-50/50">标签</TableHead>
+                                                        <TableHead className="w-[12%] text-right bg-slate-50/50">有效值 (占比)</TableHead>
+                                                        <TableHead className="w-[12%] text-right bg-slate-50/50">缺失值 (占比)</TableHead>
+
+                                                        {group === 'Numeric' ? (
+                                                            <>
+                                                                <TableHead className="text-right bg-slate-50/50">均值</TableHead>
+                                                                <TableHead className="text-right bg-slate-50/50">标准差</TableHead>
+                                                                <TableHead className="text-right bg-slate-50/50">中位数</TableHead>
+                                                                <TableHead className="text-right bg-slate-50/50">最小值</TableHead>
+                                                                <TableHead className="text-right bg-slate-50/50">最大值</TableHead>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <TableHead className="w-[30%] bg-slate-50/50">类别分布 (Top 5)</TableHead>
+                                                                <TableHead className="text-right bg-slate-50/50">众数</TableHead>
+                                                            </>
+                                                        )}
+                                                    </tr>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {groupItems.map((row) => (
+                                                        <TableRow key={row.variable} className="hover:bg-slate-50/50 transition-colors align-top">
+                                                            <TableCell className="px-4 py-3 font-mono text-slate-700 font-medium break-words">{row.variable}</TableCell>
+                                                            <TableCell className="px-4 py-3 text-slate-600 break-words" title={row.label}>{row.label || '-'}</TableCell>
+
+                                                            {/* Valid with Percentage */}
+                                                            <TableCell className="px-4 py-3 text-right text-slate-600">
+                                                                <div>{row.count}</div>
+                                                                <div className="text-xs text-slate-400">{row.validPercentage}</div>
+                                                            </TableCell>
+
+                                                            {/* Missing with Percentage */}
+                                                            <TableCell className="px-4 py-3 text-right">
+                                                                <div className={`${row.missing > 0 ? 'text-red-500 font-medium' : 'text-slate-600'}`}>{row.missing}</div>
+                                                                <div className="text-xs text-slate-400">{row.missingPercentage}</div>
+                                                            </TableCell>
+
+                                                            {group === 'Numeric' ? (
+                                                                <>
+                                                                    <TableCell className="px-4 py-3 text-right text-slate-600">{formatNumber(row.mean)}</TableCell>
+                                                                    <TableCell className="px-4 py-3 text-right text-slate-600">{formatNumber(row.stdDev)}</TableCell>
+                                                                    <TableCell className="px-4 py-3 text-right text-slate-600">{formatNumber(row.median)}</TableCell>
+                                                                    <TableCell className="px-4 py-3 text-right text-slate-600">{row.min ?? '-'}</TableCell>
+                                                                    <TableCell className="px-4 py-3 text-right text-slate-600">{row.max ?? '-'}</TableCell>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <TableCell className="px-4 py-3">
+                                                                        <div className="space-y-1">
+                                                                            {row.categoryDistribution?.map((cat, i) => (
+                                                                                <div key={i} className="flex items-center justify-between text-xs group">
+                                                                                <span className="text-slate-700 truncate max-w-[180px] bg-slate-100 px-1.5 py-0.5 rounded" title={cat.name}>
+                                                                                    {cat.name}
+                                                                                </span>
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <span className="text-slate-400 text-[10px] tabular-nums">({cat.count})</span>
+                                                                                        <span className="font-medium text-indigo-600 w-12 text-right">{cat.percentage}</span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+                                                                            {(!row.categoryDistribution || row.categoryDistribution.length === 0) && (
+                                                                                <span className="text-slate-400 italic text-xs">无数据</span>
+                                                                            )}
+                                                                        </div>
+                                                                    </TableCell>
+                                                                    <TableCell className="px-4 py-3 text-right text-slate-600 truncate max-w-[100px]" title={`${row.mode} (频率: ${row.modeFreq})`}>
+                                                                        {row.mode ?? '-'}
+                                                                    </TableCell>
+                                                                </>
+                                                            )}
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </InfiniteScroll>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }

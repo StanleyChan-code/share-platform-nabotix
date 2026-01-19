@@ -84,7 +84,7 @@ const OutputItem = ({
         const statusConfig = {
             approved: { variant: "default" as const, icon: CheckCircle, text: "已审核" },
             rejected: { variant: "destructive" as const, icon: XCircle, text: "已拒绝" },
-            pending: { variant: "secondary" as const, icon: Clock, text: "待机构审核" }
+            pending: { variant: "secondary" as const, icon: Clock, text: "待审核" }
         };
         
         let statusKey: keyof typeof statusConfig;

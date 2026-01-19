@@ -360,19 +360,19 @@ const ProfileInfo = ({ userProfile, onUpdateProfile }: ProfileInfoProps) => {
 
                   <div className="space-y-1">
                     <InfoItem
-                        icon={Building2}
-                        label="机构地址"
-                        value={institution.address || "未填写"}
-                    />
-                    <InfoItem
                         icon={Phone}
                         label="机构电话"
-                        value={institution.phone || "未填写"}
+                        value={institution.contactPhone || "未填写"}
                     />
                     <InfoItem
                         icon={Mail}
                         label="机构邮箱"
-                        value={institution.email || "未填写"}
+                        value={institution.contactEmail || "未填写"}
+                    />
+                    <InfoItem
+                        icon={Building2}
+                        label="进驻日期"
+                        value={formatDate(institution.createdAt) || "未填写"}
                     />
                   </div>
                 </div>

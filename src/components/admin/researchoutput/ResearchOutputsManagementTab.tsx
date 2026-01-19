@@ -5,7 +5,18 @@ import { ResearchOutput } from "@/integrations/api/outputApi.ts";
 import OutputDetailDialog from "@/components/outputs/OutputDetailDialog.tsx";
 import { AdminInstitutionSelector } from "@/components/admin/institution/AdminInstitutionSelector.tsx";
 import { api } from "@/integrations/api/client.ts";
-import { CheckCircle, XCircle, Clock, Eye, ChevronLeftIcon, ChevronRightIcon, Search, RefreshCw } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import {
+  CheckCircle,
+  XCircle,
+  Clock,
+  Eye,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  Search,
+  RefreshCw,
+  FileText
+} from "lucide-react";
 import { getOutputTypeDisplayName, getOutputTypeIconComponent, getAllOutputTypes } from "@/lib/outputUtils.ts";
 import ReactPaginate from "react-paginate";
 import { getCurrentUserInfoFromSession } from "@/lib/authUtils";
@@ -38,6 +49,7 @@ const ResearchOutputsManagementTab = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>("pending"); // 状态筛选
   const [selectedType, setSelectedType] = useState<string>("all"); // 类型筛选
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   // 添加防抖处理，延迟550ms
   const debouncedSearchTitle = useDebounce(searchTitle, 550);
@@ -56,9 +68,19 @@ const ResearchOutputsManagementTab = () => {
     const userInfo = getCurrentUserInfoFromSession();
     if (userInfo) {
       const isPlatformAdminUser = hasPermissionRole(PermissionRoles.PLATFORM_ADMIN);
-      const canApprove = hasPermissionRole(PermissionRoles.RESEARCH_OUTPUT_APPROVER) ||
-          hasPermissionRole(PermissionRoles.INSTITUTION_SUPERVISOR) ||
-          isPlatformAdminUser;
+      
+      // 只有平台管理员可以访问该组件
+      if (!isPlatformAdminUser) {
+        toast({
+          title: "访问被拒绝",
+          description: "您没有权限访问成果管理功能",
+          variant: "destructive"
+        });
+        navigate("/");
+        return;
+      }
+
+      const canApprove = isPlatformAdminUser;
 
       setIsPlatformAdmin(isPlatformAdminUser);
       setCanApproveOutputs(canApprove);
@@ -68,7 +90,7 @@ const ResearchOutputsManagementTab = () => {
         setSelectedInstitution(userInfo.user.institutionId);
       }
     }
-  }, []);
+  }, [toast, navigate]);
 
   // 获取研究成果数据的方法
   const fetchResearchOutputs = useCallback(async (page: number) => {
@@ -247,8 +269,9 @@ const ResearchOutputsManagementTab = () => {
 
   const renderEmptyState = () => (
       <div className="text-center py-12 text-muted-foreground">
+        <FileText className="h-16 w-16 mx-auto mb-4 opacity-50"/>
         <p className="text-lg">暂无研究成果</p>
-        <p className="text-sm mt-2">当前条件下没有找到相关研究成果</p>
+        <p className="text-sm mt-2">当前筛选条件下没有找到相关研究成果</p>
       </div>
   );
 

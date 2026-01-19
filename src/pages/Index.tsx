@@ -66,6 +66,24 @@ const Index = () => {
         };
 
         fetchData();
+
+        // 监听认证状态变化事件
+        const handleAuthStatusChange = (event: Event) => {
+            const customEvent = event as CustomEvent<{ isAuthenticated: boolean }>;
+            if (!customEvent.detail.isAuthenticated) {
+                // 用户已登出，更新currentUser状态
+                setCurrentUser(null);
+                // 清空推荐数据集
+                setRecommendedDatasets([]);
+            }
+        };
+
+        window.addEventListener('authStatusChanged', handleAuthStatusChange);
+
+        // 清理事件监听器
+        return () => {
+            window.removeEventListener('authStatusChanged', handleAuthStatusChange);
+        };
     }, []);
 
     // 当用户信息获取完成后，获取推荐数据集
@@ -299,11 +317,11 @@ const Index = () => {
                 </div>
 
                 {/* 推荐数据集（如果已登录且有推荐） */}
-                {recommendedDatasets.length > 0 && (
+                {currentUser && recommendedDatasets.length > 0 && (
                     <RecommendedDatasetsSection
                         datasets={recommendedDatasets}
                         loading={recommendedLoading}
-                        recommendationReason={currentUser?.institutionId ? '基于您的机构推荐' : '热门数据集'}
+                        recommendationReason=""
                     />
                 )}
 
