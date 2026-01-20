@@ -10,15 +10,16 @@ import { toast } from "sonner";
 import { createApplication, CreateApplicationRequest, Application } from "@/integrations/api/applicationApi";
 import { Dataset } from "@/integrations/api/datasetApi";
 import { DatasetSelector } from "@/components/dataset/DatasetSelector.tsx";
-import { DatasetTypes } from "@/lib/enums";
-import { formatDate } from "@/lib/utils";
 import FileUploader from "@/components/fileuploader/FileUploader.tsx";
+import DatasetInfoDisplay from "@/components/dataset/DatasetInfoDisplay.tsx";
 import { FileUploaderHandles} from "@/components/fileuploader/types.ts";
 import { FileInfo } from "@/integrations/api/fileApi";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { getCurrentUserInfoFromSession } from "@/lib/authUtils";
 import {FormValidator, Input, Textarea, ValidatedSelect} from "@/components/ui/FormValidator";
 import { api } from "@/integrations/api/client";
+import { getLatestApprovedVersion } from "@/lib/datasetUtils";
+import {getFileInfo} from "@/lib/utils.ts";
 
 interface ApplyDialogProps {
     open: boolean;
@@ -46,6 +47,8 @@ const ApplyDialog = ({ open, onOpenChange, datasetId, onSubmitted }: ApplyDialog
     const [applicationStatus, setApplicationStatus] = useState<Application | null>(null);
     const [pendingApplication, setPendingApplication] = useState<Application | null>(null);
     const [loadingApplication, setLoadingApplication] = useState(false);
+    const [termsAgreementFile, setTermsAgreementFile] = useState<string | null>(null);
+    const [termsAgreementFileName, setTermsAgreementFileName] = useState<string | null>(null);
     const fileUploaderRef = useRef<FileUploaderHandles>(null);
 
     // 重置表单
@@ -79,6 +82,27 @@ const ApplyDialog = ({ open, onOpenChange, datasetId, onSubmitted }: ApplyDialog
         
         // 检查用户对该数据集的申请状态
         await checkApplicationStatus(dataset.id);
+        
+        // 获取数据集最新已审核通过版本的数据使用协议文件
+        const latestApprovedVersion = getLatestApprovedVersion(dataset.versions);
+        if (latestApprovedVersion?.termsAgreementRecordId) {
+            setTermsAgreementFile(`/datasets/${dataset.id}/versions/${latestApprovedVersion.id}/terms-agreement`);
+            
+            try {
+                // 获取文件信息，用于构建下载文件名
+                const fileInfo = await getFileInfo(latestApprovedVersion.termsAgreementRecordId);
+                const extension = fileInfo.fileName.split('.').pop();
+                const filename = `${dataset.titleCn}_v${latestApprovedVersion.versionNumber}_数据使用协议.${extension}`;
+
+                setTermsAgreementFileName(filename || null);
+            } catch (error) {
+                console.error('获取文件信息失败:', error);
+                setTermsAgreementFileName(null);
+            }
+        } else {
+            setTermsAgreementFile(null);
+            setTermsAgreementFileName(null);
+        }
     };
     
     // 检查用户对该数据集的申请状态
@@ -321,53 +345,17 @@ const ApplyDialog = ({ open, onOpenChange, datasetId, onSubmitted }: ApplyDialog
                             {formData.datasetId && selectedDataset && (
                                 <>
                                     {/* 显示选中的数据集信息 */}
-                                    <div className="border rounded-lg p-4 bg-muted/50">
-                                        <h3 className="font-semibold mb-2">数据集信息</h3>
-                                        <div className="space-y-1 text-sm">
-                                            <div className="flex">
-                                                <span className="font-medium w-24 flex-shrink-0">标题:</span>
-                                                <span className="truncate whitespace-normal break-words"
-                                                      title={selectedDataset.titleCn}>{selectedDataset.titleCn}</span>
-                                            </div>
-                                            <div className="flex">
-                                                <span className="font-medium w-24 flex-shrink-0">类型:</span>
-                                                <span className="truncate"
-                                                      title={DatasetTypes[selectedDataset.type as keyof typeof DatasetTypes] || selectedDataset.type}>
-                                                    {DatasetTypes[selectedDataset.type as keyof typeof DatasetTypes] || selectedDataset.type}
-                                                </span>
-                                            </div>
-                                            <div className="flex">
-                                                <span className="font-medium w-24 flex-shrink-0">研究学科:</span>
-                                                <span className="truncate"
-                                                      title={selectedDataset.subjectArea?.name || '无'}>{selectedDataset.subjectArea?.name || '无'}</span>
-                                            </div>
-                                            <div className="flex">
-                                                <span className="font-medium w-24 flex-shrink-0">发布时间:</span>
-                                                <span
-                                                    className="truncate">{formatDate(selectedDataset.firstPublishedDate)}</span>
-                                            </div>
-                                            <div className="flex">
-                                                <span className="font-medium w-24 flex-shrink-0">提供者:</span>
-                                                <span className="truncate"
-                                                      title={selectedDataset.datasetLeader}>{selectedDataset.datasetLeader}</span>
-                                            </div>
-                                            <div className="flex">
-                                                <span className="font-medium w-24 flex-shrink-0">采集单位:</span>
-                                                <span className="truncate"
-                                                      title={selectedDataset.dataCollectionUnit}>{selectedDataset.dataCollectionUnit}</span>
-                                            </div>
-                                        </div>
+                                    <DatasetInfoDisplay dataset={selectedDataset} />
 
-                                        {/* 机构限制提示 */}
-                                        {!isDatasetAvailableToUser() && (
-                                            <Alert variant="destructive" className="mt-3">
-                                                <AlertTriangle className="h-4 w-4" />
-                                                <AlertDescription>
-                                                    该数据集暂未对用户所属机构开放申请
-                                                </AlertDescription>
-                                            </Alert>
-                                        )}
-                                    </div>
+                                    {/* 机构限制提示 */}
+                                    {!isDatasetAvailableToUser() && (
+                                        <Alert variant="destructive" className="mt-3">
+                                            <AlertTriangle className="h-4 w-4" />
+                                            <AlertDescription>
+                                                该数据集暂未对用户所属机构开放申请
+                                            </AlertDescription>
+                                        </Alert>
+                                    )}
 
                                     {/* 检查当前用户是否为数据集提供者，如果是则显示无需申请的提示 */}
                                     {isCurrentUserDatasetProvider() && (
@@ -420,16 +408,6 @@ const ApplyDialog = ({ open, onOpenChange, datasetId, onSubmitted }: ApplyDialog
                                     {/* 只有当用户不是数据集提供者时才显示申请表单 */}
                                     {!isCurrentUserDatasetProvider() && !pendingApplication && !applicationStatus && (
                                         <>
-                                            {/* 机构限制提示 */}
-                                            {!isDatasetAvailableToUser() && (
-                                                <Alert variant="destructive" className="mt-3">
-                                                    <AlertTriangle className="h-4 w-4" />
-                                                    <AlertDescription>
-                                                        该数据集暂未对用户所属机构开放申请
-                                                    </AlertDescription>
-                                                </Alert>
-                                            )}
-
                                             {isDatasetAvailableToUser() && (
                                                 <>
                                                     {/* Applicant Role Selection */}
@@ -553,7 +531,6 @@ const ApplyDialog = ({ open, onOpenChange, datasetId, onSubmitted }: ApplyDialog
                                                                 placeholder="国家自然科学基金、省部级基金等（选填）"
                                                                 maxLength={200}
                                                             />
-                                                            <p className="text-xs text-muted-foreground">选填字段</p>
                                                         </div>
 
                                                         <div className="space-y-2">
@@ -586,16 +563,20 @@ const ApplyDialog = ({ open, onOpenChange, datasetId, onSubmitted }: ApplyDialog
                                                                 审批表签字扫描文档 <Asterisk className="h-3 w-3 text-red-500" />
                                                             </Label>
                                                             <FileUploader
-                                                                ref={fileUploaderRef}
-                                                                onResetComplete={() => {
-                                                                    setUploadedFile(null);
-                                                                }}
-                                                                onUploadComplete={(fileInfo) => {
-                                                                    setUploadedFile(fileInfo);
-                                                                }}
-                                                                maxSize={20 * 1024 * 1024} // 20MB限制
-                                                                acceptedFileTypes={['.pdf']} // 只允许PDF格式
-                                                            />
+                                                            ref={fileUploaderRef}
+                                                            onResetComplete={() => {
+                                                                setUploadedFile(null);
+                                                            }}
+                                                            onUploadComplete={(fileInfo) => {
+                                                                setUploadedFile(fileInfo);
+                                                            }}
+                                                            maxSize={20 * 1024 * 1024} // 20MB限制
+                                                            acceptedFileTypes={['.pdf']} // 只允许PDF格式
+                                                            templateFile={termsAgreementFile || "data_usage_agreement.docx"}
+                                                            templateFileName={termsAgreementFileName}
+                                                            templateLabel="数据使用协议"
+                                                            isStaticTemplateFile={!termsAgreementFile}
+                                                        />
                                                             <p className="text-xs text-muted-foreground">支持PDF格式，最大20MB</p>
                                                         </div>
                                                     </div>

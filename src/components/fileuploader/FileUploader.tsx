@@ -4,10 +4,11 @@ import {Progress} from "@/components/ui/progress";
 import {Alert, AlertDescription} from "@/components/ui/alert";
 import {fileApi} from "@/integrations/api/fileApi";
 import {Clock, Download, Info, Pause, Play, RotateCcw, X} from 'lucide-react';
+import {toast} from "@/hooks/use-toast";
 
 import {ChunkTask, FileUploaderHandles, FileUploaderProps, UploadState} from './types';
 import {ErrorClassifier, FileValidator, ProgressCalculator, SpeedCalculator, UploadQueue} from './uploadUtils';
-import {formatFileSize} from "@/lib/utils.ts";
+import {formatFileSize, downloadFile} from "@/lib/utils.ts";
 
 // 清理状态类型
 interface CleanupState {
@@ -27,6 +28,8 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
                                                                              maxConcurrentUploads = 3,
                                                                              templateFile,
                                                                              templateLabel,
+                                                                             templateFileName,
+                                                                             isStaticTemplateFile = true,
                                                                              required = false,
                                                                              onValidityChange,
                                                                              validateOnSubmit = true
@@ -1000,26 +1003,30 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
         if (!templateFile) return;
 
         try {
-            const fileExtension = templateFile.split('.').pop() || '';
-            const downloadFileName = `${templateLabel || 'template'}.${fileExtension}`;
-
-            const response = await fetch(`/template/${templateFile}`);
-            if (!response.ok) {
-                throw new Error(`下载模板失败: ${response.status} ${response.statusText}`);
+            let downloadFileName: string;
+            if (templateFileName) {
+                // 如果提供了完整的下载文件名，直接使用
+                downloadFileName = templateFileName;
+            } else {
+                // 否则根据模板文件扩展名和标签生成文件名
+                const fileExtension = templateFile.split('.').pop() || '';
+                downloadFileName = `${templateLabel || 'template'}.${fileExtension}`;
             }
 
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = downloadFileName;
-            document.body.appendChild(link);
-            link.click();
+            // 显示下载开始的toast提示
+            toast({
+                title: "开始下载",
+                description: `文件 "${downloadFileName}" 已开始下载`
+            });
 
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
+            await downloadFile(templateFile, downloadFileName, isStaticTemplateFile);
         } catch (error) {
             console.error('下载模板失败:', error);
+            toast({
+                title: "下载失败",
+                description: "模板文件下载失败，请稍后重试",
+                variant: "destructive"
+            });
         }
     };
 
@@ -1088,9 +1095,23 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
             </div>
 
             {file && (
-                <div className="text-sm text-gray-500">
-                    <p>文件名: {file.name}</p>
-                    <p>文件大小: {formatFileSize(file.size)}</p>
+                <div className="flex items-center gap-2 justify-between border border-gray-200 rounded-md px-4 py-2 bg-green-50">
+                    <div className="text-sm text-gray-500">
+                        <p>文件名: {file.name}</p>
+                        <p>文件大小: {formatFileSize(file.size)}</p>
+                    </div>
+                    {uploadStatus === 'success' && !isUploading && !isPaused && (
+                        <Button
+                            type="button"
+                            onClick={handleClearFile}
+                            variant="outline"
+                            size="icon"
+                            title="清除文件"
+                            className={"text-red-500 hover:bg-red-100 hover:text-red-700"}
+                        >
+                            <X className="h-4 w-4"/>
+                        </Button>
+                    )}
                 </div>
             )}
 
@@ -1142,28 +1163,6 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
                             {isCancelledRef.current ? '已取消' : '取消上传'}
                         </Button>
                     </div>
-                </div>
-            )}
-
-            {uploadStatus === 'success' && (
-                <div className="flex items-center gap-2">
-                    <Alert className="bg-green-50 border-green-200 flex-1">
-                        <AlertDescription className="text-green-800">
-                            文件上传成功！
-                        </AlertDescription>
-                    </Alert>
-
-                    {!isUploading && !isPaused && (
-                        <Button
-                            type="button"
-                            onClick={handleClearFile}
-                            variant="outline"
-                            size="icon"
-                            title="清除文件"
-                        >
-                            <X className="h-4 w-4"/>
-                        </Button>
-                    )}
                 </div>
             )}
 

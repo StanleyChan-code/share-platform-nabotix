@@ -14,6 +14,7 @@ import { RecentOutputsSection } from "@/components/home/RecentOutputsSection";
 import { OutputCard } from "@/components/home/OutputCard";
 import { outputApi } from "@/integrations/api/outputApi.ts";
 import { Card, CardContent } from "@/components/ui/card";
+import {UserDto} from "@/integrations/api/userApi.ts";
 
 // 定义平台统计数据结构
 interface PlatformStatistics {
@@ -22,13 +23,6 @@ interface PlatformStatistics {
     approvedResearchOutputCount: number;
     recentApplicationCount: number;
     datasetCountByType: Record<string, number>;
-}
-
-interface User {
-    id: string;
-    institutionId?: string;
-    realName?: string;
-    username?: string;
 }
 
 const Index = () => {
@@ -42,7 +36,7 @@ const Index = () => {
     const [recommendedLoading, setRecommendedLoading] = useState(true);
     const [outputsLoading, setOutputsLoading] = useState(true);
     const [highValueOutputsLoading, setHighValueOutputsLoading] = useState(true);
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [currentUser, setCurrentUser] = useState<UserDto | null>(null);
 
     useEffect(() => {
         const fetchData = async () => {

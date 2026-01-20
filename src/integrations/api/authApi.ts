@@ -35,7 +35,6 @@ export const login = async (credentials: LoginCredentials) => {
 export interface RegisterData {
     phone: string;
     verificationCode: string;
-    username: string;
     realName: string;
     email?: string;
     password: string;
@@ -61,7 +60,8 @@ export const sendVerificationCode = async (phone: string, businessType?: string)
 // 获取当前用户信息
 export interface UserProfile {
     id: string;
-    username: string;
+    /** @deprecated 用户名已废弃 */
+    username?: string;
     realName: string;
     email: string;
     phone: string;
@@ -88,7 +88,6 @@ export const getCurrentUserRoles = async () => {
 
 // 更新用户信息请求
 export interface UpdateUserProfileData {
-    username: string;
     email: string;
     education: string;
     field: string;

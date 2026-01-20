@@ -13,7 +13,6 @@ import {userApi} from "@/integrations/api/userApi.ts";
 import {Button} from "@/components/ui/button.tsx";
 import {
     PlusCircle,
-    Eye,
     Pencil,
     ChevronRightIcon,
     ChevronLeftIcon,
@@ -22,8 +21,10 @@ import {
     Search,
     Asterisk,
     AlertCircle,
-    User
+    User,
+    Eye
 } from "lucide-react";
+import UserInfoDialog from "./UserInfoDialog.tsx";
 import {Switch} from "@/components/ui/switch.tsx";
 import {AdminInstitutionSelector} from "@/components/admin/institution/AdminInstitutionSelector.tsx";
 import {getCurrentUserInfoFromSession, refreshUserInfo} from "@/lib/authUtils";
@@ -35,13 +36,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog.tsx";
 import AddUserToInstitutionForm from "@/components/admin/user/AddUserToInstitutionForm.tsx";
-import {
-    Dialog as InfoDialog,
-    DialogContent as InfoDialogContent,
-    DialogHeader as InfoDialogHeader,
-    DialogTitle as InfoDialogTitle,
-    DialogTrigger as InfoDialogTrigger,
-} from "@/components/ui/dialog.tsx";
+
 import {EducationLevels, ID_TYPES} from "@/lib/enums";
 import ReactPaginate from "react-paginate";
 import EditUserDialog from "@/components/admin/user/EditUserDialog.tsx";
@@ -398,39 +393,12 @@ const UserManagementTab = () => {
         }
     };
 
-    // 对证件号码进行脱敏处理
-    const maskIdNumber = (idType: string, idNumber: string) => {
-        if (!idNumber) return "未填写";
-
-        switch (idType) {
-            case 'NATIONAL_ID':
-                // 身份证：显示前6位和后4位，中间用*代替
-                return idNumber.replace(/(\d{6})\d+(\d{4})/, '$1**********$2');
-            case 'PASSPORT':
-                // 护照：显示前2位和后2位，中间用*代替
-                return idNumber.replace(/(.{2}).*(.{2})/, '$1******$2');
-            default:
-                // 其他类型：显示前1/3和后1/3，中间用*代替
-                const showLength = Math.max(1, Math.floor(idNumber.length / 3));
-                const regExp = new RegExp(`(.{${showLength}}).*?(.{${showLength}})$`);
-                return idNumber.replace(regExp, `$1${'*'.repeat(Math.max(3, idNumber.length - showLength * 2))}$2`);
-        }
-    };
-
     // 处理页面更改
     const handlePageClick = (event: { selected: number }) => {
         const page = event.selected;
         setCurrentPage(page);
         fetchUsers(page);
     };
-
-    // 渲染信息字段的辅助函数
-    const renderInfoField = (label: string, value: string) => (
-        <div className="grid grid-cols-4 items-center gap-4">
-            <span className="text-right col-span-1 font-medium">{label}</span>
-            <span className="col-span-3">{value}</span>
-        </div>
-    );
 
     return (
         <div className="space-y-6">
@@ -612,78 +580,20 @@ const UserManagementTab = () => {
                                             </TableCell>
                                             <TableCell>{formatDateTime(user.createdAt)}</TableCell>
                                             <TableCell className="flex gap-2">
-                                                <InfoDialog
-                                                    open={showUserInfoDialog && selectedUser?.id === user.id}
-                                                    onOpenChange={setShowUserInfoDialog}>
-                                                    <InfoDialogTrigger asChild>
-                                                        <Button variant="outline" size="sm"
-                                                                onClick={() => showUserDetails(user)}>
-                                                            <Eye className="h-4 w-4"/>
-                                                        </Button>
-                                                    </InfoDialogTrigger>
-                                                    <InfoDialogContent className="max-w-2xl">
-                                                        <InfoDialogHeader>
-                                                            <InfoDialogTitle>用户详细信息</InfoDialogTitle>
-                                                        </InfoDialogHeader>
-                                                        {selectedUser && (
-                                                            <div className="grid gap-4 py-4">
-                                                                {renderInfoField("ID:", selectedUser.id)}
-                                                                {renderInfoField("用户名:", selectedUser.username)}
-                                                                {renderInfoField("真实姓名:", selectedUser.realName)}
-                                                                {renderInfoField("邮箱:", selectedUser.email)}
-                                                                {renderInfoField("手机号:", selectedUser.phone || "-")}
-                                                                {renderInfoField(
-                                                                    "所属机构:",
-                                                                    selectedUser.institutionId
-                                                                        ? (institutionMap[selectedUser.institutionId]?.fullName || selectedUser.institutionId)
-                                                                        : "未分配"
-                                                                )}
-                                                                {renderInfoField("注册时间:", formatDateTime(selectedUser.createdAt))}
-                                                                {renderInfoField(
-                                                                    "证件类型:",
-                                                                    selectedUser.idType
-                                                                        ? (ID_TYPES[selectedUser.idType] || selectedUser.idType)
-                                                                        : "未填写"
-                                                                )}
-
-                                                                {renderInfoField(
-                                                                    "证件号码:",
-                                                                    maskIdNumber(selectedUser.idType, selectedUser.idNumber)
-                                                                )}
-
-                                                                {renderInfoField(
-                                                                    "学历:",
-                                                                    selectedUser.education
-                                                                        ? (EducationLevels[selectedUser.education as keyof typeof EducationLevels] || selectedUser.education)
-                                                                        : "未填写"
-                                                                )}
-
-                                                                {renderInfoField("职称:", selectedUser.title || "未填写")}
-                                                                {renderInfoField("专业领域:", selectedUser.field || "未填写")}
-
-                                                                {/* 角色字段特殊处理 */}
-                                                                <div
-                                                                    className="grid grid-cols-4 items-start gap-4">
-                                                                        <span
-                                                                            className="text-right font-medium">角色:</span>
-                                                                    <div className="col-span-3">
-                                                                        {userRoles[selectedUser.id]?.map((role, index) => (
-                                                                            <Badge key={index} variant="outline"
-                                                                                   className="mr-1 mb-1">
-                                                                                {getPermissionRoleDisplayName(role)}
-                                                                            </Badge>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </InfoDialogContent>
-                                                </InfoDialog>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => showUserDetails(user)}
+                                                    className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-all duration-200"
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                    <span className="sr-only">查看用户信息</span>
+                                                </Button>
 
                                                 {(canManageUser || user.id === getCurrentUserInfoFromSession()?.user?.id) && (
                                                     <Button
                                                         variant="outline"
-                                                        size="sm"
+                                                        className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-all duration-200"
                                                         onClick={() => {
                                                             setSelectedUser(user);
                                                             setShowEditUserDialog(true);
@@ -755,6 +665,14 @@ const UserManagementTab = () => {
             )}
             {selectedUser && (
                 <>
+                    <UserInfoDialog
+                        open={showUserInfoDialog}
+                        onOpenChange={setShowUserInfoDialog}
+                        user={selectedUser}
+                        institutionMap={institutionMap}
+                        userRoles={userRoles}
+                        isPlatformAdmin={isPlatformAdmin}
+                    />
                     <EditUserDialog
                         open={showEditUserDialog}
                         onOpenChange={setShowEditUserDialog}

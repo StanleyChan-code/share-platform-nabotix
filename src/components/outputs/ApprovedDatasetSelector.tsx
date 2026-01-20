@@ -1,13 +1,11 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Dataset, datasetApi } from "@/integrations/api/datasetApi";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
-import {cn, formatDate} from "@/lib/utils";
-import { DatasetTypes } from "@/lib/enums";
-import { useDebounce } from "@/hooks/useDebounce";
+import { Button } from "@/components/ui/button.tsx";
+import { Label } from "@/components/ui/label.tsx";
+import { Dataset, datasetApi } from "@/integrations/api/datasetApi.ts";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover.tsx";
+import { ChevronsUpDown } from "lucide-react";
+import { DatasetCommand } from "@/components/dataset/DatasetCommand.tsx";
+import { useDebounce } from "@/hooks/useDebounce.ts";
 
 interface ApprovedDatasetSelectorProps {
   selectedDataset: Dataset | null;
@@ -114,60 +112,16 @@ export function ApprovedDatasetSelector({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="p-0 w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height]" align="start">
-          <Command shouldFilter={false}>
-            <CommandInput 
-              placeholder="搜索已申请通过的数据集..."
-              value={datasetSearchTerm}
-              onValueChange={setDatasetSearchTerm}
-              disabled={disabled}
-            />
-            <CommandEmpty>
-              {datasetSearchLoading ? (
-                <div className="flex items-center justify-center p-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                </div>
-              ) : (
-                "未找到相关数据集"
-              )}
-            </CommandEmpty>
-            <CommandGroup>
-              {filteredDatasets.map((dataset) => (
-                <CommandItem
-                  key={dataset.id}
-                  onSelect={() => handleDatasetSelect(dataset)}
-                  className="cursor-pointer"
-                  disabled={disabled}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      selectedDataset?.id === dataset.id ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  <div className="flex flex-col w-full">
-                    <span className="truncate font-medium" title={dataset.titleCn}>{dataset.titleCn?.length > 30 ? `${dataset.titleCn.substring(0, 30)}...` : dataset.titleCn}</span>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      <div className="flex flex-wrap gap-2">
-                        <span className="bg-secondary px-2 py-1 rounded">
-                          {DatasetTypes[dataset.type as keyof typeof DatasetTypes] || dataset.type}
-                        </span>
-                        {dataset.subjectArea && (
-                          <span className="bg-secondary px-2 py-1 rounded">
-                            {dataset.subjectArea.name}
-                          </span>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 mt-1">
-                        <span className="truncate">发布时间: {formatDate(dataset.firstPublishedDate)}</span>
-                        <span className="truncate">提供者: {dataset.datasetLeader}</span>
-                        <span className="truncate">采集单位: {dataset.dataCollectionUnit}</span>
-                      </div>
-                    </div>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </Command>
+          <DatasetCommand
+            selectedDataset={selectedDataset}
+            filteredDatasets={filteredDatasets}
+            datasetSearchTerm={datasetSearchTerm}
+            onDatasetSearchTermChange={setDatasetSearchTerm}
+            datasetSearchLoading={datasetSearchLoading}
+            onDatasetSelect={handleDatasetSelect}
+            disabled={disabled}
+            placeholder="搜索已申请通过的数据集..."
+          />
         </PopoverContent>
       </Popover>
     </div>

@@ -12,8 +12,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader2, X, Asterisk, AlertCircle } from "lucide-react";
 import { Dataset } from "@/integrations/api/datasetApi";
-import {DatasetTypes, OutputTypes} from "@/lib/enums";
-import { formatDate, formatFileSize } from "@/lib/utils";
+import {OutputTypes} from "@/lib/enums";
+import { formatFileSize } from "@/lib/utils";
+import DatasetInfoDisplay from "@/components/dataset/DatasetInfoDisplay.tsx";
 import { getAllJournalPartitionName, getAllJournalPartitionTypes, getOutputTypeDisplayName } from "@/lib/outputUtils";
 import * as React from "react";
 import { FormValidator, Input, Textarea } from "@/components/ui/FormValidator";
@@ -149,50 +150,10 @@ const ResearchOutputForm = ({
         if (!showDatasetInfo || !selectedDataset) return null;
 
         return (
-            <div className="border rounded-lg p-4 bg-muted/50">
-                <h3 className="font-semibold mb-2">关联数据集信息</h3>
-                <div className="space-y-1 text-sm">
-                    <div className="flex">
-                        <span className="font-medium w-24 flex-shrink-0">标题:</span>
-                        <span className="truncate whitespace-normal break-words"
-                              title={selectedDataset.titleCn}>
-              {selectedDataset.titleCn}
-            </span>
-                    </div>
-                    <div className="flex">
-                        <span className="font-medium w-24 flex-shrink-0">类型:</span>
-                        <span className="truncate"
-                              title={DatasetTypes[selectedDataset.type as keyof typeof DatasetTypes] || selectedDataset.type}>
-              {DatasetTypes[selectedDataset.type as keyof typeof DatasetTypes] || selectedDataset.type}
-            </span>
-                    </div>
-                    <div className="flex">
-                        <span className="font-medium w-24 flex-shrink-0">研究学科:</span>
-                        <span className="truncate"
-                              title={selectedDataset.subjectArea?.name || '无'}>
-              {selectedDataset.subjectArea?.name || '无'}
-            </span>
-                    </div>
-                    <div className="flex">
-                        <span className="font-medium w-24 flex-shrink-0">发布时间:</span>
-                        <span className="truncate">{formatDate(selectedDataset.firstPublishedDate)}</span>
-                    </div>
-                    <div className="flex">
-                        <span className="font-medium w-24 flex-shrink-0">提供者:</span>
-                        <span className="truncate"
-                              title={selectedDataset.datasetLeader}>
-              {selectedDataset.datasetLeader}
-            </span>
-                    </div>
-                    <div className="flex">
-                        <span className="font-medium w-24 flex-shrink-0">采集单位:</span>
-                        <span className="truncate"
-                              title={selectedDataset.dataCollectionUnit}>
-              {selectedDataset.dataCollectionUnit}
-            </span>
-                    </div>
-                </div>
-            </div>
+            <DatasetInfoDisplay 
+                dataset={selectedDataset} 
+                title="关联数据集信息"
+            />
         );
     };
 
@@ -780,7 +741,7 @@ const ResearchOutputForm = ({
     return (
         <div className="space-y-4">
             {/* 数据集选择器 */}
-            {!selectedDataset && renderDatasetSelection()}
+            {renderDatasetSelection()}
 
             {/* 数据集信息展示 */}
             {selectedDataset && renderDatasetInformation()}

@@ -216,6 +216,7 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                 <Label htmlFor="versionNumber" className="flex items-center gap-1">
                   版本号 <Asterisk className="h-3 w-3 text-red-500" />
                 </Label>
+                <p className="text-xs text-muted-foreground">数据集的版本标识，如2.0、2.1等</p>
                 <Input
                     id="versionNumber"
                     name="versionNumber"
@@ -227,13 +228,13 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                     validationType="custom"
                     customValidation={validateVersionNumber}
                 />
-                <p className="text-xs text-muted-foreground">数据集的版本标识，如2.0、2.1等</p>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="versionDescription" className="flex items-center gap-1">
                   版本描述 <Asterisk className="h-3 w-3 text-red-500" />
                 </Label>
+                <p className="text-xs text-muted-foreground">简要描述此版本的主要更新内容</p>
                 <Textarea
                     id="versionDescription"
                     name="versionDescription"
@@ -246,12 +247,11 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                     validationType="custom"
                     customValidation={validateVersionDescription}
                 />
-                <p className="text-xs text-muted-foreground">简要描述此版本的主要更新内容</p>
               </div>
             </div>
 
             {/* 文件上传 */}
-            <div className="space-y-4">
+            <div className="space-y-4 border-t pt-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <File className="h-5 w-5" />
                 文件上传
@@ -263,6 +263,9 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                     <Label className="flex items-center gap-1">
                       完整数据集文件 <Asterisk className="h-3 w-3 text-red-500" />
                     </Label>
+                    <p className="text-xs text-muted-foreground">
+                      支持 CSV、Excel 格式，最大 10GB。包含完整的数据集内容。
+                    </p>
                     <FileUploader
                         ref={dataFileRef}
                         onUploadComplete={handleDataFileUpload}
@@ -273,22 +276,15 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                         templateLabel="数据集模板"
                         required
                     />
-                    {dataFileInfo ? (
-                        <div className="flex items-center gap-2 text-sm text-green-600">
-                          <CheckCircle className="h-4 w-4" />
-                          {dataFileInfo.fileName} ({formatFileSize(dataFileInfo.fileSize)})
-                        </div>
-                    ) : (
-                        <p className="text-xs text-muted-foreground">
-                          支持 CSV、Excel 格式，最大 10GB。包含完整的数据集内容。
-                        </p>
-                    )}
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 border-t pt-4">
                     <Label className="flex items-center gap-1">
                       数据分享文件 <Asterisk className="h-3 w-3 text-red-500" />
                     </Label>
+                    <p className="text-xs text-muted-foreground">
+                      支持 CSV、Excel 格式，最大 500MB。用户申请后可下载的文件。
+                    </p>
                     <FileUploader
                         ref={sharingFileRef}
                         onUploadComplete={handleSharingFileUpload}
@@ -297,24 +293,17 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                         acceptedFileTypes={['.csv', '.xlsx', '.xls']}
                         required
                     />
-                    {sharingFileInfo ? (
-                        <div className="flex items-center gap-2 text-sm text-green-600">
-                          <CheckCircle className="h-4 w-4" />
-                          {sharingFileInfo.fileName} ({formatFileSize(sharingFileInfo.fileSize)})
-                        </div>
-                    ) : (
-                        <p className="text-xs text-muted-foreground">
-                          支持 CSV、Excel 格式，最大 500MB。用户申请后可下载的文件。
-                        </p>
-                    )}
                   </div>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-4 border-t pt-4">
                   <div className="space-y-2">
                     <Label className="flex items-center gap-1">
                       数据字典文件 <Asterisk className="h-3 w-3 text-red-500" />
                     </Label>
+                    <p className="text-xs text-muted-foreground">
+                      支持 CSV、Excel 格式，最大 100MB。描述数据字段含义和结构的文件。
+                    </p>
                     <FileUploader
                         ref={dictFileRef}
                         onUploadComplete={handleDictFileUpload}
@@ -325,22 +314,15 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                         templateLabel="数据字典模板"
                         required
                     />
-                    {dictFileInfo ? (
-                        <div className="flex items-center gap-2 text-sm text-green-600">
-                          <CheckCircle className="h-4 w-4" />
-                          {dictFileInfo.fileName} ({formatFileSize(dictFileInfo.fileSize)})
-                        </div>
-                    ) : (
-                        <p className="text-xs text-muted-foreground">
-                          支持 CSV、Excel 格式，最大 100MB。描述数据字段含义和结构的文件。
-                        </p>
-                    )}
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 border-t pt-4">
                     <Label className="flex items-center gap-1">
                       数据使用协议 <Asterisk className="h-3 w-3 text-red-500" />
                     </Label>
+                    <p className="text-xs text-muted-foreground">
+                      支持 PDF 格式，最大 20MB。数据使用的条款和协议文档。
+                    </p>
                     <FileUploader
                         ref={termsFileRef}
                         onUploadComplete={handleTermsFileUpload}
@@ -351,16 +333,6 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                         templateLabel="数据使用协议模板"
                         required
                     />
-                    {termsFileInfo ? (
-                        <div className="flex items-center gap-2 text-sm text-green-600">
-                          <CheckCircle className="h-4 w-4" />
-                          {termsFileInfo.fileName} ({formatFileSize(termsFileInfo.fileSize)})
-                        </div>
-                    ) : (
-                        <p className="text-xs text-muted-foreground">
-                          支持 PDF 格式，最大 20MB。数据使用的条款和协议文档。
-                        </p>
-                    )}
                   </div>
                 </div>
               </div>

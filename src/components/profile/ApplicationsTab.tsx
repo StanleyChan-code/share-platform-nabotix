@@ -24,6 +24,7 @@ const ApplicationsTab = () => {
   const [selectedDataset, setSelectedDataset] = useState<any>(null);
   const [isDatasetModalOpen, setIsDatasetModalOpen] = useState(false);
   const [isQADialogOpen, setIsQADialogOpen] = useState(false);
+  const [defaultDatasetTab, setDefaultDatasetTab] = useState<string>('overview'); // 控制数据集对话框默认标签页
   const paginatedListRef = useRef<ReactPaginatedListRef>(null);
 
   const title = '我的申请记录';
@@ -39,13 +40,14 @@ const ApplicationsTab = () => {
     setViewDialogOpen(true);
   };
 
-  const handleViewDataset = (application: Application) => {
+  const handleViewDataset = (application: Application, defaultTab: string = 'overview') => {
     // 创建一个模拟的数据集对象，包含必要的字段
     const dataset = {
       id: application.datasetId,
       titleCn: application.datasetTitle,
       // 可以根据需要添加其他字段
     };
+    setDefaultDatasetTab(defaultTab);
     setSelectedDataset(dataset);
     setIsDatasetModalOpen(true);
   };
@@ -190,6 +192,7 @@ const ApplicationsTab = () => {
                   dataset={selectedDataset}
                   open={isDatasetModalOpen}
                   onOpenChange={setIsDatasetModalOpen}
+                  defaultTab={defaultDatasetTab}
               />
           )}
         </>

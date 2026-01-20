@@ -1,16 +1,12 @@
 import {api} from "@/integrations/api/client";
 import {Dataset} from "@/integrations/api/datasetApi.ts";
-import {RelatedUsersDto} from "@/integrations/api/userApi.ts";
+import {RelatedUsersDto, UserDto} from "@/integrations/api/userApi.ts";
 
 // 定义研究成果相关接口
 export interface ResearchOutput {
     id: string;
     dataset: Dataset | null;
-    submitter: {
-        id: string;
-        username: string;
-        realName: string;
-    };
+    submitter: UserDto;
     type: string;
     otherType: string | null;
     title: string;
@@ -21,11 +17,7 @@ export interface ResearchOutput {
     fileId: string | null;
     createdAt: string;
     approved: boolean | null;
-    approver: {
-        id: string;
-        username: string;
-        realName: string;
-    } | null;
+    approver: UserDto | null;
     approvedAt: string | null;
     rejectionReason: string | null;
     otherInfo: Record<string, any>;

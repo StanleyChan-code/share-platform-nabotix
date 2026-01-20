@@ -265,8 +265,8 @@ const OutputItem = ({
                             {output.submitter && (
                                 <div className="flex items-center gap-2 min-w-0 max-w-full">
                                     <User className="h-4 w-4 flex-shrink-0"/>
-                                    <span className="truncate" title={output.submitter.realName || output.submitter.username}>
-                                        提交者: {truncateText(output.submitter.realName || output.submitter.username, 15)}
+                                    <span className="truncate" title={output.submitter.realName || output.submitter.phone}>
+                                        提交者: {truncateText(output.submitter.realName || output.submitter.phone, 15)}
                                     </span>
                                 </div>
                             )}

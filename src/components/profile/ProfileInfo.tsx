@@ -35,7 +35,6 @@ interface ProfileInfoProps {
 
 // 用户信息表单类型
 interface EditFormData {
-  username: string;
   realName: string;
   phone: string;
   title: string;
@@ -48,7 +47,6 @@ const ProfileInfo = ({ userProfile, onUpdateProfile }: ProfileInfoProps) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [editForm, setEditForm] = useState<EditFormData>({
-    username: "",
     realName: "",
     title: "",
     field: "",
@@ -93,7 +91,6 @@ const ProfileInfo = ({ userProfile, onUpdateProfile }: ProfileInfoProps) => {
   useEffect(() => {
     if (isEditDialogOpen && userProfile) {
       setEditForm({
-        username: userProfile.user.username || "",
         realName: userProfile.user.realName || "",
         phone: userProfile.user.phone || "",
         title: userProfile.user.title || "",
@@ -108,15 +105,6 @@ const ProfileInfo = ({ userProfile, onUpdateProfile }: ProfileInfoProps) => {
   // 验证表单
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
-
-    // 用户名验证（必填）
-    if (!editForm.username.trim()) {
-      errors.username = "用户名不能为空";
-    } else if (editForm.username.trim().length < 2) {
-      errors.username = "用户名至少需要2个字符";
-    } else if (editForm.username.trim().length > 50) {
-      errors.username = "用户名不能超过50个字符";
-    }
 
     // 邮箱验证
     if (editForm.email.trim()) {
@@ -151,7 +139,6 @@ const ProfileInfo = ({ userProfile, onUpdateProfile }: ProfileInfoProps) => {
 
     try {
       const response = await updateUserProfile({
-        username: editForm.username,
         email: editForm.email,
         education: editForm.education ? editForm.education : null,
         field: editForm.field,
@@ -268,9 +255,9 @@ const ProfileInfo = ({ userProfile, onUpdateProfile }: ProfileInfoProps) => {
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-1">
                 <InfoItem
-                    icon={Hash}
-                    label="用户名"
-                    value={userProfile.user.username}
+                    icon={User}
+                    label="姓名"
+                    value={userProfile.user.realName}
                 />
                 <InfoItem
                     icon={Phone}
@@ -288,18 +275,13 @@ const ProfileInfo = ({ userProfile, onUpdateProfile }: ProfileInfoProps) => {
                     value={userProfile.user.title}
                 />
                 <InfoItem
-                    icon={Briefcase}
-                    label="专业领域"
-                    value={userProfile.user.field}
+                    icon={Calendar}
+                    label="注册日期"
+                    value={userProfile.user.createdAt ? formatDate(userProfile.user.createdAt) : ""}
                 />
               </div>
 
               <div className="space-y-1">
-                <InfoItem
-                    icon={User}
-                    label="姓名"
-                    value={userProfile.user.realName}
-                />
                 <InfoItem
                     icon={Mail}
                     label="联系邮箱"
@@ -316,9 +298,9 @@ const ProfileInfo = ({ userProfile, onUpdateProfile }: ProfileInfoProps) => {
                     value={institution?.fullName || "未分配"}
                 />
                 <InfoItem
-                    icon={Calendar}
-                    label="注册日期"
-                    value={userProfile.user.createdAt ? formatDate(userProfile.user.createdAt) : ""}
+                    icon={Briefcase}
+                    label="专业领域"
+                    value={userProfile.user.field}
                 />
               </div>
             </div>
@@ -423,19 +405,6 @@ const ProfileInfo = ({ userProfile, onUpdateProfile }: ProfileInfoProps) => {
                         className="bg-gray-50 cursor-not-allowed"
                     />
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="username">用户名 <span className="text-red-500">*</span></Label>
-                  <Input
-                      id="username"
-                      name="username"
-                      value={editForm.username}
-                      onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
-                      placeholder="请输入用户名"
-                      disabled={updating}
-                  />
-                  {formErrors.username && <p className="text-sm text-red-500">{formErrors.username}</p>}
                 </div>
 
                 <div className="space-y-2">

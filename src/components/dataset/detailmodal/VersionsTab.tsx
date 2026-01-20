@@ -22,7 +22,7 @@ import {useState} from "react";
 import {Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger} from "@/components/ui/dialog.tsx";
 import {AddDatasetVersionForm} from "@/components/admin/dataset/AddDatasetVersionForm.tsx";
 import {ScrollArea} from "@/components/ui/scroll-area.tsx";
-import {formatDate} from "@/lib/utils.ts";
+import {formatDate, formatDateTime} from "@/lib/utils.ts";
 import {canUploadDataset, hasPermissionRole, PermissionRoles} from "@/lib/permissionUtils.ts";
 import ApprovalActions from "@/components/ui/ApprovalActions.tsx";
 import {Dataset, datasetApi} from "@/integrations/api/datasetApi.ts";
@@ -63,29 +63,43 @@ export function VersionsTab({
     
     const datasetId = dataset?.id;
 
+    // 细化权限判断
+    const hasPlatformAdminPermission = hasPermissionRole(PermissionRoles.PLATFORM_ADMIN);
+    const hasInstitutionSupervisorPermission = dataset?.institutionId === getCurrentUserFromSession()?.institutionId && hasPermissionRole(PermissionRoles.INSTITUTION_SUPERVISOR);
+    const hasDatasetApproverPermission = dataset?.institutionId === getCurrentUserFromSession()?.institutionId && hasPermissionRole(PermissionRoles.DATASET_APPROVER);
+    
     // 检查用户是否有审核权限
     const canApproveDataset = useAdvancedQuery && dataset && (
-        hasPermissionRole(PermissionRoles.PLATFORM_ADMIN) ||
-        dataset.institutionId === getCurrentUserFromSession()?.institutionId && (hasPermissionRole(PermissionRoles.INSTITUTION_SUPERVISOR) || hasPermissionRole(PermissionRoles.DATASET_APPROVER))
+        hasPlatformAdminPermission ||
+        hasInstitutionSupervisorPermission ||
+        hasDatasetApproverPermission
     );
 
     // 获取版本状态显示信息
     const getVersionStatusInfo = (version: any) => {
-        if (version.approved === true) {
-            return {
-                icon: CheckCircle,
-                text: "已批准",
-                variant: "default" as const,
-                color: "text-green-600",
-                bgColor: "bg-green-50 border-green-200"
-            };
-        } else if (version.approved === false) {
+        if (version.institutionApproved === false || version.approved === false) {
             return {
                 icon: XCircle,
                 text: "已拒绝",
                 variant: "destructive" as const,
                 color: "text-red-600",
                 bgColor: "bg-red-50 border-red-200"
+            };
+        } else if (version.approved === true) {
+            return {
+                icon: CheckCircle,
+                text: "已发布",
+                variant: "default" as const,
+                color: "text-green-600",
+                bgColor: "bg-green-50 border-green-200"
+            };
+        } else if (version.institutionApproved === true) {
+            return {
+                icon: HelpCircle,
+                text: "待平台审核",
+                variant: "secondary" as const,
+                color: "text-blue-600",
+                bgColor: "bg-blue-50 border-blue-200"
             };
         } else {
             return {
@@ -133,18 +147,19 @@ export function VersionsTab({
     };
 
     // 处理审核操作
-    const handleApprovalAction = async (versionId: string, approved: boolean, comment: string) => {
+    const handleApprovalAction = async (versionId: string, approved: boolean, comment: string, reviewType: 'INSTITUTION' | 'PLATFORM') => {
         if (!datasetId) return;
 
         try {
             await datasetApi.updateDatasetVersionApproval(datasetId, versionId, {
                 approved: approved,
-                rejectionReason: approved ? undefined : comment
+                rejectionReason: approved ? undefined : comment,
+                reviewType: reviewType
             });
 
             toast({
                 title: "操作成功",
-                description: approved ? "版本已通过审核" : "版本已被拒绝"
+                description: approved ? "审核通过" : "审核拒绝"
             });
 
             if (onVersionAdded) {
@@ -173,9 +188,14 @@ export function VersionsTab({
             setRelatedUsers(response.data);
             
             // 如果版本已经审核，高亮审核员
-            if (version.approved !== null && version.supervisor) {
-               setHighlightedUserIds([version.supervisor.id]);
+            const reviewerIds: string[] = [];
+            if (version.institutionApproved !== null && version.institutionReviewer) {
+                reviewerIds.push(version.institutionReviewer.id);
             }
+            if (version.approved !== null && version.supervisor) {
+                reviewerIds.push(version.supervisor.id);
+            }
+            setHighlightedUserIds(reviewerIds);
             
             // 打开对话框
             setIsRelatedUsersDialogOpen(true);
@@ -218,13 +238,13 @@ export function VersionsTab({
                                         <QAItem
                                             number={1}
                                             title="版本创建"
-                                            description="数据集上传员在创建数据集时，系统会自动创建第一个数据集版本。"
+                                            description="数据集提供者（上传员）在创建数据集时，系统会自动创建第一个数据集版本。"
                                         />
                                         
                                         <QAItem
                                             number={2}
                                             title="审核权限"
-                                            description="只有机构数据集审核员或机构管理员有权限审核数据集版本。"
+                                            description="机构审核由机构管理员或数据集审核员进行；平台审核由平台管理员进行。"
                                         />
                                         
                                         <QAItem
@@ -259,7 +279,7 @@ export function VersionsTab({
                                                 <div className="text-sm">
                                                     <p className="font-medium text-blue-800 mb-1">提示</p>
                                                     <p className="text-blue-700">
-                                                        在数据集版本列表中，每个版本右侧的用户图标按钮可以点击查看该版本的相关审核人员信息。
+                                                        在数据集版本列表中，每个版本右侧的用户图标按钮可以点击查看该版本的相关审核人员信息，包括机构审核员和平台审核员。
                                                     </p>
                                                 </div>
                                             </div>
@@ -389,35 +409,102 @@ export function VersionsTab({
                                                 {/* 审核操作 */}
                                                 {canApproveDataset && (
                                                 <div className="flex-shrink-0">
-                                                    {version.approved === null && (
-                                                        <ApprovalActions
-                                                            showCommentDialog={true}
-                                                            requireCommentOnApprove={false}
-                                                            requireCommentOnReject={true}
-                                                            approveDialogTitle={`审核通过意见 - 版本${version.versionNumber}`}
-                                                            rejectDialogTitle={`审核拒绝意见 - 版本${version.versionNumber}`}
-                                                            onSuccess={(approved, comment) =>
-                                                                handleApprovalAction(version.id, approved, comment)
-                                                            }
-                                                            approveButtonText="通过"
-                                                            rejectButtonText="拒绝"
-                                                            showRevokeApprovalButton={false}
-                                                        />
+                                                    {/* 待机构审核状态 */}
+                                                    {version.institutionApproved === null && (
+                                                        <>
+                                                            {/* 机构审核员/机构管理员：机构审核操作 */}
+                                                            {(hasInstitutionSupervisorPermission || hasDatasetApproverPermission) && (
+                                                                <ApprovalActions
+                                                                    showCommentDialog={true}
+                                                                    requireCommentOnApprove={false}
+                                                                    requireCommentOnReject={true}
+                                                                    approveDialogTitle={`机构审核通过意见 - 版本${version.versionNumber}`}
+                                                                    rejectDialogTitle={`机构审核拒绝意见 - 版本${version.versionNumber}`}
+                                                                    onSuccess={(approved, comment) =>
+                                                                        handleApprovalAction(version.id, approved, comment, 'INSTITUTION')
+                                                                    }
+                                                                    approveButtonText="机构通过"
+                                                                    rejectButtonText="机构拒绝"
+                                                                    showRevokeApprovalButton={false}
+                                                                />
+                                                            )}
+                                                            {/* 平台管理员：机构审核操作 */}
+                                                            {hasPlatformAdminPermission && (
+                                                                <ApprovalActions
+                                                                    showCommentDialog={true}
+                                                                    requireCommentOnApprove={false}
+                                                                    requireCommentOnReject={true}
+                                                                    approveDialogTitle={`机构审核通过意见 - 版本${version.versionNumber}`}
+                                                                    rejectDialogTitle={`机构审核拒绝意见 - 版本${version.versionNumber}`}
+                                                                    onSuccess={(approved, comment) =>
+                                                                        handleApprovalAction(version.id, approved, comment, 'INSTITUTION')
+                                                                    }
+                                                                    approveButtonText="机构通过"
+                                                                    rejectButtonText="机构拒绝"
+                                                                    showRevokeApprovalButton={false}
+                                                                />
+                                                            )}
+                                                        </>
                                                     )}
+                                                    {/* 机构审核通过状态 */}
+                                                    {version.institutionApproved === true && version.approved !== false && (
+                                                        <>
+                                                            {/* 机构审核员/机构管理员：机构驳回操作 */}
+                                                            {(hasInstitutionSupervisorPermission || hasDatasetApproverPermission) && (
+                                                                <ApprovalActions
+                                                                    showCommentDialog={true}
+                                                                    requireCommentOnReject={true}
+                                                                    showRevokeApprovalButton={true}
+                                                                    revokeApprovalButtonText="机构驳回"
+                                                                    rejectDialogTitle={`机构驳回通过意见 - 版本${version.versionNumber}`}
+                                                                    onSuccess={async (approved, comment) => {
+                                                                        if (!approved) {
+                                                                            await handleApprovalAction(version.id, false, comment, 'INSTITUTION');
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            )}
+                                                            {/* 平台管理员：平台审核操作 */}
+                                                            {hasPlatformAdminPermission && version.approved === null && (
+                                                                <ApprovalActions
+                                                                    showCommentDialog={true}
+                                                                    requireCommentOnApprove={false}
+                                                                    requireCommentOnReject={true}
+                                                                    approveDialogTitle={`平台审核通过意见 - 版本${version.versionNumber}`}
+                                                                    rejectDialogTitle={`平台审核拒绝意见 - 版本${version.versionNumber}`}
+                                                                    onSuccess={(approved, comment) =>
+                                                                        handleApprovalAction(version.id, approved, comment, 'PLATFORM')
+                                                                    }
+                                                                    approveButtonText="平台通过"
+                                                                    rejectButtonText="平台拒绝"
+                                                                    showRevokeApprovalButton={false}
+                                                                />
+                                                            )}
+                                                        </>
+                                                    )}
+                                                    {/* 平台审核通过状态 */}
                                                     {version.approved === true && (
-                                                        <ApprovalActions
-                                                            showCommentDialog={true}
-                                                            requireCommentOnApprove={true}
-                                                            requireCommentOnReject={true}
-                                                            showRevokeApprovalButton={true}
-                                                            revokeApprovalButtonText="驳回通过"
-                                                            rejectDialogTitle={`驳回通过意见 - 版本${version.versionNumber}`}
-                                                            onSuccess={(approved, comment) =>
-                                                                handleApprovalAction(version.id, false, comment)
-                                                            }
-                                                        />
+                                                        <>
+                                                            {/* 机构审核员/机构管理员：无操作 */}
+                                                            {/* 平台管理员：平台驳回操作 */}
+                                                            {hasPlatformAdminPermission && (
+                                                                <ApprovalActions
+                                                                    showCommentDialog={true}
+                                                                    requireCommentOnReject={true}
+                                                                    showRevokeApprovalButton={true}
+                                                                    revokeApprovalButtonText="平台驳回"
+                                                                    rejectDialogTitle={`平台驳回通过意见 - 版本${version.versionNumber}`}
+                                                                    onSuccess={async (approved, comment) => {
+                                                                        if (!approved) {
+                                                                            await handleApprovalAction(version.id, false, comment, 'PLATFORM');
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            )}
+                                                        </>
                                                     )}
-                                                    {version.approved === false && (
+                                                    {/* 已拒绝状态 */}
+                                                    {(version.institutionApproved === false || version.approved === false) && (
                                                         <div className="text-sm text-muted-foreground italic px-3 py-2">
                                                             已拒绝
                                                         </div>
@@ -476,18 +563,90 @@ export function VersionsTab({
                                             )}
                                         </div>
 
-                                        {/* 高级查询时如果版本被拒绝则显示拒绝理由 */}
-                                        {version.approved === false && (
-                                            <div className="border-t pt-4">
-                                                <div className="flex items-center gap-2 mb-3">
-                                                    <XCircle className="h-4 w-4 text-destructive"/>
-                                                    <span className="font-medium text-sm text-destructive">拒绝原因</span>
+                                        {/* 审核信息 */}
+                                        <div className="border-t pt-4">
+                                            {/* 机构审核信息 */}
+                                            {version.institutionApproved !== null && (
+                                                <div className="mb-4">
+                                                    <div className="flex items-center gap-2 mb-3">
+                                                        <User className="h-4 w-4 text-muted-foreground"/>
+                                                        <span className="font-medium text-sm">机构审核</span>
+                                                    </div>
+                                                    <div className="bg-muted/20 rounded-lg p-4">
+                                                        <div className="flex flex-col gap-2">
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="text-sm text-muted-foreground">审核状态</span>
+                                                                <Badge 
+                                                                    variant={version.institutionApproved ? "default" : "destructive"} 
+                                                                    className={`gap-1.5 px-3 py-1.5 ${version.institutionApproved ? 'bg-green-50 text-green-600 border-green-200' : 'bg-red-50 text-red-600 border-red-200'}`}
+                                                                >
+                                                                    {version.institutionApproved ? '已通过' : '已拒绝'}
+                                                                </Badge>
+                                                            </div>
+                                                            {version.institutionApprovedAt && (
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="text-sm text-muted-foreground">审核时间</span>
+                                                                    <span className="text-sm">{formatDateTime(new Date(version.institutionApprovedAt))}</span>
+                                                                </div>
+                                                            )}
+                                                            {version.institutionReviewer && (
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="text-sm text-muted-foreground">审核员</span>
+                                                                    <span className="text-sm">{version.institutionReviewer.realName}</span>
+                                                                </div>
+                                                            )}
+                                                            {!version.institutionApproved && version.institutionRejectReason && (
+                                                                <div className="mt-2">
+                                                                    <span className="text-sm text-muted-foreground block mb-1">拒绝原因</span>
+                                                                    <span className="text-sm text-red-600 whitespace-pre-wrap">{version.institutionRejectReason}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className="text-sm text-muted-foreground">
-                                                    {version.rejectReason || '无'}
+                                            )}
+                                            
+                                            {/* 平台审核信息 */}
+                                            {version.approved !== null && version.institutionApproved !== false && (
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-3">
+                                                        <User className="h-4 w-4 text-muted-foreground"/>
+                                                        <span className="font-medium text-sm">平台审核</span>
+                                                    </div>
+                                                    <div className="bg-muted/20 rounded-lg p-4">
+                                                        <div className="flex flex-col gap-2">
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="text-sm text-muted-foreground">审核状态</span>
+                                                                <Badge 
+                                                                    variant={version.approved ? "default" : "destructive"} 
+                                                                    className={`gap-1.5 px-3 py-1.5 ${version.approved ? 'bg-green-50 text-green-600 border-green-200' : 'bg-red-50 text-red-600 border-red-200'}`}
+                                                                >
+                                                                    {version.approved ? '已通过' : '已拒绝'}
+                                                                </Badge>
+                                                            </div>
+                                                            {version.approvedAt && (
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="text-sm text-muted-foreground">审核时间</span>
+                                                                    <span className="text-sm">{formatDateTime(new Date(version.approvedAt))}</span>
+                                                                </div>
+                                                            )}
+                                                            {version.supervisor && (
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="text-sm text-muted-foreground">审核员</span>
+                                                                    <span className="text-sm">{version.supervisor.realName}</span>
+                                                                </div>
+                                                            )}
+                                                            {!version.approved && version.rejectReason && (
+                                                                <div className="mt-2">
+                                                                    <span className="text-sm text-muted-foreground block mb-1">拒绝原因</span>
+                                                                    <span className="text-sm text-red-600 whitespace-pre-wrap">{version.rejectReason}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        )}
+                                            )}
+                                        </div>
                                     </CardContent>
                                 </Card>
                             );

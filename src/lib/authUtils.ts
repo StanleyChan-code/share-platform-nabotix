@@ -341,7 +341,6 @@ export const getCurrentUserFromSession = (): any | null => {
 export interface UserInfo {
   user: {
     id: string;
-    username: string;
     realName: string;
     email: string;
     phone: string;

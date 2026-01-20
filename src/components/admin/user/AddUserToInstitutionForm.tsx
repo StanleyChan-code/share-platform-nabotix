@@ -20,7 +20,6 @@ interface AddUserToInstitutionFormProps {
 
 const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdded }: AddUserToInstitutionFormProps) => {
   const [formData, setFormData] = useState({
-    username: "",
     realName: "",
     phone: "",
     email: "",
@@ -127,13 +126,6 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
     }
   };
 
-  // 生成用户名
-  const generateUsername = () => {
-    if (formData.username.trim()) return formData.username.trim();
-    if (formData.email) return formData.email.split('@')[0];
-    return `user_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     setLoading(true);
 
@@ -205,7 +197,6 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
 
       // 6. 创建用户请求数据
       const createUserRequest = {
-        username: generateUsername(),
         realName: formData.realName.trim(),
         email: formData.email?.trim() || null,
         phone: formData.phone.trim(),
@@ -244,7 +235,6 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
 
   const resetForm = () => {
     setFormData({
-      username: "",
       realName: "",
       phone: "",
       email: "",
@@ -272,8 +262,7 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
   roleOptions.push(
     { id: PermissionRoles.INSTITUTION_USER_MANAGER, name: getPermissionRoleDisplayName(PermissionRoles.INSTITUTION_USER_MANAGER) },
     { id: PermissionRoles.DATASET_UPLOADER, name: getPermissionRoleDisplayName(PermissionRoles.DATASET_UPLOADER) },
-    { id: PermissionRoles.DATASET_APPROVER, name: getPermissionRoleDisplayName(PermissionRoles.DATASET_APPROVER) },
-    { id: PermissionRoles.RESEARCH_OUTPUT_APPROVER, name: getPermissionRoleDisplayName(PermissionRoles.RESEARCH_OUTPUT_APPROVER) }
+    { id: PermissionRoles.DATASET_APPROVER, name: getPermissionRoleDisplayName(PermissionRoles.DATASET_APPROVER) }
   );
   
   // 如果是平台管理员，添加平台管理员选项到最前面
@@ -322,7 +311,6 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
       icon: User,
       required: false,
       fields: [
-        { name: "username", label: "用户名", icon: User, required: false, type: "text" },
         { name: "email", label: "邮箱地址", icon: Mail, required: false, type: "email" },
       ]
     },
@@ -400,11 +388,10 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
                                       maxLength={
                                         field.name === 'realName' ? 100 :
                                             field.name === 'phone' ? 20 :
-                                                field.name === 'username' ? 100 :
-                                                    field.name === 'email' ? 200 :
-                                                        field.name === 'idNumber' ? 50 :
-                                                            field.name === 'title' ? 100 :
-                                                                field.name === 'field' ? 200 : 100
+                                                field.name === 'email' ? 200 :
+                                                    field.name === 'idNumber' ? 50 :
+                                                        field.name === 'title' ? 100 :
+                                                            field.name === 'field' ? 200 : 100
                                       }
                                       required={field.required}
                                       validationType={

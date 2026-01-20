@@ -61,10 +61,17 @@ export interface DatasetVersion {
     description: string;
     recordCount: number;
     variableCount: number;
+    // 平台审核信息
     approved: boolean | null;
     approvedAt: string | null; // ISO格式日期时间或null
     rejectReason: string | null;
     supervisor: UserDto | null;
+    
+    // 机构审核信息
+    institutionApproved: boolean | null;
+    institutionApprovedAt: string | null; // ISO格式日期时间或null
+    institutionRejectReason: string | null;
+    institutionReviewer: UserDto | null;
 
     // 文件记录ID（管理接口中使用）
     fileRecordId?: string;
@@ -164,6 +171,7 @@ export interface AddDatasetVersionRequest {
 export interface UpdateDatasetVersionApprovalRequest {
     approved: boolean;
     rejectionReason?: string;
+    reviewType: 'INSTITUTION' | 'PLATFORM'; // 审核类型：机构审核或平台审核
 }
 
 // 数据集API函数
@@ -267,6 +275,7 @@ export const datasetApi = {
         endDate?: string;
         type?: string;
         published?: boolean;
+        reviewStatus?: "PUBLISHED" | "PENDING_PLATFORM_REVIEW" | "PENDING_INSTITUTION_REVIEW" | "ALL";
     }) {
         const queryParams = new URLSearchParams();
 
@@ -280,6 +289,7 @@ export const datasetApi = {
         if (params.type) queryParams.append('type', params.type);
         if (params.published !== undefined) queryParams.append('published', String(params.published));
         if (params.hasPendingVersion !== undefined) queryParams.append('hasPendingVersion', String(params.hasPendingVersion));
+        if (params.reviewStatus) queryParams.append('reviewStatus', params.reviewStatus);
 
         // 分页参数
         queryParams.append('page', (params.page ?? 0).toString());

@@ -559,6 +559,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                       <Label htmlFor="titleCn" className="flex items-center gap-1">
                         数据集标题 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
+                      <p className="text-xs text-muted-foreground">请输入数据集的完整标题，最多200个字符</p>
                       <Input
                           id="titleCn"
                           name="titleCn"
@@ -575,13 +576,13 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                             return true;
                           }}
                       />
-                      <p className="text-xs text-muted-foreground">请输入数据集的完整标题，最多200个字符</p>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="type" className="flex items-center gap-1">
                         研究类型 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
+                      <p className="text-xs text-muted-foreground">选择最适合您数据集的研究类型</p>
                       <Select value={formData.type} onValueChange={(value) => handleSelectChange("type", value)}>
                         <SelectTrigger>
                           <SelectValue placeholder="选择研究类型" />
@@ -597,13 +598,13 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                           <SelectItem value="WEARABLE">可穿戴设备</SelectItem>
                         </SelectContent>
                       </Select>
-                      <p className="text-xs text-muted-foreground">选择最适合您数据集的研究类型</p>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="principalInvestigator" className="flex items-center gap-1">
                         首席研究员（PI） <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
+                      <p className="text-xs text-muted-foreground">项目或研究的首席研究员姓名</p>
                       <Input
                           id="principalInvestigator"
                           name="principalInvestigator"
@@ -620,13 +621,13 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                             return true;
                           }}
                       />
-                      <p className="text-xs text-muted-foreground">项目或研究的首席研究员姓名</p>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="datasetLeader" className="flex items-center gap-1">
                         数据集负责人 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
+                      <p className="text-xs text-muted-foreground">负责此数据集的主要人员姓名</p>
                       <Input
                           id="datasetLeader"
                           name="datasetLeader"
@@ -643,13 +644,13 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                             return true;
                           }}
                       />
-                      <p className="text-xs text-muted-foreground">负责此数据集的主要人员姓名</p>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="contactPerson" className="flex items-center gap-1">
                         联系人 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
+                      <p className="text-xs text-muted-foreground">负责数据申请和咨询的联系人</p>
                       <Input
                           id="contactPerson"
                           name="contactPerson"
@@ -666,7 +667,6 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                             return true;
                           }}
                       />
-                      <p className="text-xs text-muted-foreground">负责数据申请和咨询的联系人</p>
                     </div>
 
                     <div className="space-y-2">
@@ -698,6 +698,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                       <Label htmlFor="versionNumber" className="flex items-center gap-1">
                         版本号 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
+                      <p className="text-xs text-muted-foreground">数据集的版本标识，如1.0、2.1等</p>
                       <Input
                           id="versionNumber"
                           name="versionNumber"
@@ -716,7 +717,6 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                             return true;
                           }}
                       />
-                      <p className="text-xs text-muted-foreground">数据集的版本标识，如1.0、2.1等</p>
                     </div>
                   </div>
 
@@ -726,6 +726,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                       <Label htmlFor="description" className="flex items-center gap-1">
                         数据集描述 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
+                      <p className="text-xs text-muted-foreground">详细描述数据集的内容、用途、采集方法等信息，最多2000字符</p>
                       <Textarea
                           id="description"
                           name="description"
@@ -743,13 +744,13 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                             return true;
                           }}
                       />
-                      <p className="text-xs text-muted-foreground">详细描述数据集的内容、用途、采集方法等信息，最多2000字符</p>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="subjectAreaId" className="flex items-center gap-1">
                         学科领域 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
+                      <p className="text-xs text-muted-foreground">选择数据集所属的主要学科领域</p>
                       <Select
                           value={formData.subjectAreaId}
                           onValueChange={(value) => handleSelectChange("subjectAreaId", value)}
@@ -773,13 +774,13 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                           )}
                         </SelectContent>
                       </Select>
-                      <p className="text-xs text-muted-foreground">选择数据集所属的主要学科领域</p>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="dataCollectionUnit" className="flex items-center gap-1">
                         数据采集单位 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
+                      <p className="text-xs text-muted-foreground">负责数据采集的具体单位名称</p>
                       <Input
                           id="dataCollectionUnit"
                           name="dataCollectionUnit"
@@ -796,13 +797,13 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                             return true;
                           }}
                       />
-                      <p className="text-xs text-muted-foreground">负责数据采集的具体单位名称</p>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="contactInfo" className="flex items-center gap-1">
                         联系方式 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
+                      <p className="text-xs text-muted-foreground">联系人的电话或邮箱地址</p>
                       <Input
                           id="contactInfo"
                           name="contactInfo"
@@ -825,13 +826,13 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                             return true;
                           }}
                       />
-                      <p className="text-xs text-muted-foreground">联系人的电话或邮箱地址</p>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="samplingMethod" className="flex items-center gap-1">
                         抽样方法 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
+                      <p className="text-xs text-muted-foreground">描述数据采集时使用的抽样方法</p>
                       <Input
                           id="samplingMethod"
                           name="samplingMethod"
@@ -848,7 +849,6 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                             return true;
                           }}
                       />
-                      <p className="text-xs text-muted-foreground">描述数据采集时使用的抽样方法</p>
                     </div>
 
                     <div className="space-y-2">
@@ -880,6 +880,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                       <Label htmlFor="versionDescription" className="flex items-center gap-1">
                         版本描述 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
+                      <p className="text-xs text-muted-foreground">简要描述此版本的主要更新内容</p>
                       <Input
                           id="versionDescription"
                           name="versionDescription"
@@ -890,13 +891,12 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                           required
                           validationType="custom"
                           customValidation={(value) => {
-                            if (!value.trim()) return "版本描述不能为空";
-                            if (value.trim().length < 5) return "版本描述至少需要5个字符";
-                            if (value.trim().length > 500) return "版本描述不能超过500个字符";
-                            return true;
+                              if (!value.trim()) return "版本描述不能为空";
+                              if (value.trim().length < 10) return "版本描述至少需要10个字符";
+                              if (value.trim().length > 500) return "版本描述不能超过500个字符";
+                              return true;
                           }}
                       />
-                      <p className="text-xs text-muted-foreground">简要描述此版本的主要更新内容</p>
                     </div>
                   </div>
                 </div>
@@ -947,14 +947,14 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                       <Label className="flex items-center gap-1">
                         选择机构 <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
-                      <AdminInstitutionSelector
-                          value={formData.institutionId}
-                          onChange={(value) => setFormData(prev => ({ ...prev, institutionId: value }))}
-                      />
                       <p className="text-sm text-muted-foreground flex items-center gap-1">
                         <Info className="h-3 w-3" />
                         作为平台管理员，您可以为数据集指定所属机构。
                       </p>
+                      <AdminInstitutionSelector
+                          value={formData.institutionId}
+                          onChange={(value) => setFormData(prev => ({ ...prev, institutionId: value }))}
+                      />
                     </div>
                   </div>
               )}
@@ -1004,12 +1004,13 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
 
                 <div className="space-y-2">
                   <Label htmlFor="newKeyword">添加关键词</Label>
+                  <p className="text-xs text-muted-foreground">输入关键词后按回车或点击添加按钮</p>
                   <div className="flex gap-2">
                     <Input
                         id="newKeyword"
                         value={newKeyword}
                         onChange={(e) => setNewKeyword(e.target.value)}
-                        placeholder="输入关键词后按回车或点击添加"
+                        placeholder="请逐个输入关键词"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
@@ -1023,7 +1024,6 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                       添加
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">输入关键词后按回车或点击添加按钮</p>
                 </div>
 
                 {formData.keywords.length > 0 ? (
@@ -1061,6 +1061,9 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                     <Label className="flex items-center gap-1">
                       完整数据集文件 <Asterisk className="h-3 w-3 text-red-500" />
                     </Label>
+                    <p className="text-xs text-muted-foreground">
+                      支持 CSV、Excel 格式，最大 10GB。包含完整的数据集内容。
+                    </p>
                     <FileUploader
                         ref={dataFileRef}
                         onUploadComplete={handleDataFileUpload}
@@ -1071,22 +1074,15 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                         templateLabel="数据集模板"
                         required
                     />
-                    {dataFileInfo ? (
-                        <div className="flex items-center gap-2 text-sm text-green-600">
-                          <CheckCircle className="h-4 w-4" />
-                          {dataFileInfo.fileName} ({formatFileSize(dataFileInfo.fileSize)})
-                        </div>
-                    ) : (
-                        <p className="text-xs text-muted-foreground">
-                          支持 CSV、Excel 格式，最大 10GB。包含完整的数据集内容。
-                        </p>
-                    )}
                   </div>
 
                   <div className="space-y-2 pt-2 border-t">
                     <Label className="flex items-center gap-1">
                       数据分享文件 <Asterisk className="h-3 w-3 text-red-500" />
                     </Label>
+                    <p className="text-xs text-muted-foreground">
+                      支持 CSV、Excel 格式，最大 500MB。用户申请后可下载的文件。
+                    </p>
                     <FileUploader
                         ref={sharingFileRef}
                         onUploadComplete={handleSharingFileUpload}
@@ -1095,22 +1091,15 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                         acceptedFileTypes={['.csv', '.xlsx', '.xls']}
                         required
                     />
-                    {sharingFileInfo ? (
-                        <div className="flex items-center gap-2 text-sm text-green-600">
-                          <CheckCircle className="h-4 w-4" />
-                          {sharingFileInfo.fileName} ({formatFileSize(sharingFileInfo.fileSize)})
-                        </div>
-                    ) : (
-                        <p className="text-xs text-muted-foreground">
-                          支持 CSV、Excel 格式，最大 500MB。用户申请后可下载的文件。
-                        </p>
-                    )}
                   </div>
 
                   <div className="space-y-2 pt-2 border-t">
                     <Label className="flex items-center gap-1">
                       数据字典文件 <Asterisk className="h-3 w-3 text-red-500" />
                     </Label>
+                    <p className="text-xs text-muted-foreground">
+                      支持 CSV、Excel 格式，最大 100MB。描述数据字段含义和结构的文件。
+                    </p>
                     <FileUploader
                         ref={dictFileRef}
                         onUploadComplete={handleDictFileUpload}
@@ -1121,22 +1110,15 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                         templateLabel="数据字典模板"
                         required
                     />
-                    {dictFileInfo ? (
-                        <div className="flex items-center gap-2 text-sm text-green-600">
-                          <CheckCircle className="h-4 w-4" />
-                          {dictFileInfo.fileName} ({formatFileSize(dictFileInfo.fileSize)})
-                        </div>
-                    ) : (
-                        <p className="text-xs text-muted-foreground">
-                          支持 CSV、Excel 格式，最大 100MB。描述数据字段含义和结构的文件。
-                        </p>
-                    )}
                   </div>
 
                   <div className="space-y-2 pt-2 border-t">
                     <Label className="flex items-center gap-1">
                       数据使用协议 <Asterisk className="h-3 w-3 text-red-500" />
                     </Label>
+                    <p className="text-xs text-muted-foreground">
+                      支持 PDF 格式，最大 20MB。数据使用的条款和协议文档。
+                    </p>
                     <FileUploader
                         ref={termsFileRef}
                         onUploadComplete={handleTermsFileUpload}
@@ -1147,16 +1129,6 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                         templateLabel="数据使用协议模板"
                         required
                     />
-                    {termsFileInfo ? (
-                        <div className="flex items-center gap-2 text-sm text-green-600">
-                          <CheckCircle className="h-4 w-4" />
-                          {termsFileInfo.fileName} ({formatFileSize(termsFileInfo.fileSize)})
-                        </div>
-                    ) : (
-                        <p className="text-xs text-muted-foreground">
-                          支持 PDF 格式，最大 20MB。数据使用的条款和协议文档。
-                        </p>
-                    )}
                   </div>
                 </div>
               </div>

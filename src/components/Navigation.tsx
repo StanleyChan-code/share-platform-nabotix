@@ -489,7 +489,7 @@ export function Navigation() {
                                         </div>
                                         <div className="hidden sm:flex flex-col items-start">
                                             <span className="text-sm font-medium text-gray-900">
-                                                {userProfile?.user?.realName || userProfile?.user?.username || '用户'}
+                                                {userProfile?.user?.realName || '用户'}
                                             </span>
                                             <span className="text-xs text-muted-foreground">
                                                 {userProfile?.institution?.fullName || '未设置机构'}
@@ -507,7 +507,7 @@ export function Navigation() {
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-semibold text-gray-900 truncate">
-                                                    {userProfile?.user?.realName || userProfile?.user?.username || '用户'}
+                                                    {userProfile?.user?.realName || '用户'}
                                                 </p>
                                                 <p className="text-sm text-muted-foreground truncate flex items-center py-1">
                                                     <Phone className="h-4 w-4 mr-1"/>
@@ -615,7 +615,7 @@ export function Navigation() {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="font-semibold text-gray-900 text-sm truncate">
-                                                        {userProfile?.user?.realName || userProfile?.user?.username || '用户'}
+                                                        {userProfile?.user?.realName || '用户'}
                                                     </p>
                                                     <p className="text-xs text-muted-foreground truncate">
                                                         {userProfile?.institution?.fullName || '未设置机构'}

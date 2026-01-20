@@ -277,7 +277,7 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
 
       toast({
         title: "登录成功",
-        description: `欢迎回来，${userProfile.user.realName || userProfile.user.username}!`,
+        description: `欢迎回来，${userProfile.user.realName || userProfile.user.phone}!`,
       });
 
       onLoginSuccess();
@@ -317,7 +317,7 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
         <div className="space-y-4">
           {/* 手机号输入 */}
           <div className="space-y-2">
-            <Label htmlFor="login-phone" className="text-sm font-medium">手机号 *</Label>
+            <Label htmlFor="login-phone" className="text-sm font-medium">手机号</Label>
             <div className="relative">
               <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -352,7 +352,7 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
 
             <TabsContent value="PASSWORD" className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label htmlFor="login-password" className="text-sm font-medium">密码 *</Label>
+                <Label htmlFor="login-password" className="text-sm font-medium">密码</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -393,7 +393,7 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
 
             <TabsContent value="VERIFICATION_CODE" className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label htmlFor="login-verification-code" className="text-sm font-medium">验证码 *</Label>
+                <Label htmlFor="login-verification-code" className="text-sm font-medium">验证码</Label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Shield className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />

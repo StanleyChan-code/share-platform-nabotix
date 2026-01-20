@@ -246,12 +246,16 @@ const UnifiedDashboard = () => {
         pendingCountsController.addEventListener('refetchOutputPendingCount', handleUpdate);
         pendingCountsController.addEventListener('refetchApplicationPendingCount', handleUpdate);
         pendingCountsController.addEventListener('refetchDatasetPendingCount', handleUpdate);
+        // 添加对refetchAllPendingCounts事件的监听，以支持定时刷新
+        pendingCountsController.addEventListener('refetchAllPendingCounts', handleUpdate);
 
         // 清理函数
         return () => {
             pendingCountsController.removeEventListener('refetchOutputPendingCount', handleUpdate);
             pendingCountsController.removeEventListener('refetchApplicationPendingCount', handleUpdate);
             pendingCountsController.removeEventListener('refetchDatasetPendingCount', handleUpdate);
+            // 移除对refetchAllPendingCounts事件的监听
+            pendingCountsController.removeEventListener('refetchAllPendingCounts', handleUpdate);
         };
     }, []);
 

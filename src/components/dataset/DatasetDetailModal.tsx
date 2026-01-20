@@ -19,6 +19,7 @@ interface DatasetDetailModalProps {
     onOpenChange: (open: boolean) => void;
     useAdvancedQuery?: boolean; // 控制是否使用高级查询
     onDatasetUpdated?: () => void; // 数据集更新后的回调函数
+    defaultTab?: string; // 默认显示的标签页
 }
 
 export function DatasetDetailModal({
@@ -26,7 +27,8 @@ export function DatasetDetailModal({
                                        open,
                                        onOpenChange,
                                        useAdvancedQuery = false,
-                                       onDatasetUpdated
+                                       onDatasetUpdated,
+                                       defaultTab: propDefaultTab = 'overview'
                                    }: DatasetDetailModalProps) {
     const [detailDataset, setDetailDataset] = useState<any>(null);
     const [loading, setLoading] = useState<boolean>(true);
@@ -35,7 +37,7 @@ export function DatasetDetailModal({
     const [versions, setVersions] = useState<any[]>([]);
     const [parentDataset, setParentDataset] = useState<Dataset>(null);
     const [followUpModals, setFollowUpModals] = useState<{ [key: string]: boolean }>({}); // 管理随访数据集对话框
-    const [defaultTab, setDefaultTab] = useState<string>('overview');
+    const [defaultTab, setDefaultTab] = useState<string>(propDefaultTab);
 
     // Fetch detailed dataset with timeline when modal opens
     useEffect(() => {
@@ -90,8 +92,10 @@ export function DatasetDetailModal({
                     if (hasPendingVersion) {
                         setDefaultTab('versions');
                     } else {
-                        setDefaultTab('overview');
+                        setDefaultTab(propDefaultTab); // 使用传入的默认标签页
                     }
+                } else {
+                    setDefaultTab(propDefaultTab); // 使用传入的默认标签页
                 }
             } catch (err) {
                 console.error('Error fetching detailed dataset:', err);
@@ -102,7 +106,7 @@ export function DatasetDetailModal({
         };
 
         fetchDetailedDataset();
-    }, [dataset?.id, open, useAdvancedQuery]);
+    }, [dataset?.id, open, useAdvancedQuery, propDefaultTab]);
 
     // Clear data when modal closes
     useEffect(() => {
@@ -116,6 +120,13 @@ export function DatasetDetailModal({
             setLoading(true);
         }
     }, [open]);
+
+    // 更新默认标签页当属性变化时
+    useEffect(() => {
+        if (propDefaultTab) {
+            setDefaultTab(propDefaultTab);
+        }
+    }, [propDefaultTab]);
 
     // Fetch institution information when we have the dataset provider ID
     useEffect(() => {

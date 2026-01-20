@@ -62,6 +62,14 @@ const CommandList = React.forwardRef<
     ref={ref}
     className={cn("max-h-[300px] overflow-y-auto overflow-x-hidden", className)}
     {...props}
+    onWheel={(e) => {
+      // Ensure wheel events are properly handled
+      const target = e.currentTarget;
+      if (target.scrollHeight > target.clientHeight) {
+        target.scrollTop += e.deltaY/2;
+        // e.preventDefault();
+      }
+    }}
   />
 ))
 

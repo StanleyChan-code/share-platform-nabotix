@@ -21,7 +21,8 @@ import {
     AlertCircle,
     MessageSquare,
     Database,
-    Trash2
+    Trash2,
+    Download
 } from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
@@ -45,7 +46,7 @@ import {RelatedUsersDto} from "@/integrations/api/userApi";
 interface ApplicationItemProps {
     application: Application;
     onViewDetails: (application: Application) => void;
-    onViewDataset: (application: Application) => void;
+    onViewDataset: (application: Application, defaultTab: string) => void;
     onApprove?: (applicationId: string, notes: string) => void;
     onReject?: (applicationId: string, notes: string) => void;
     onDelete?: (application: Application) => void;
@@ -354,7 +355,7 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                             </CardTitle>
                             <div
                                 className="text-sm text-muted-foreground flex items-center gap-1 cursor-pointer hover:text-primary hover:underline"
-                                onClick={() => onViewDataset(application)}
+                                onClick={() => onViewDataset(application, 'overview')}
                             >
                                 <Database className="h-3 w-3 flex-shrink-0"/>
                                 <span className="truncate">
@@ -403,6 +404,25 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                                         <p>查看审核员</p>
                                     </TooltipContent>
                                 </Tooltip>
+
+                                {/* 显示下载按钮 - 只有当申请审核全部通过时才显示 */}
+                                {application.status === 'APPROVED' && (
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-10 w-10 p-2 text-blue-600 hover:text-blue-700"
+                                                onClick={() => onViewDataset(application, 'termsandfiles')}
+                                            >
+                                                <Download className="h-4 w-4"/>
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>下载数据集</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                )}
 
                                 {/* 显示删除按钮 */}
                                 {hasDeletionPermission(application) && (

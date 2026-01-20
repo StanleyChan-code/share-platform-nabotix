@@ -1,6 +1,7 @@
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import {FileText, Download, Shield, AlertTriangle, CheckCircle, ClockIcon, XCircle, AlertCircle} from "lucide-react";
+import { getFileInfo, downloadFile } from "@/lib/utils";
 import {api} from "@/integrations/api/client.ts";
 import {useToast} from "@/hooks/use-toast.ts";
 import {useNavigate} from "react-router-dom";
@@ -159,15 +160,15 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
                 });
                 return;
             }
-            let fileInfoResponse = null;
+            
             try {
-                fileInfoResponse = await api.get(`/files/${fileId}/info`);
-                if (!fileInfoResponse.data.success) {
+                const fileInfo = await getFileInfo(fileId);
+                if (!fileInfo) {
                     throw new Error('获取文件信息失败');
                 }
 
                 // 检查文件是否已被删除
-                if (fileInfoResponse.data.data.deleted) {
+                if (fileInfo.deleted) {
                     toast({
                         title: "文件不可用",
                         description: "该文件已被删除",
@@ -175,6 +176,10 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
                     });
                     return;
                 }
+                
+                // 提取后缀
+                const extension = fileInfo.fileName.split('.').pop();
+                filename = `${filename}.${extension}`;
             } catch (error) {
                 console.error('查询文件信息失败:', error);
                 toast({
@@ -185,23 +190,8 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
                 return;
             }
 
-            const originalFilename = fileInfoResponse.data.data?.fileName;
-            // 提取后缀
-            const extension = originalFilename.split('.').pop();
-            filename = `${filename}.${extension}`;
-
             // 发起下载请求
-            const response = await api.downloadFile(endpoint);
-
-            // 创建下载链接
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', filename);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.URL.revokeObjectURL(url);
+            await downloadFile(endpoint, filename);
 
             toast({
                 title: "开始下载",

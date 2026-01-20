@@ -328,7 +328,7 @@ const OutputDetailDialog = ({
                                         {currentOutput.submitter && (
                                             <InfoCard
                                                 title="提交人"
-                                                value={currentOutput.submitter.realName || currentOutput.submitter.username}
+                                                value={currentOutput.submitter.realName || currentOutput.submitter.phone}
                                                 icon={User}
                                             />
                                         )}
@@ -551,7 +551,7 @@ const OutputDetailDialog = ({
                                             {currentOutput.approved === true && currentOutput.approver && (
                                                 <InfoCard
                                                     title="审核人"
-                                                    value={currentOutput.approver.realName || currentOutput.approver.username}
+                                                    value={currentOutput.approver.realName || currentOutput.approver.phone}
                                                 />
                                             )}
                                         </div>

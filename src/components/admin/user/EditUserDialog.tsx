@@ -31,7 +31,6 @@ const formSchema = z.object({
     idNumber: z.string().min(1, "证件号码不能为空"),
 
     // 选填字段 - 允许为空字符串
-    username: z.string().optional(),
     email: z.string().email("请输入有效的邮箱地址").optional().or(z.literal("")),
     education: z.enum(Object.keys(EDUCATION_LEVELS) as [string, ...string[]]).optional().or(z.literal("")),
     title: z.string().optional().or(z.literal("")),
@@ -48,7 +47,6 @@ interface EditUserDialogProps {
 const EditUserDialog = ({open, onOpenChange, user, onUserUpdated}: EditUserDialogProps) => {
     const {toast} = useToast();
     const [formData, setFormData] = useState({
-        username: "",
         realName: "",
         email: "",
         phone: "",
@@ -65,7 +63,6 @@ const EditUserDialog = ({open, onOpenChange, user, onUserUpdated}: EditUserDialo
         if (open && user) {
             // 当对话框打开且有用户数据时，填充表单
             setFormData({
-                username: user.username || "",
                 realName: user.realName || "",
                 email: user.email || "",
                 phone: user.phone || "",
@@ -78,7 +75,6 @@ const EditUserDialog = ({open, onOpenChange, user, onUserUpdated}: EditUserDialo
         } else if (!open) {
             // 当对话框关闭时，重置表单
             setFormData({
-                username: "",
                 realName: "",
                 email: "",
                 phone: "",
@@ -117,7 +113,6 @@ const EditUserDialog = ({open, onOpenChange, user, onUserUpdated}: EditUserDialo
             // 处理选填字段：如果为空字符串则转为 undefined
             const processedData = {
                 ...formData,
-                username: formData.username || undefined,
                 email: formData.email || undefined,
                 education: formData.education || undefined,
                 title: formData.title || undefined,
@@ -125,7 +120,6 @@ const EditUserDialog = ({open, onOpenChange, user, onUserUpdated}: EditUserDialo
             };
 
             const updateRequest: UpdateUserRequest = {
-                username: processedData.username,
                 realName: processedData.realName,
                 email: processedData.email,
                 phone: processedData.phone,
@@ -191,7 +185,6 @@ const EditUserDialog = ({open, onOpenChange, user, onUserUpdated}: EditUserDialo
             icon: Mail,
             required: true,
             fields: [
-                {name: "username", label: "用户名", icon: User, required: true},
                 {name: "email", label: "邮箱", icon: Mail, required: false, type: "email"},
             ]
         },

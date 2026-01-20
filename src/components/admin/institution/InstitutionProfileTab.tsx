@@ -328,6 +328,12 @@ const InstitutionProfileTab = ({ institutionId, onInstitutionUpdated }: Institut
                                   )}
                                 </Label>
 
+                                {!isEditable && field.description && (
+                                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                      <Info className="h-3 w-3" />
+                                      {field.description}
+                                    </p>
+                                )}
                                 {field.type === "select" ? (
                                     <ValidatedSelect
                                         id={field.name}
@@ -368,12 +374,6 @@ const InstitutionProfileTab = ({ institutionId, onInstitutionUpdated }: Institut
                                     />
                                 )}
 
-                                {!isEditable && field.description && (
-                                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                      <Info className="h-3 w-3" />
-                                      {field.description}
-                                    </p>
-                                )}
                               </div>
                           );
                         })}

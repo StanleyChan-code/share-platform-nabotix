@@ -3,7 +3,6 @@ import { api, Page } from './client';
 // 用户信息接口
 export interface User {
   id: string;
-  username: string;
   realName: string;
   phone: string;
   email: string;
@@ -27,12 +26,13 @@ export interface UserDto {
   phone: string;
   realName: string;
   title: string;
-  username: string;
+  email: string,
+  field: string,
+  institutionId: string
 }
 
 // 创建用户请求
 export interface CreateUserRequest {
-  username: string;
   realName: string;
   phone: string;
   email: string;
@@ -48,7 +48,6 @@ export interface CreateUserRequest {
 
 // 更新用户信息请求
 export interface UpdateUserRequest {
-  username?: string;
   phone?: string;
   email?: string;
   education?: string;

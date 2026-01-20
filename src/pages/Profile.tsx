@@ -24,7 +24,6 @@ const Profile = () => {
     const location = useLocation();
 
     const [_editForm, setEditForm] = useState({
-        username: "",
         realName: "",
         title: "",
         field: "",
@@ -74,7 +73,6 @@ const Profile = () => {
                     }
 
                     setEditForm({
-                        username: userInfo.user.username || "",
                         realName: userInfo.user.realName || "",
                         title: userInfo.user.title || "",
                         field: userInfo.user.field || "",
@@ -172,7 +170,7 @@ const Profile = () => {
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-3 mb-2">
                                         <h2 className="text-xl font-bold text-gray-900 truncate">
-                                            {userProfile.user.realName || userProfile?.user.username || '用户'}
+                                            {userProfile.user.realName || '用户'}
                                         </h2>
                                         {/* 角色显示 */}
                                         <div className="flex items-center gap-1 flex-wrap">

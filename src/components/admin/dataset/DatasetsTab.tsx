@@ -68,9 +68,20 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedSubject, setSelectedSubject] = useState<string>("all");
     const [selectedType, setSelectedType] = useState<string>("all"); // 数据集类型筛选状态
-    const [hasPendingVersion, setHasPendingVersion] = useState<boolean | "all">(true);
     const [isTopLevel, setIsTopLevel] = useState<boolean | "all">("all");
     const [institutionId, setInstitutionId] = useState<string | null>(null);
+    // 根据用户角色设置默认审核状态筛选
+    const initialReviewStatus = (() => {
+        const roles = getCurrentUserRolesFromSession();
+        if (roles.includes(PermissionRoles.INSTITUTION_SUPERVISOR) || roles.includes(PermissionRoles.DATASET_APPROVER)) {
+            return "PENDING_INSTITUTION_REVIEW"; // 机构管理员和机构数据集审核员默认选待机构审核
+        } else if (roles.includes(PermissionRoles.PLATFORM_ADMIN)) {
+            return "PENDING_PLATFORM_REVIEW"; // 平台管理员默认选待平台审核
+        } else {
+            return "ALL"; // 其他角色默认选全部
+        }
+    })();
+    const [reviewStatus, setReviewStatus] = useState<string>(initialReviewStatus); // 审核状态筛选
     const [subjects, setSubjects] = useState<ResearchSubject[]>([]);
     const [showFilters, setShowFilters] = useState(true);
 
@@ -131,9 +142,9 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                     titleCnOrKey: debouncedSearchTerm || undefined,
                     subjectAreaId: selectedSubject !== "all" ? selectedSubject : undefined,
                     type: selectedType !== "all" ? selectedType : undefined, // 添加类型筛选
-                    hasPendingVersion: hasPendingVersion !== "all" ? hasPendingVersion : undefined,
                     isTopLevel: isTopLevel !== "all" ? isTopLevel : undefined,
-                    institutionId: institutionId || undefined
+                    institutionId: institutionId || undefined,
+                    reviewStatus: reviewStatus !== "ALL" ? reviewStatus as any : undefined
                 });
             } else {
                 // 否则获取所有可管理的数据集
@@ -146,9 +157,9 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                     subjectAreaId: selectedSubject !== "all" ? selectedSubject : undefined,
                     type: selectedType !== "all" ? selectedType : undefined, // 添加类型筛选
                     isTopLevel: isTopLevel !== "all" ? isTopLevel : undefined,
-                    hasPendingVersion: hasPendingVersion !== "all" ? hasPendingVersion : undefined,
                     institutionId: institutionId || undefined,
-                    providerId: ''
+                    providerId: '',
+                    reviewStatus: reviewStatus !== "ALL" ? reviewStatus as any : undefined
                 });
             }
 
@@ -172,7 +183,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
         }
 
         return response?.data;
-    }, [currentUser?.user?.id, filterByCurrentUser, toast, debouncedSearchTerm, selectedSubject, selectedType, hasPendingVersion, isTopLevel, institutionId]); // 添加 selectedType 到依赖数组
+    }, [currentUser?.user?.id, filterByCurrentUser, toast, debouncedSearchTerm, selectedSubject, selectedType, isTopLevel, institutionId, reviewStatus]); // 添加 selectedType 到依赖数组
 
     // 当filterByCurrentUser或currentUser改变时，重新获取数据
     useEffect(() => {
@@ -180,7 +191,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
         if (!filterByCurrentUser) {
             fetchDatasetList(0);
         }
-    }, [filterByCurrentUser, fetchDatasetList]);
+    }, [filterByCurrentUser, fetchDatasetList, reviewStatus]);
 
     // 当筛选条件变化时重新获取数据
     useEffect(() => {
@@ -189,7 +200,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
         } else if (paginatedListRef.current) {
             paginatedListRef.current.refresh();
         }
-    }, [debouncedSearchTerm, selectedSubject, hasPendingVersion, isTopLevel, institutionId, filterByCurrentUser, fetchDatasetList]);
+    }, [debouncedSearchTerm, selectedSubject, isTopLevel, institutionId, reviewStatus, filterByCurrentUser, fetchDatasetList]);
 
     // 当切换到我的数据集模式时，确保使用 PaginatedList
     useEffect(() => {
@@ -223,7 +234,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
     const getStatusIcon = (dataset: Dataset) => {
         // 检查是否有已批准的版本
         const hasApprovedVersion = dataset.versions.some(version => version.approved === true);
-        const hasRejectedVersion = dataset.versions.some(version => version.approved === false);
+        const hasRejectedVersion = dataset.versions.some(version => version.institutionApproved === false || version.approved === false);
 
         if (hasApprovedVersion) {
             return <CheckCircle className="h-3 w-3 mr-1"/>;
@@ -237,7 +248,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
     const getStatusColor = (dataset: Dataset) => {
         // 检查是否有已批准的版本
         const hasApprovedVersion = dataset.versions.some(version => version.approved === true);
-        const hasRejectedVersion = dataset.versions.some(version => version.approved === false);
+        const hasRejectedVersion = dataset.versions.some(version => version.institutionApproved === false || version.approved === false);
 
         if (hasApprovedVersion) {
             return 'text-green-700 bg-green-100';
@@ -251,14 +262,20 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
     const getStatusText = (dataset: Dataset) => {
         // 检查是否有已批准的版本
         const hasApprovedVersion = dataset.versions.some(version => version.approved === true);
-        const hasRejectedVersion = dataset.versions.some(version => version.approved === false);
+        const hasRejectedVersion = dataset.versions.some(version => version.institutionApproved === false || version.approved === false);
+        const hasPendingInstitutionReview = dataset.versions.some(version => version.institutionApproved === null);
+        const hasPendingPlatformReview = dataset.versions.some(version => version.institutionApproved === true && version.approved === null);
 
         if (hasApprovedVersion) {
             return '已发布';
         } else if (hasRejectedVersion) {
             return '已拒绝';
-        } else if (dataset.versions.length > 0) {
+        } else if (hasPendingPlatformReview) {
+            return '待平台审核';
+        } else if (hasPendingInstitutionReview) {
             return '待机构审核';
+        } else if (dataset.versions.length > 0) {
+            return '待审核';
         } else {
             return '未提交数据集版本';
         }
@@ -266,7 +283,17 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
 
     // 计算待审核版本数量
     const getPendingVersionCount = (dataset: Dataset) => {
-        return dataset.versions.filter(version => version.approved === null).length;
+        return dataset.versions.filter(version => version.institutionApproved === null || version.approved === null).length;
+    };
+
+    // 计算待机构审核版本数量
+    const getPendingInstitutionReviewCount = (dataset: Dataset) => {
+        return dataset.versions.filter(version => version.institutionApproved === null).length;
+    };
+
+    // 计算待平台审核版本数量
+    const getPendingPlatformReviewCount = (dataset: Dataset) => {
+        return dataset.versions.filter(version => version.institutionApproved === true && version.approved === null).length;
     };
 
     const handleViewDataset = (dataset: Dataset) => {
@@ -327,9 +354,9 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
         setSearchTerm("");
         setSelectedSubject("all");
         setSelectedType("all"); // 重置类型筛选
-        setHasPendingVersion("all");
         setIsTopLevel("all");
         setInstitutionId(null);
+        setReviewStatus("ALL");
     };
 
     const renderDatasetItem = (dataset: Dataset) => (
@@ -363,10 +390,18 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                                 <span className={"text-sm"}>{getStatusText(dataset)}</span>
                             </Badge>
                             {getPendingVersionCount(dataset) > 0 && (
-
-                                <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800 border-yellow-200">
-                                    版本待机构审核
-                                </Badge>
+                                <>
+                                    {getPendingInstitutionReviewCount(dataset) > 0 && (
+                                        <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800 border-yellow-200 mr-1">
+                                            版本待机构审核
+                                        </Badge>
+                                    )}
+                                    {getPendingPlatformReviewCount(dataset) > 0 && (
+                                        <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800 border-blue-200">
+                                            版本待平台审核
+                                        </Badge>
+                                    )}
+                                </>
                             )}
                         </div>
                         <div className="flex gap-1">
@@ -419,9 +454,9 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                         {dataset.provider && (
                             <div className="flex items-center gap-2">
                                 <User className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                                <span className="font-medium">提供者: </span>
+                                <span className="font-medium">数据集提供者: </span>
                                 <span className="truncate">
-                  {dataset.provider.realName || dataset.provider.username}
+                  {dataset.provider.realName}
                 </span>
                             </div>
                         )}
@@ -640,20 +675,17 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                                         </Select>
                                     </div>
 
-                                    {/* 是否有待审核版本 */}
+                                    {/* 审核状态筛选 */}
                                     <div>
-                                        <Select
-                                            value={hasPendingVersion === "all" ? "all" : hasPendingVersion ? "true" : "false"}
-                                            onValueChange={(value) =>
-                                                setHasPendingVersion(value === "all" ? "all" : value === "true")
-                                            }
-                                        >
+                                        <Select value={reviewStatus} onValueChange={setReviewStatus}>
                                             <SelectTrigger>
-                                                <SelectValue placeholder="待审核版本"/>
+                                                <SelectValue placeholder="审核状态" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="all">全部审核状态</SelectItem>
-                                                <SelectItem value="true">待审核状态</SelectItem>
+                                                <SelectItem value="ALL">全部审核状态</SelectItem>
+                                                <SelectItem value="PUBLISHED">已发布</SelectItem>
+                                                <SelectItem value="PENDING_INSTITUTION_REVIEW">待机构审核</SelectItem>
+                                                <SelectItem value="PENDING_PLATFORM_REVIEW">待平台审核</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>

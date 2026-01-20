@@ -10,6 +10,8 @@ export interface FileUploaderProps {
     maxConcurrentUploads?: number;
     templateFile?: string;
     templateLabel?: string;
+    templateFileName?: string;
+    isStaticTemplateFile?: boolean;
     required?: boolean;
     onValidityChange?: (isValid: boolean) => void;
     validateOnSubmit?: boolean;

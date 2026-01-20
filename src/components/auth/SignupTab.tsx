@@ -27,7 +27,6 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
   const [verificationCode, setVerificationCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [username, setUsername] = useState("");
   const [realName, setRealName] = useState("");
   const [email, setEmail] = useState("");
   const [idType, setIdType] = useState("");
@@ -61,23 +60,6 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
     }
     if (!/^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]*$/.test(value)) {
       return "密码只能包含字母、数字和特殊字符";
-    }
-    return true;
-  };
-
-  // 用户名验证函数
-  const validateUsername = (value: string): boolean | string => {
-    if (!value.trim()) {
-      return "用户名不能为空";
-    }
-    if (value.trim().length < 2) {
-      return "用户名至少需要2个字符";
-    }
-    if (value.trim().length > 20) {
-      return "用户名不能超过20个字符";
-    }
-    if (!/^[a-zA-Z0-9_\u4e00-\u9fa5]+$/.test(value.trim())) {
-      return "用户名只能包含中文、英文、数字和下划线";
     }
     return true;
   };
@@ -124,14 +106,6 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
     }
     if (!/^\d{6}$/.test(value.trim())) {
       return "验证码必须是6位数字";
-    }
-    return true;
-  };
-
-  // 邮箱验证函数
-  const validateEmail = (value: string): boolean | string => {
-    if (value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
-      return "请输入有效的邮箱地址";
     }
     return true;
   };
@@ -292,7 +266,6 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
       const response = await register({
         phone: phone.trim(),
         verificationCode: verificationCode.trim(),
-        username: username.trim(),
         realName: realName.trim(),
         email: email.trim(),
         password: password,
@@ -339,117 +312,6 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
           className="space-y-4"
           showAllErrorsOnSubmit={true}
       >
-        {/* 手机号与验证码行 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="md:col-span-2 space-y-2">
-            <Label htmlFor="signup-phone" className="text-sm font-medium flex items-center gap-1">
-              手机号 <span className="text-red-500">*</span>
-            </Label>
-            <div className="relative">
-              <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                  id="signup-phone"
-                  name="phone"
-                  type="tel"
-                  placeholder="请输入11位手机号码"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="pl-10 h-11"
-                  maxLength={11}
-                  required
-                  validationType="custom"
-                  customValidation={validatePhone}
-                  errorMessage="请输入有效的手机号码"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-sm font-medium opacity-0">发送</Label>
-            <Button
-                type="button"
-                onClick={handleSendVerificationCode}
-                disabled={sendCodeLoading || countdown > 0}
-                className="w-full h-11 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                variant="default"
-            >
-              <Send className="h-4 w-4 mr-1" />
-              {sendCodeLoading ? "发送中..." : countdown > 0 ? `${countdown}秒后重试` : "发送验证码"}
-            </Button>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="signup-verification-code" className="text-sm font-medium flex items-center gap-1">
-            验证码 <span className="text-red-500">*</span>
-          </Label>
-          <div className="relative">
-            <Shield className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-                id="signup-verification-code"
-                name="verificationCode"
-                type="text"
-                placeholder="请输入6位数字验证码"
-                value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value)}
-                className="pl-10 h-11"
-                maxLength={6}
-                required
-                validationType="custom"
-                customValidation={validateVerificationCode}
-                errorMessage="请输入6位数字验证码"
-            />
-          </div>
-        </div>
-
-        {/* 用户名 */}
-        <div className="space-y-2">
-          <Label htmlFor="signup-username" className="text-sm font-medium flex items-center gap-1">
-            用户名 <span className="text-red-500">*</span>
-          </Label>
-          <div className="relative">
-            <UserIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-                id="signup-username"
-                name="username"
-                type="text"
-                placeholder="2-20个字符，支持中文、英文、数字、下划线"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="pl-10 h-11"
-                maxLength={20}
-                required
-                validationType="custom"
-                customValidation={validateUsername}
-                errorMessage="用户名格式不正确"
-            />
-          </div>
-        </div>
-
-        {/* 真实姓名 */}
-        <div className="space-y-2">
-          <Label htmlFor="signup-realname" className="text-sm font-medium flex items-center gap-1">
-            真实姓名 <span className="text-red-500">*</span>
-          </Label>
-          <div className="relative">
-            <BadgeCheck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-                id="signup-realname"
-                name="realName"
-                type="text"
-                placeholder="请输入真实姓名，支持中文、英文"
-                value={realName} // 确保 value 正确绑定
-                onChange={handleRealNameChange} // 使用专门的 change handler
-                className="pl-10 h-11"
-                maxLength={20}
-                required
-                validationType="custom"
-                customValidation={validateRealName}
-                errorMessage="真实姓名格式不正确"
-            />
-          </div>
-        </div>
-
         {/* 机构选择 */}
         <div className="space-y-2">
           <Label htmlFor="signup-institution" className="text-sm font-medium flex items-center gap-1">
@@ -524,6 +386,30 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
           </div>
         </div>
 
+        {/* 真实姓名 */}
+        <div className="space-y-2">
+          <Label htmlFor="signup-realname" className="text-sm font-medium flex items-center gap-1">
+            真实姓名 <span className="text-red-500">*</span>
+          </Label>
+          <div className="relative">
+            <BadgeCheck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+                id="signup-realname"
+                name="realName"
+                type="text"
+                placeholder="请输入真实姓名，支持中文、英文"
+                value={realName} // 确保 value 正确绑定
+                onChange={handleRealNameChange} // 使用专门的 change handler
+                className="pl-10 h-11"
+                maxLength={20}
+                required
+                validationType="custom"
+                customValidation={validateRealName}
+                errorMessage="真实姓名格式不正确"
+            />
+          </div>
+        </div>
+
         {/* 证件类型和证件号码行 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -582,24 +468,24 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
         </div>
 
         {/* 邮箱 */}
-        <div className="space-y-2">
-          <Label htmlFor="signup-email" className="text-sm font-medium">联系邮箱</Label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-                id="signup-email"
-                name="email"
-                type="email"
-                placeholder="请输入邮箱地址（选填）"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="pl-10 h-11"
-                validationType="custom"
-                customValidation={validateEmail}
-                errorMessage="请输入有效的邮箱地址"
-            />
-          </div>
-        </div>
+        {/*<div className="space-y-2">*/}
+        {/*  <Label htmlFor="signup-email" className="text-sm font-medium">联系邮箱</Label>*/}
+        {/*  <div className="relative">*/}
+        {/*    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />*/}
+        {/*    <Input*/}
+        {/*        id="signup-email"*/}
+        {/*        name="email"*/}
+        {/*        type="email"*/}
+        {/*        placeholder="请输入邮箱地址（选填）"*/}
+        {/*        value={email}*/}
+        {/*        onChange={(e) => setEmail(e.target.value)}*/}
+        {/*        className="pl-10 h-11"*/}
+        {/*        validationType="custom"*/}
+        {/*        customValidation={validateEmail}*/}
+        {/*        errorMessage="请输入有效的邮箱地址"*/}
+        {/*    />*/}
+        {/*  </div>*/}
+        {/*</div>*/}
 
         {/* 密码 */}
         <div className="space-y-2">
@@ -645,6 +531,69 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
                 isPasswordConfirm={true}
                 passwordRef={passwordRef}
                 errorMessage="两次输入的密码不一致"
+            />
+          </div>
+        </div>
+
+        {/* 手机号与验证码行 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="md:col-span-2 space-y-2">
+            <Label htmlFor="signup-phone" className="text-sm font-medium flex items-center gap-1">
+              手机号 <span className="text-red-500">*</span>
+            </Label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                  id="signup-phone"
+                  name="phone"
+                  type="tel"
+                  placeholder="请输入11位手机号码"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="pl-10 h-11"
+                  maxLength={11}
+                  required
+                  validationType="custom"
+                  customValidation={validatePhone}
+                  errorMessage="请输入有效的手机号码"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium opacity-0">发送</Label>
+            <Button
+                type="button"
+                onClick={handleSendVerificationCode}
+                disabled={sendCodeLoading || countdown > 0}
+                className="w-full h-11 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                variant="default"
+            >
+              <Send className="h-4 w-4 mr-1" />
+              {sendCodeLoading ? "发送中..." : countdown > 0 ? `${countdown}秒后重试` : "发送验证码"}
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="signup-verification-code" className="text-sm font-medium flex items-center gap-1">
+            验证码 <span className="text-red-500">*</span>
+          </Label>
+          <div className="relative">
+            <Shield className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+                id="signup-verification-code"
+                name="verificationCode"
+                type="text"
+                placeholder="请输入6位数字验证码"
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value)}
+                className="pl-10 h-11"
+                maxLength={6}
+                required
+                validationType="custom"
+                customValidation={validateVerificationCode}
+                errorMessage="请输入6位数字验证码"
             />
           </div>
         </div>

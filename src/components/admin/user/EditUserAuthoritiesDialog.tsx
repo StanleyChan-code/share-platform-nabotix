@@ -36,8 +36,7 @@ const EditUserAuthoritiesDialog = ({ open, onOpenChange, user, onAuthoritiesUpda
     const normalRoles: string[] = [
         PermissionRoles.INSTITUTION_USER_MANAGER,
         PermissionRoles.DATASET_UPLOADER,
-        PermissionRoles.DATASET_APPROVER,
-        PermissionRoles.RESEARCH_OUTPUT_APPROVER
+        PermissionRoles.DATASET_APPROVER
     ];
 
     // 检查是否是管理员角色
@@ -71,7 +70,9 @@ const EditUserAuthoritiesDialog = ({ open, onOpenChange, user, onAuthoritiesUpda
             setLoading(true);
             userApi.getUserAuthorities(user.id)
                 .then(roles => {
-                    setSelectedRoles(roles.data);
+                    // 过滤掉研究成果审核员角色，只保留当前可见的角色选项
+                    const filteredRoles = roles.data.filter((role: string) => role !== PermissionRoles.RESEARCH_OUTPUT_APPROVER);
+                    setSelectedRoles(filteredRoles);
                 })
                 .catch(error => {
                     console.error("获取用户权限失败:", error);
@@ -180,7 +181,6 @@ const EditUserAuthoritiesDialog = ({ open, onOpenChange, user, onAuthoritiesUpda
         { id: PermissionRoles.INSTITUTION_USER_MANAGER, name: getPermissionRoleDisplayName(PermissionRoles.INSTITUTION_USER_MANAGER), isAdmin: false },
         { id: PermissionRoles.DATASET_UPLOADER, name: getPermissionRoleDisplayName(PermissionRoles.DATASET_UPLOADER), isAdmin: false },
         { id: PermissionRoles.DATASET_APPROVER, name: getPermissionRoleDisplayName(PermissionRoles.DATASET_APPROVER), isAdmin: false },
-        { id: PermissionRoles.RESEARCH_OUTPUT_APPROVER, name: getPermissionRoleDisplayName(PermissionRoles.RESEARCH_OUTPUT_APPROVER), isAdmin: false },
     ];
 
     // 如果是平台管理员，添加平台管理员选项到最前面

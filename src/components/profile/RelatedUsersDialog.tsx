@@ -126,7 +126,7 @@ const RelatedUsersDialog: React.FC<RelatedUsersDialogProps> = ({
                         }`}
                       >
                         <CardHeader className="pb-3 flex flex-row items-center justify-between bg-gray-50 rounded-t-md">
-                          <CardTitle className="text-base font-semibold">{user.realName || user.username}</CardTitle>
+                          <CardTitle className="text-base font-semibold">{user.realName}</CardTitle>
                           {isUserHighlighted(user.id) && (
                             <div className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded text-xs font-medium">
                               <CheckCircle className="h-3 w-3" />
@@ -136,7 +136,6 @@ const RelatedUsersDialog: React.FC<RelatedUsersDialogProps> = ({
                         </CardHeader>
                         <CardContent className="space-y-2 mt-4">
                           <InfoItem icon={User} label="姓名" value={user.realName} />
-                          <InfoItem icon={User} label="用户名" value={user.username} />
                           {/*<InfoItem icon={Phone} label="电话" value={user.phone} />*/}
                           <InfoItem icon={Mail} label="邮箱" value={user.email} />
                           <InfoItem icon={User} label="职称" value={user.title} />
