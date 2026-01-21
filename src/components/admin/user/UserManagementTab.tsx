@@ -52,7 +52,7 @@ const UserManagementTab = () => {
     const [userRoles, setUserRoles] = useState<Record<string, string[]>>({});
     const [loading, setLoading] = useState(false);
     const [showAddUserDialog, setShowAddUserDialog] = useState(false);
-    const [selectedInstitutionId, setSelectedInstitutionId] = useState<string | null>(null);
+    const [selectedInstitutionId, setSelectedInstitutionId] = useState<string[] | null>(null);
     const [isPlatformAdmin, setIsPlatformAdmin] = useState<boolean>(false);
     const [userInstitutionId, setUserInstitutionId] = useState<string | null>(null);
     const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -91,7 +91,7 @@ const UserManagementTab = () => {
 
             // 设置初始机构
             if (!isPlatformAdminUser) {
-                setSelectedInstitutionId(userInfo.user.institutionId);
+                setSelectedInstitutionId(userInfo.user.institutionId ? [userInfo.user.institutionId] : null);
             }
         }
     }, []);
@@ -100,7 +100,7 @@ const UserManagementTab = () => {
     useEffect(() => {
         // 平台管理员：可以立即获取（不选机构时获取所有用户）
         // 非平台管理员：需要等待机构设置
-        if (isPlatformAdmin || selectedInstitutionId) {
+        if (isPlatformAdmin || selectedInstitutionId?.length > 0) {
             setCurrentPage(0);
             fetchUsers(0);
         }
@@ -141,12 +141,12 @@ const UserManagementTab = () => {
             const size = 5;
             let response;
 
-            if (isPlatformAdmin && !selectedInstitutionId) {
+            if (isPlatformAdmin && (!selectedInstitutionId || selectedInstitutionId.length === 0)) {
                 // 平台管理员且未选择机构时，获取所有用户
                 response = await userApi.getAllUsers(page, size);
             } else {
                 // 获取指定机构的用户列表
-                response = await userApi.getUsers(page, size, selectedInstitutionId!);
+                response = await userApi.getUsers(page, size, selectedInstitutionId![0]);
             }
 
             const userList = response.data.content;
@@ -196,7 +196,7 @@ const UserManagementTab = () => {
         }
 
         // 权限检查
-        if (!isPlatformAdmin && !selectedInstitutionId) {
+        if (!isPlatformAdmin && (!selectedInstitutionId || selectedInstitutionId.length === 0)) {
             toast({
                 title: "错误",
                 description: "请先选择机构",
@@ -408,6 +408,7 @@ const UserManagementTab = () => {
                         value={selectedInstitutionId}
                         onChange={setSelectedInstitutionId}
                         placeholder="选择要管理的机构（可选）"
+                        allowMultiple={false}
                     />
                 </div>
             )}
@@ -456,7 +457,7 @@ const UserManagementTab = () => {
                         <DialogTrigger asChild>
                             <Button
                                 onClick={() => setShowAddUserDialog(true)}
-                                disabled={!selectedInstitutionId}
+                                disabled={!selectedInstitutionId || selectedInstitutionId.length === 0}
                                 className="gap-2"
                             >
                                 <PlusCircle className="h-4 w-4"/>
@@ -476,9 +477,9 @@ const UserManagementTab = () => {
                             <div className="flex-1 overflow-hidden overflow-y-auto">
                                 <ScrollArea className="h-full w-full pr-4">
                                     <div className="h-[calc(85vh-100px)]">
-                                        {selectedInstitutionId && (
+                                        {selectedInstitutionId && selectedInstitutionId.length > 0 && (
                                             <AddUserToInstitutionForm
-                                                institutionId={selectedInstitutionId}
+                                                institutionId={selectedInstitutionId![0]}
                                                 onUserAdded={handleUserAdded}
                                             />
                                         )}
@@ -493,7 +494,7 @@ const UserManagementTab = () => {
                 <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
-            ) : (selectedInstitutionId || isPlatformAdmin) ? (
+            ) : ((selectedInstitutionId && selectedInstitutionId.length > 0) || isPlatformAdmin) ? (
                 <>
 
                     <Table className="border rounded-md">

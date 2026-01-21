@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
+import { Checkbox } from "@/components/ui/checkbox.tsx";
 import {
   Users,
   Database,
@@ -21,7 +22,7 @@ import { DatasetDetailModal } from "@/components/dataset/DatasetDetailModal.tsx"
 import { institutionApi } from "@/integrations/api/institutionApi.ts";
 import { datasetApi } from "@/integrations/api/datasetApi.ts";
 import { toast } from "sonner";
-import { InstitutionSelector } from "@/components/dataset/InstitutionSelector";
+import { AdminInstitutionSelector } from "@/components/admin/institution/AdminInstitutionSelector.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import {canUploadDataset} from "@/lib/permissionUtils.ts";
 import { CopyButton } from "@/components/ui/CopyButton.tsx";
@@ -433,10 +434,37 @@ export function OverviewTab({
                   {isEditing ? (
                       <div>
                         <p className="text-xs text-muted-foreground mb-2">允许申请的机构</p>
-                        <InstitutionSelector
-                            value={editableFields.applicationInstitutionIds}
-                            onChange={(value) => setEditableFields(prev => ({...prev, applicationInstitutionIds: value}))}
-                        />
+                        <div className="space-y-4">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="noInstitutionRestriction"
+                              checked={editableFields.applicationInstitutionIds === null}
+                              onCheckedChange={(checked) => {
+                                setEditableFields(prev => ({
+                                  ...prev,
+                                  applicationInstitutionIds: checked ? null : []
+                                }));
+                              }}
+                            />
+                            <label htmlFor="noInstitutionRestriction" className="text-sm font-medium">
+                              不限制申请机构（任何机构均可申请）
+                            </label>
+                          </div>
+
+                          {editableFields.applicationInstitutionIds !== null && (
+                            <AdminInstitutionSelector
+                              value={editableFields.applicationInstitutionIds}
+                              onChange={(value) => {
+                                setEditableFields(prev => ({
+                                  ...prev,
+                                  applicationInstitutionIds: value || []
+                                }));
+                              }}
+                              allowMultiple={true}
+                              placeholder="请选择允许申请的机构（可多选）"
+                            />
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground mt-2">
                           {editableFields.applicationInstitutionIds === null || editableFields.applicationInstitutionIds?.length === 0
                               ? "任何机构均可申请此数据集"

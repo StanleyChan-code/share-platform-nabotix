@@ -10,7 +10,6 @@ import FileUploader from "@/components/fileuploader/FileUploader.tsx";
 import { FileUploaderHandles } from "@/components/fileuploader/types.ts";
 import {formatFileSize, formatISOString} from "@/lib/utils.ts";
 import { BaselineDatasetSelector } from "@/components/admin/dataset/BaselineDatasetSelector.tsx";
-import { InstitutionSelector } from "@/components/dataset/InstitutionSelector.tsx";
 import { AdminInstitutionSelector } from "@/components/admin/institution/AdminInstitutionSelector.tsx";
 import { datasetApi } from "@/integrations/api/datasetApi.ts";
 import { institutionApi } from "@/integrations/api/institutionApi.ts";
@@ -72,7 +71,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
     versionDescription: '',
     applicationInstitutionIds: [] as string[],
     noInstitutionRestriction: true,
-    institutionId: ''
+    institutionId: null as string[] | null
   });
 
   const [newKeyword, setNewKeyword] = useState('');
@@ -126,7 +125,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
         formData.versionNumber.trim() !== '' ||
         formData.versionDescription.trim() !== '' ||
         formData.applicationInstitutionIds.length > 0 ||
-        formData.institutionId !== '' ||
+        formData.institutionId !== null || formData.institutionId.length === 0 ||
         dataFileInfo !== null ||
         dictFileInfo !== null ||
         termsFileInfo !== null ||
@@ -354,7 +353,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
     }
 
     // 平台管理员验证
-    if (isPlatformAdmin() && !formData.institutionId) {
+    if (isPlatformAdmin() && (!formData.institutionId || formData.institutionId.length === 0)) {
       toast.error('请选择数据集所属机构');
       return;
     }
@@ -438,7 +437,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
         dataSharingRecordId: sharingFileInfo.id,
         recordCount: 0,
         variableCount: 0,
-        ...(isPlatformAdmin() && formData.institutionId && { institutionId: formData.institutionId })
+        ...(isPlatformAdmin() && formData.institutionId && formData.institutionId.length > 0 && { institutionId: formData.institutionId[0] })
       };
 
       const response = await datasetApi.createDataset(datasetData);
@@ -487,7 +486,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
       versionDescription: '',
       applicationInstitutionIds: [],
       noInstitutionRestriction: true,
-      institutionId: ''
+      institutionId: null
     });
 
     // 重置文件上传
@@ -965,24 +964,38 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                   <Building className="h-5 w-5" />
                   开放申请机构
                 </h3>
-                <InstitutionSelector
-                    value={formData.noInstitutionRestriction ? null : formData.applicationInstitutionIds}
-                    onChange={(value) => {
-                      if (value === null) {
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="noInstitutionRestriction"
+                      checked={formData.noInstitutionRestriction}
+                      onCheckedChange={(checked) => {
                         setFormData(prev => ({
                           ...prev,
-                          noInstitutionRestriction: true,
-                          applicationInstitutionIds: []
+                          noInstitutionRestriction: checked === true,
+                          applicationInstitutionIds: checked ? [] : prev.applicationInstitutionIds
                         }));
-                      } else {
+                      }}
+                    />
+                    <label htmlFor="noInstitutionRestriction" className="text-sm font-medium">
+                      不限制申请机构（任何机构均可申请）
+                    </label>
+                  </div>
+
+                  {!formData.noInstitutionRestriction && (
+                    <AdminInstitutionSelector
+                      value={formData.applicationInstitutionIds}
+                      onChange={(value) => {
                         setFormData(prev => ({
                           ...prev,
-                          noInstitutionRestriction: false,
-                          applicationInstitutionIds: value
+                          applicationInstitutionIds: value || []
                         }));
-                      }
-                    }}
-                />
+                      }}
+                      allowMultiple={true}
+                      placeholder="请选择允许申请的机构（可多选）"
+                    />
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   选择可以申请此数据集的机构。如果不限制机构，则所有机构都可以申请。
                 </p>
@@ -1259,4 +1272,3 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
       </>
   );
 }
-

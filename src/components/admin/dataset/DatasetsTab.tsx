@@ -2,7 +2,6 @@ import React, {useCallback, useRef, useState, useEffect} from 'react';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card.tsx';
 import {Badge} from '@/components/ui/badge.tsx';
 import {Skeleton} from '@/components/ui/skeleton.tsx';
-import PaginatedList from '@/components/ui/PaginatedList.tsx';
 import {datasetApi, Dataset, ResearchSubject} from '@/integrations/api/datasetApi.ts';
 import {formatDateTime} from '@/lib/utils.ts';
 import {
@@ -45,14 +44,12 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/c
 import {AdminInstitutionSelector} from "@/components/admin/institution/AdminInstitutionSelector.tsx";
 import {useDebounce} from "@/hooks/useDebounce";
 import {Input} from "@/components/ui/FormValidator.tsx";
+import {Switch} from "@/components/ui/switch.tsx";
 import {refreshDatasetPendingCount} from "@/lib/pendingCountsController";
 import { ApiResponse, Page } from '@/integrations/api/client';
 
-interface DatasetsTabProps {
-    filterByCurrentUser?: boolean;
-}
-
-const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
+const DatasetsTab = () => {
+    const [filterByCurrentUser, setFilterByCurrentUser] = useState(false);
     const [selectedDataset, setSelectedDataset] = React.useState<any>(null);
     const [isDatasetModalOpen, setIsDatasetModalOpen] = React.useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
@@ -61,7 +58,6 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
     const [cancelUploadDialogOpen, setCancelUploadDialogOpen] = React.useState(false);
     const [userRoles, setUserRoles] = useState<string[]>([]);
     const {toast} = useToast();
-    const paginatedListRef = useRef<any>(null);
     const currentUser = getCurrentUserInfoFromSession();
 
     // 添加筛选相关状态
@@ -69,7 +65,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
     const [selectedSubject, setSelectedSubject] = useState<string>("all");
     const [selectedType, setSelectedType] = useState<string>("all"); // 数据集类型筛选状态
     const [isTopLevel, setIsTopLevel] = useState<boolean | "all">("all");
-    const [institutionId, setInstitutionId] = useState<string | null>(null);
+    const [institutionId, setInstitutionId] = useState<string[] | null>(null);
     // 根据用户角色设置默认审核状态筛选
     const initialReviewStatus = (() => {
         const roles = getCurrentUserRolesFromSession();
@@ -129,39 +125,21 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
 
         loadingRef.current = true;
         setLoading(true);
-        let response: ApiResponse<Page<Dataset>>;
+        let response: ApiResponse;
         try {
-            // 如果设置了filterByCurrentUser并且有当前用户，则只获取当前用户的数据集
-            if (filterByCurrentUser && currentUser?.user?.id) {
-                response = await datasetApi.advancedSearchDatasets({
-                    page,
-                    size,
-                    sortBy: 'updatedAt',
-                    sortDir: 'desc',
-                    providerId: currentUser?.user?.id,
-                    titleCnOrKey: debouncedSearchTerm || undefined,
-                    subjectAreaId: selectedSubject !== "all" ? selectedSubject : undefined,
-                    type: selectedType !== "all" ? selectedType : undefined, // 添加类型筛选
-                    isTopLevel: isTopLevel !== "all" ? isTopLevel : undefined,
-                    institutionId: institutionId || undefined,
-                    reviewStatus: reviewStatus !== "ALL" ? reviewStatus as any : undefined
-                });
-            } else {
-                // 否则获取所有可管理的数据集
-                response = await datasetApi.advancedSearchDatasets({
-                    page,
-                    size,
-                    sortBy: 'updatedAt',
-                    sortDir: 'desc',
-                    titleCnOrKey: debouncedSearchTerm || undefined,
-                    subjectAreaId: selectedSubject !== "all" ? selectedSubject : undefined,
-                    type: selectedType !== "all" ? selectedType : undefined, // 添加类型筛选
-                    isTopLevel: isTopLevel !== "all" ? isTopLevel : undefined,
-                    institutionId: institutionId || undefined,
-                    providerId: '',
-                    reviewStatus: reviewStatus !== "ALL" ? reviewStatus as any : undefined
-                });
-            }
+            response = await datasetApi.advancedSearchDatasets({
+                page,
+                size,
+                sortBy: 'updatedAt',
+                sortDir: 'desc',
+                titleCnOrKey: debouncedSearchTerm || undefined,
+                subjectAreaId: selectedSubject !== "all" ? selectedSubject : undefined,
+                type: selectedType !== "all" ? selectedType : undefined, // 添加类型筛选
+                isTopLevel: isTopLevel !== "all" ? isTopLevel : undefined,
+                institutionId: institutionId && institutionId.length > 0 ? institutionId[0] : undefined,
+                providerId: filterByCurrentUser ? currentUser?.user?.id : undefined, // 如果设置了filterByCurrentUser并且有当前用户，则只获取当前用户的数据集
+                reviewStatus: reviewStatus !== "ALL" ? reviewStatus as any : undefined
+            });
 
             setDatasets(response.data.content);
             setTotalPages(response.data.page.totalPages);
@@ -185,29 +163,10 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
         return response?.data;
     }, [currentUser?.user?.id, filterByCurrentUser, toast, debouncedSearchTerm, selectedSubject, selectedType, isTopLevel, institutionId, reviewStatus]); // 添加 selectedType 到依赖数组
 
-    // 当filterByCurrentUser或currentUser改变时，重新获取数据
-    useEffect(() => {
-        // 只在非过滤当前用户模式下使用分页逻辑
-        if (!filterByCurrentUser) {
-            fetchDatasetList(0);
-        }
-    }, [filterByCurrentUser, fetchDatasetList, reviewStatus]);
-
     // 当筛选条件变化时重新获取数据
     useEffect(() => {
-        if (!filterByCurrentUser) {
             fetchDatasetList(0);
-        } else if (paginatedListRef.current) {
-            paginatedListRef.current.refresh();
-        }
     }, [debouncedSearchTerm, selectedSubject, isTopLevel, institutionId, reviewStatus, filterByCurrentUser, fetchDatasetList]);
-
-    // 当切换到我的数据集模式时，确保使用 PaginatedList
-    useEffect(() => {
-        if (filterByCurrentUser && paginatedListRef.current) {
-            paginatedListRef.current.refresh();
-        }
-    }, [filterByCurrentUser]);
 
     const hasDeletionPermission = (dataset: Dataset) => {
         // 只有数据集创建者或平台管理员可以删除数据集
@@ -327,13 +286,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
             setDeleteDialogOpen(false);
             setDatasetToDelete(null);
             // 触发重新加载数据
-            if (paginatedListRef.current) {
-                paginatedListRef.current.refresh();
-            }
-            // 如果使用react-paginate分页，也需要刷新
-            if (!filterByCurrentUser) {
-                fetchDatasetList(currentPage);
-            }
+            fetchDatasetList(currentPage);
         } catch (error) {
             toast({
                 title: "删除失败",
@@ -588,12 +541,13 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
         <TooltipProvider>
             <>
                         {/* 平台管理员机构选择器 */}
-                        {hasPermissionRole(PermissionRoles.PLATFORM_ADMIN) && !filterByCurrentUser && (
+                        {hasPermissionRole(PermissionRoles.PLATFORM_ADMIN) && (
                             <div className="mb-6 p-4 border rounded-lg bg-muted/50">
                                 <AdminInstitutionSelector
                                     value={institutionId}
                                     onChange={setInstitutionId}
                                     placeholder="选择要管理的机构（可选）"
+                                    allowMultiple={false}
                                 />
                             </div>
                         )}
@@ -616,6 +570,17 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
 
                                     {/* 右侧按钮组 */}
                                     <div className="flex flex-wrap gap-2 justify-end">
+                                        {/* 只看自己开关 */}
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm">只看自己</span>
+                                            <Switch
+                                                checked={filterByCurrentUser}
+                                                onCheckedChange={(checked) => {
+                                                    setFilterByCurrentUser(checked);
+                                                }}
+                                            />
+                                        </div>
+                                        
                                         {/* 刷新按钮 */}
                                         <Button variant="outline" onClick={() => fetchDatasetList(currentPage)} className="gap-2">
                                             <RefreshCw className="h-4 w-4"/>
@@ -715,26 +680,11 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                             <div className="mb-6">
                                 <DatasetUploadForm onSuccess={() => {
                                     setShowUpload(false);
-                                    // Refresh the dataset list
-                                    if (paginatedListRef.current) {
-                                        paginatedListRef.current.refresh();
-                                    }
-                                    if (!filterByCurrentUser) {
-                                        fetchDatasetList(currentPage);
-                                    }
+                                    fetchDatasetList(currentPage);
                                 }}/>
                             </div>
                         )}
 
-                        {filterByCurrentUser ? (
-                            <PaginatedList
-                                ref={paginatedListRef}
-                                fetchData={fetchDatasetList}
-                                renderItem={renderDatasetItem}
-                                renderEmptyState={renderEmptyState}
-                                pageSize={10}
-                            />
-                        ) : (
                             <div>
                                 {loading ? (
                                     <div className="space-y-4">
@@ -794,7 +744,6 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                                     renderEmptyState()
                                 )}
                             </div>
-                        )}
 
                 {selectedDataset && (
                     <DatasetDetailModal
@@ -804,12 +753,7 @@ const DatasetsTab = ({filterByCurrentUser = true}: DatasetsTabProps) => {
                         useAdvancedQuery={true}
                         onDatasetUpdated={() => {
                             // 关闭模态框后刷新列表
-                            if (paginatedListRef.current) {
-                                paginatedListRef.current.refresh();
-                            }
-                            if (!filterByCurrentUser) {
-                                fetchDatasetList(currentPage);
-                            }
+                            fetchDatasetList(currentPage);
                         }}
                     />
                 )}

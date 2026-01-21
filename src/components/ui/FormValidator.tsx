@@ -13,6 +13,7 @@ import React, {
 import {cn} from '@/lib/utils';
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
 import {toast} from "@/components/ui/use-toast.ts";
+import * as z from 'zod';
 
 // ============================ 类型定义 ============================
 
@@ -562,7 +563,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                     isValid = /^1[3-9]\d{9}$/.test(trimmedValue);
                     break;
                 case 'email':
-                    isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedValue);
+                    try {
+                        z.string().email().parse(trimmedValue);
+                        isValid = true;
+                    } catch {
+                        isValid = false;
+                    }
                     break;
                 case 'verificationCode':
                     isValid = /^\d{6}$/.test(trimmedValue);

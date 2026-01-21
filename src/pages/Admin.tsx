@@ -105,7 +105,7 @@ const UnifiedDashboard = () => {
                 label: "数据集管理",
                 icon: Database,
                 description: "审核和管理数据集",
-                content: <DatasetsTab filterByCurrentUser={false}/>,
+                content: <DatasetsTab/>,
                 allowRoles: [PermissionRoles.PLATFORM_ADMIN, PermissionRoles.INSTITUTION_SUPERVISOR, PermissionRoles.DATASET_APPROVER, PermissionRoles.DATASET_UPLOADER],
                 color: "indigo"
             },

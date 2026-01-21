@@ -1,4 +1,4 @@
-import { Calendar, Users, Building, Tag, Eye, Database, Star } from "lucide-react";
+import {Calendar, Users, Building, Tag, Eye, Target} from "lucide-react";
 import { Dataset } from "@/integrations/api/datasetApi";
 import { DatasetTypes } from "@/lib/enums";
 import { formatDate } from "@/lib/utils";
@@ -41,7 +41,7 @@ export const DatasetCard = ({ dataset, showRecommendationBadge = false }: Datase
         {/* 研究领域 */}
         {dataset.subjectArea?.name && (
             <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-              <Database className="h-3.5 w-3.5 text-green-500" />
+              <Target className="h-3.5 w-3.5 text-green-500" />
               <span className="font-medium">研究领域:</span>
               <span>{dataset.subjectArea.name}</span>
             </div>
@@ -51,7 +51,6 @@ export const DatasetCard = ({ dataset, showRecommendationBadge = false }: Datase
         {dataset.description && (
             <p
                 className="text-sm text-gray-600 line-clamp-3 mb-4 flex-1 leading-relaxed  whitespace-pre-line"
-                title={dataset.description}
             >
               {dataset.description}
             </p>

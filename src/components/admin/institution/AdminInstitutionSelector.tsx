@@ -3,52 +3,58 @@ import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover.tsx";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command.tsx";
-import { Search, ChevronsUpDown, Check, X } from "lucide-react";
+import {Search, ChevronsUpDown, Check, X, Building} from "lucide-react";
 import { cn } from "@/lib/utils.ts";
-import { institutionApi } from "@/integrations/api/institutionApi.ts";
+import {Institution, institutionApi} from "@/integrations/api/institutionApi.ts";
 import { toast } from "sonner";
 import { useDebounce } from "@/hooks/useDebounce";
 
 interface AdminInstitutionSelectorProps {
-  value: string | null;
-  onChange: (value: string | null) => void;
+  value: string[] | null;
+  onChange: (value: string[] | null) => void;
   disabled?: boolean;
   placeholder?: string;
+  disableUnverified?: boolean;
+  allowMultiple?: boolean;
 }
 
 export function AdminInstitutionSelector({ 
   value, 
   onChange, 
   disabled,
-  placeholder = "选择机构"
+  placeholder = "请选择机构",
+  disableUnverified = false,
+  allowMultiple = false // 默认是单选模式
 }: AdminInstitutionSelectorProps) {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState<Array<{ id: string; fullName: string }>>([]);
+  const [searchResults, setSearchResults] = useState<Institution[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [selectedInstitution, setSelectedInstitution] = useState<{ id: string; fullName: string } | null>(null);
+  const [selectedInstitutions, setSelectedInstitutions] = useState<Institution[]>([]);
   
   // 添加防抖处理，延迟550ms
   const debouncedSearchTerm = useDebounce(searchTerm, 550);
 
   // 获取已选择机构的详细信息
   useEffect(() => {
-    const fetchSelectedInstitution = async () => {
-      if (!value) {
-        setSelectedInstitution(null);
+    const fetchSelectedInstitutions = async () => {
+      if (!value || value.length === 0) {
+        setSelectedInstitutions([]);
         return;
       }
 
       try {
-        const response = await institutionApi.getInstitutionById(value);
-        setSelectedInstitution(response.data);
+        const institutionDetails = await Promise.all(
+          value.map(id => institutionApi.getInstitutionById(id))
+        );
+        setSelectedInstitutions(institutionDetails.map(response => response.data));
       } catch (error) {
         console.error("获取机构信息失败:", error);
         toast.error("获取机构信息失败");
       }
     };
 
-    fetchSelectedInstitution();
+    fetchSelectedInstitutions();
   }, [value]);
 
   // 搜索机构（平台管理员专用）
@@ -61,7 +67,7 @@ export function AdminInstitutionSelector({
     const searchInstitutions = async () => {
       setSearchLoading(true);
       try {
-        const response = await institutionApi.searchInstitutionsForAdmin(debouncedSearchTerm);
+        const response = await institutionApi.searchInstitutions(debouncedSearchTerm);
         setSearchResults(response.data.content || []);
       } catch (error) {
         console.error("搜索机构失败:", error);
@@ -74,15 +80,42 @@ export function AdminInstitutionSelector({
     searchInstitutions();
   }, [debouncedSearchTerm]);
 
-  // 选择机构
-  const selectInstitution = (institutionId: string) => {
-    onChange(institutionId);
-    setOpen(false);
+  // 切换机构选择
+  const toggleInstitutionSelection = (institutionId: string) => {
+    // 如果当前值为null，初始化为空数组
+    const currentValue = value === null ? [] : [...value];
+    
+    const isSelected = currentValue.includes(institutionId);
+    if (isSelected) {
+      onChange(currentValue.filter(id => id !== institutionId));
+    } else {
+      if (allowMultiple) {
+        onChange([...currentValue, institutionId]);
+      } else {
+        onChange([institutionId]);
+      }
+    }
+    // 如果是单选模式，选择后关闭弹窗
+    if (!allowMultiple) {
+      setOpen(false);
+    }
+  };
+
+  // 检查机构是否已选择
+  const isInstitutionSelected = (institutionId: string) => {
+    if (value === null) return false;
+    return value.includes(institutionId);
   };
 
   // 清除选择
   const clearSelection = () => {
     onChange(null);
+  };
+
+  // 清除单个选择
+  const removeInstitution = (institutionId: string) => {
+    if (value === null) return;
+    onChange(value.filter(id => id !== institutionId));
   };
 
   return (
@@ -96,11 +129,14 @@ export function AdminInstitutionSelector({
             className="w-full justify-between"
             disabled={disabled}
           >
-            {selectedInstitution 
-              ? selectedInstitution.fullName 
-              : placeholder}
             <div className="flex items-center gap-2">
-              {selectedInstitution && !disabled && (
+                <Building className="h-4 w-4" />
+                {value && value.length > 0 
+                  ? (allowMultiple ? `${value.length} 个机构已选择` : selectedInstitutions[0]?.fullName)
+                  : placeholder}
+              </div>
+            <div className="flex items-center gap-2">
+              {value && value.length > 0 && !disabled && (
                 <X 
                   className="h-4 w-4 opacity-50 hover:opacity-100" 
                   onClick={(e) => {
@@ -116,12 +152,11 @@ export function AdminInstitutionSelector({
         <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
           <Command shouldFilter={false}>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <CommandInput
                 placeholder="搜索机构..."
                 value={searchTerm}
                 onValueChange={setSearchTerm}
-                className="pl-10"
+                className="pl-2"
               />
             </div>
             <CommandList>
@@ -133,15 +168,33 @@ export function AdminInstitutionSelector({
                   <CommandItem
                     key={institution.id}
                     value={institution.id}
-                    onSelect={() => selectInstitution(institution.id)}
+                    onSelect={() => toggleInstitutionSelection(institution.id)}
+                    className="flex items-center space-x-2"
+                    disabled={disableUnverified && !institution.verified}
                   >
                     <Check
                       className={cn(
-                        "mr-2 h-4 w-4",
-                        value === institution.id ? "opacity-100" : "opacity-0"
+                        "h-4 w-4",
+                        isInstitutionSelected(institution.id) ? "opacity-100" : "opacity-0"
                       )}
                     />
-                    {institution.fullName}
+                    <div className="flex flex-col flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className={`font-medium ${disableUnverified && !institution.verified ? 'text-muted-foreground' : ''}`}>
+                          {institution.fullName}
+                        </span>
+                        {!institution.verified && disableUnverified && (
+                          <Badge variant="outline" className="text-xs text-amber-600 border-amber-300 bg-amber-50">
+                            暂未公开
+                          </Badge>
+                        )}
+                      </div>
+                      {institution.shortName && (
+                        <span className={`text-xs ${disableUnverified && !institution.verified ? 'text-muted-foreground' : 'text-muted-foreground'}`}>
+                          {institution.shortName}
+                        </span>
+                      )}
+                    </div>
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -150,16 +203,21 @@ export function AdminInstitutionSelector({
         </PopoverContent>
       </Popover>
 
-      {selectedInstitution && (
-        <Badge variant="secondary" className="gap-1 text-sm">
-          {selectedInstitution.fullName}
-          {!disabled && (
-            <X
-              className="h-3 w-3 cursor-pointer"
-              onClick={clearSelection}
-            />
-          )}
-        </Badge>
+      {/* 只有在多选模式且选中多个机构时才显示下方的Badge */}
+      {value && value.length > 0 && allowMultiple && (
+        <div className="flex flex-wrap gap-2">
+          {selectedInstitutions.map((institution) => (
+            <Badge key={institution.id} variant="secondary" className="gap-1 text-sm">
+              {institution.fullName}
+              {!disabled && (
+                <X
+                  className="h-3 w-3 cursor-pointer"
+                  onClick={() => removeInstitution(institution.id)}
+                />
+              )}
+            </Badge>
+          ))}
+        </div>
       )}
     </div>
   );

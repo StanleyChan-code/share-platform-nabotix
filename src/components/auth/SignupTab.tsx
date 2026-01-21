@@ -1,19 +1,15 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { ApiError } from "@/integrations/api/client";
 import { register, sendVerificationCode } from "@/integrations/api/authApi";
-import { Institution, institutionApi } from "@/integrations/api/institutionApi";
-import { Phone, Lock, User as UserIcon, Mail, Send, Building, CreditCard, Check, ChevronsUpDown, Shield, BadgeCheck, KeyRound } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Phone, Lock, Send, CreditCard, Shield, BadgeCheck } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useDebounce } from "@/hooks/useDebounce";
 import {FormValidator, Input, ValidatedSelect} from "@/components/ui/FormValidator";
 import {ID_TYPES} from "@/lib/enums.ts";
+import { AdminInstitutionSelector } from "@/components/admin/institution/AdminInstitutionSelector";
 
 interface SignupTabProps {
   phone: string;
@@ -31,18 +27,11 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
   const [email, setEmail] = useState("");
   const [idType, setIdType] = useState("");
   const [idNumber, setIdNumber] = useState("");
-  const [institutionId, setInstitutionId] = useState("");
+  const [institutionId, setInstitutionId] = useState<string[] | null>(null);
   const [countdown, setCountdown] = useState(0);
-  const [open, setOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
-  const [searchResults, setSearchResults] = useState<Institution[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const passwordRef = useRef<any>(null);
   const confirmPasswordRef = useRef<any>(null);
   const { toast } = useToast();
-
-  // 添加防抖处理，延迟550ms
-  const debouncedSearchValue = useDebounce(searchValue, 550);
 
   // 密码验证函数 - 更详细的错误提示
   const validatePassword = (value: string): boolean | string => {
@@ -164,31 +153,6 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
     }
   }, [countdown]);
 
-  // 机构搜索
-  useEffect(() => {
-    if (debouncedSearchValue.trim() === "") {
-      setSearchResults([]);
-      return;
-    }
-
-    const searchInstitutions = async () => {
-      setIsSearching(true);
-      try {
-        const response = await institutionApi.searchInstitutions(debouncedSearchValue);
-        if (response.success) {
-          setSearchResults(response.data.content || []);
-        }
-      } catch (error) {
-        console.error("搜索机构失败:", error);
-        setSearchResults([]);
-      } finally {
-        setIsSearching(false);
-      }
-    };
-
-    searchInstitutions();
-  }, [debouncedSearchValue]);
-
   const handleSendVerificationCode = async () => {
     // 先验证手机号格式
     const phoneValidation = validatePhone(phone);
@@ -239,18 +203,6 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
   };
 
   const handleSubmit = async (formData: Record<string, any>) => {
-    console.log('表单提交数据:', formData);
-
-    // 手动验证机构选择（因为不是标准 Input 组件）
-    if (!institutionId) {
-      toast({
-        title: "提交失败",
-        description: "请选择所属机构",
-        variant: "destructive",
-      });
-      return;
-    }
-
     // 手动验证证件类型选择
     if (!idType) {
       toast({
@@ -271,7 +223,7 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
         password: password,
         idType: idType,
         idNumber: idNumber.trim(),
-        institutionId: institutionId
+        institutionId: institutionId?.[0] || null
       });
 
       if (response.data.success) {
@@ -299,13 +251,6 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
     }
   };
 
-  // 获取选中机构的名称
-  const selectedInstitution = useMemo(() => {
-    if (!institutionId) return "";
-    const institution = searchResults.find(inst => inst.id === institutionId);
-    return institution ? institution.fullName : "";
-  }, [institutionId, searchResults]);
-
   return (
       <FormValidator
           onSubmit={handleSubmit}
@@ -318,70 +263,19 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
             所属机构 <span className="text-red-500">*</span>
           </Label>
           <div className="relative">
-            <Building className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10" />
-            <Popover open={open} onOpenChange={setOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={open}
-                    className="w-full justify-between pl-10 h-11 border-gray-300 hover:border-blue-500 transition-colors"
-                >
-                  <span className={cn("truncate", !selectedInstitution && "text-muted-foreground")}>
-                    {selectedInstitution || "请选择所属机构"}
-                  </span>
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                <Command shouldFilter={false}>
-                  <CommandInput
-                      placeholder="搜索机构..."
-                      value={searchValue}
-                      onValueChange={setSearchValue}
-                  />
-                  <CommandList>
-                    <CommandEmpty>
-                      {isSearching ? "搜索中..." : "未找到相关机构"}
-                    </CommandEmpty>
-                    <CommandGroup>
-                      {(searchValue ? searchResults : []).map((institution) => (
-                          <CommandItem
-                              key={institution.id}
-                              value={institution.id}
-                              onSelect={(currentValue) => {
-                                setInstitutionId(currentValue === institutionId ? "" : currentValue);
-                                setOpen(false);
-                              }}
-                              className="flex items-center space-x-2"
-                          >
-                            <Check
-                                className={cn(
-                                    "h-4 w-4",
-                                    institutionId === institution.id ? "opacity-100" : "opacity-0"
-                                )}
-                            />
-                            <div className="flex flex-col">
-                              <span className="font-medium">{institution.fullName}</span>
-                              {institution.shortName && (
-                                  <span className="text-xs text-muted-foreground">{institution.shortName}</span>
-                              )}
-                            </div>
-                          </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-            <input
+            <AdminInstitutionSelector
+              value={institutionId}
+              onChange={(value) => setInstitutionId(value)}
+              placeholder="请选择所属机构"
+              disableUnverified={true}
+              allowMultiple={false}
+            />
+            <Input
                 type="hidden"
                 name="institutionId"
-                value={institutionId}
-                onChange={(e) => setInstitutionId(e.target.value)}
+                value={institutionId?.[0] || ""}
                 required
-                data-validation-type="custom"
-                data-custom-validation="validateInstitution"
+                errorMessage="请选择所属机构"
             />
           </div>
         </div>
@@ -423,6 +317,7 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
                   placeholder="请选择证件类型"
                   value={idType}
                   onValueChange={setIdType}
+                  errorMessage="请选择证件类型"
                   required>
                 <SelectContent>
                   {Object.entries(ID_TYPES).map(([value, label]) => (

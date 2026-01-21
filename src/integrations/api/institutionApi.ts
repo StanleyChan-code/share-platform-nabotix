@@ -38,7 +38,7 @@ export const institutionApi = {
 
   // 验证通过机构（适用于平台管理员）
   async verifyInstitution(id: string, verified: boolean) {
-    const response = await api.post<ApiResponse<Institution>>(`/manage/institutions/${id}/verify`, null, {
+    const response = await api.post<Institution>(`/manage/institutions/${id}/verify`, null, {
       params: { verified }
     });
     return response.data;
@@ -51,8 +51,10 @@ export const institutionApi = {
   },
 
   // 根据名称搜索机构（公共接口）
-  async searchInstitutions(name: string) {
-    const response = await api.get<Page<Institution>>(`/institutions/search?name=${encodeURIComponent(name)}`);
+  async searchInstitutions(name: string, page: number = 0, size: number = 5) {
+    const response = await api.get<Page<Institution>>('/institutions/search', {
+      params: { name, page, size }
+    });
     return response.data;
   },
 
@@ -60,14 +62,6 @@ export const institutionApi = {
   async getAllInstitutionsForAdmin(page: number = 0, size: number = 10) {
     const response = await api.get<Page<Institution>>('/manage/institutions', {
       params: { page, size }
-    });
-    return response.data;
-  },
-
-  // 搜索机构（管理接口，平台管理员专用）
-  async searchInstitutionsForAdmin(name: string, page: number = 0, size: number = 10) {
-    const response = await api.get<Page<Institution>>('/manage/institutions/search', {
-      params: { name, page, size }
     });
     return response.data;
   },
@@ -86,7 +80,7 @@ export const institutionApi = {
 
   // 删除机构（平台管理员专用）
   async deleteInstitution(id: string) {
-    const response = await api.delete<ApiResponse<void>>(`/manage/institutions/${id}`);
+    const response = await api.delete<void>(`/manage/institutions/${id}`);
     return response.data;
   },
 

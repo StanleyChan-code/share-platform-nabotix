@@ -36,7 +36,7 @@ const ApplicationReviewTab: React.FC = () => {
 
     // 添加筛选相关状态
     const [searchTerm, setSearchTerm] = useState("");
-    const [institutionId, setInstitutionId] = useState<string | null>(null);
+    const [institutionId, setInstitutionId] = useState<string[] | null>(null);
 
     // 添加防抖处理，延迟550ms
     const debouncedSearchTerm = useDebounce(searchTerm, 550);
@@ -66,7 +66,7 @@ const ApplicationReviewTab: React.FC = () => {
                 size,
                 'submittedAt',
                 'desc',
-                institutionId || undefined,
+                institutionId && institutionId.length > 0 ? institutionId[0] : undefined,
                 debouncedSearchTerm || undefined,
                 selectedStatus === 'all' ? undefined : selectedStatus
             );
@@ -240,6 +240,7 @@ const ApplicationReviewTab: React.FC = () => {
                             value={institutionId}
                             onChange={setInstitutionId}
                             placeholder="选择要管理的机构（可选）"
+                            allowMultiple={false}
                         />
                     </div>
                 )}

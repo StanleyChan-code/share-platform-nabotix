@@ -35,7 +35,7 @@ import {refreshOutputPendingCount} from "@/lib/pendingCountsController";
 import {Card, CardContent} from "@/components/ui/card";
 
 const ResearchOutputsManagementTab = () => {
-  const [selectedInstitution, setSelectedInstitution] = useState<string | null>(null);
+  const [selectedInstitution, setSelectedInstitution] = useState<string[] | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedOutput, setSelectedOutput] = useState<ResearchOutput | null>(null);
   const [outputs, setOutputs] = useState<ResearchOutput[]>([]);
@@ -87,14 +87,14 @@ const ResearchOutputsManagementTab = () => {
 
       // 如果不是平台管理员，设置默认机构为用户所属机构
       if (!isPlatformAdminUser && userInfo.user.institutionId) {
-        setSelectedInstitution(userInfo.user.institutionId);
+        setSelectedInstitution([userInfo.user.institutionId]);
       }
     }
   }, [toast, navigate]);
 
   // 获取研究成果数据的方法
   const fetchResearchOutputs = useCallback(async (page: number) => {
-    if (!selectedInstitution && !isPlatformAdmin) {
+    if ((!selectedInstitution || selectedInstitution.length === 0) && !isPlatformAdmin) {
       // 如果没有选择机构且不是平台管理员，则不加载数据
       setOutputs([]);
       setTotalPages(0);
@@ -115,11 +115,11 @@ const ResearchOutputsManagementTab = () => {
       };
 
       // 只有平台管理员可以选择机构
-      if (isPlatformAdmin && selectedInstitution) {
-        params.institutionId = selectedInstitution;
-      } else if (!isPlatformAdmin && selectedInstitution) {
+      if (isPlatformAdmin && selectedInstitution && selectedInstitution.length > 0) {
+        params.institutionId = selectedInstitution[0];
+      } else if (!isPlatformAdmin && selectedInstitution && selectedInstitution.length > 0) {
         // 非平台管理员默认使用自己的机构
-        params.institutionId = selectedInstitution;
+        params.institutionId = selectedInstitution[0];
       }
 
       const response = await api.get('/manage/research-outputs', {
@@ -288,6 +288,7 @@ const ResearchOutputsManagementTab = () => {
                         value={selectedInstitution}
                         onChange={setSelectedInstitution}
                         placeholder="选择要管理的机构（可选）"
+                        allowMultiple={false}
                     />
                   </div>
                 </div>

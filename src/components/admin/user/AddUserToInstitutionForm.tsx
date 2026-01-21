@@ -33,7 +33,7 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
-  const [selectedInstitutionId, setSelectedInstitutionId] = useState<string | null>(propInstitutionId || null);
+  const [selectedInstitutionId, setSelectedInstitutionId] = useState<string[] | null>(propInstitutionId ? [propInstitutionId] : null);
   const { toast } = useToast();
 
   // 检查用户是否为平台管理员
@@ -42,7 +42,7 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
     if (userInfo) {
       setIsPlatformAdmin(userInfo.roles.includes('PLATFORM_ADMIN'));
       if (!userInfo.roles.includes('PLATFORM_ADMIN') && propInstitutionId) {
-        setSelectedInstitutionId(propInstitutionId);
+        setSelectedInstitutionId([propInstitutionId]);
       }
     }
 
@@ -172,19 +172,8 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
         return;
       }
 
-      // 4. 验证邮箱格式（如果提供了邮箱）
-      if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-        toast({
-          title: "错误",
-          description: "邮箱格式不正确",
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
-
       // 5. 检查机构ID
-      const effectiveInstitutionId = isPlatformAdmin ? selectedInstitutionId : propInstitutionId;
+      const effectiveInstitutionId = isPlatformAdmin ? selectedInstitutionId?.[0] : propInstitutionId;
       if (!effectiveInstitutionId) {
         toast({
           title: "错误",
@@ -428,6 +417,7 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
                           value={selectedInstitutionId}
                           onChange={setSelectedInstitutionId}
                           placeholder="请选择机构"
+                          allowMultiple={false}
                       />
                     </div>
                   </div>

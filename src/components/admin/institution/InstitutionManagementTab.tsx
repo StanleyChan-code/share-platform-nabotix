@@ -58,7 +58,7 @@ const InstitutionManagementTab = () => {
 
                 // 否则获取所有机构列表（支持搜索和分页）
                 if (searchName) {
-                    response = await institutionApi.searchInstitutionsForAdmin(searchName, page, pageSize);
+                    response = await institutionApi.searchInstitutions(searchName, page, pageSize);
                 } else {
                     response = await institutionApi.getAllInstitutionsForAdmin(page, pageSize);
                 }

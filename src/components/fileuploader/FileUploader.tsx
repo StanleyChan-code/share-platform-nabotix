@@ -2,6 +2,7 @@ import React, {forwardRef, useEffect, useImperativeHandle, useRef, useState} fro
 import {Button} from "@/components/ui/button";
 import {Progress} from "@/components/ui/progress";
 import {Alert, AlertDescription} from "@/components/ui/alert";
+import {AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger} from "@/components/ui/alert-dialog";
 import {fileApi} from "@/integrations/api/fileApi";
 import {Clock, Download, Info, Pause, Play, RotateCcw, X} from 'lucide-react';
 import {toast} from "@/hooks/use-toast";
@@ -1101,16 +1102,31 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
                         <p>文件大小: {formatFileSize(file.size)}</p>
                     </div>
                     {uploadStatus === 'success' && !isUploading && !isPaused && (
-                        <Button
-                            type="button"
-                            onClick={handleClearFile}
-                            variant="outline"
-                            size="icon"
-                            title="清除文件"
-                            className={"text-red-500 hover:bg-red-100 hover:text-red-700"}
-                        >
-                            <X className="h-4 w-4"/>
-                        </Button>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    title="清除文件"
+                                    className={"text-red-500 hover:bg-red-100 hover:text-red-700"}
+                                >
+                                    <X className="h-4 w-4"/>
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>确认清除文件</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        确定要清除已上传的文件吗？此操作无法撤销。
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>取消</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleClearFile}>确认清除</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                     )}
                 </div>
             )}
