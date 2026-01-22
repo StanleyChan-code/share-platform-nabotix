@@ -22,7 +22,7 @@ export function ResearchDirectionChart() {
           const subjectsWithPopularity = await Promise.all(
             response.data.data.map(async (subject) => {
               try {
-                const searchCount = subject.searchCount || 0
+                const searchCount = subject.weeklyPopularity || 0
                 return {
                   ...subject,
                   searchCount
@@ -31,7 +31,7 @@ export function ResearchDirectionChart() {
                 console.error(`获取研究学科 ${subject.name} 的热度失败:`, error);
                 return {
                   ...subject,
-                  searchCount: 0
+                  weeklyPopularity: 0
                 };
               }
             })
@@ -43,17 +43,6 @@ export function ResearchDirectionChart() {
         }
       } catch (error) {
         console.error("获取研究学科热度数据失败:", error);
-        setError("获取数据失败，显示模拟数据");
-        
-        // 出错时使用模拟数据
-        setData([
-          { id: "1", name: "心血管疾病", description: "", active: true, createdAt: "", updatedAt: "", searchCount: 245, nameEn: "" },
-          { id: "2", name: "肿瘤学", description: "", active: true, createdAt: "", updatedAt: "", searchCount: 198, nameEn: "" },
-          { id: "3", name: "神经科学", description: "", active: true, createdAt: "", updatedAt: "", searchCount: 167, nameEn: "" },
-          { id: "4", name: "内分泌学", description: "", active: true, createdAt: "", updatedAt: "", searchCount: 134, nameEn: "" },
-          { id: "5", name: "免疫学", description: "", active: true, createdAt: "", updatedAt: "", searchCount: 123, nameEn: "" },
-          { id: "6", name: "感染性疾病", description: "", active: true, createdAt: "", updatedAt: "", searchCount: 98, nameEn: "" },
-        ]);
       } finally {
         setLoading(false);
       }
@@ -99,7 +88,7 @@ export function ResearchDirectionChart() {
                 labelFormatter={(label) => `研究学科: ${label}`}
               />
               <Bar 
-                dataKey="searchCount" 
+                dataKey="weeklyPopularity" 
                 fill="hsl(var(--primary))" 
                 radius={[4, 4, 0, 0]}
                 name="访问热度"

@@ -86,10 +86,10 @@ export const DatasetCard = ({ dataset, showRecommendationBadge = false }: Datase
               <span className="font-medium">采集时间:</span>
               <span>{formatDate(dataset.startDate)} - {formatDate(dataset.endDate)}</span>
             </div>
-            {dataset.searchCount !== undefined && (
+            {dataset.weeklyPopularity !== undefined && (
                 <div className="flex items-center gap-1 text-gray-500">
                   <Eye className="h-3.5 w-3.5 text-purple-500" />
-                  <span>近期访问: {dataset.searchCount}</span>
+                  <span>访问热度 {dataset.weeklyPopularity}</span>
                 </div>
             )}
           </div>

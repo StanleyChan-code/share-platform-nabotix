@@ -13,7 +13,7 @@ import {
   Mail,
   MapPin,
   Share,
-  Layers2, SwatchBook, Phone
+  Layers2, SwatchBook, Phone, Eye
 } from "lucide-react";
 import { formatDate } from "@/lib/utils.ts";
 import { Button } from "@/components/ui/button.tsx";
@@ -179,7 +179,7 @@ export function OverviewTab({
           <StatCard
               icon={TrendingUp}
               label="访问热度"
-              value={dataset.searchCount?.toLocaleString() || '0'}
+              value={dataset.weeklyPopularity?.toLocaleString() || '0'}
           />
         </div>
 
@@ -233,31 +233,17 @@ export function OverviewTab({
 
           <CardContent className="space-y-6">
             {/* 标题和学科分类 */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 bg-muted/20 rounded-lg">
-              <div className="lg:col-span-2">
-                <h3 className="font-semibold text-lg mb-2">{dataset.titleCn}</h3>
-                {isEditing ? (
-                    <textarea
-                        value={editableFields.description}
-                        onChange={(e) => setEditableFields(prev => ({...prev, description: e.target.value}))}
-                        className="w-full min-h-[100px] p-3 border rounded-md text-sm bg-white"
-                        placeholder="请输入数据集描述..."
-                        maxLength={2000}
-                    />
-                ) : (
-                    <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
-                      {dataset.description || "暂无描述"}
-                    </div>
-                )}
-              </div>
-
-              <div className="space-y-3">
-
+            <div className="p-4 bg-muted/20 rounded-lg">
+              <h3 className="font-semibold text-lg mb-3">{dataset.titleCn}</h3>
+              
+              {/* 学科分类、抽样方法、基线数据集水平排列 */}
+              <div className="flex flex-wrap gap-6 mb-4">
                 {dataset.subjectArea && (
                     <InfoItem
                         icon={Layers2}
                         label="学科分类"
                         value={dataset.subjectArea.name}
+                        className="flex-shrink-0"
                     />
                 )}
 
@@ -266,13 +252,14 @@ export function OverviewTab({
                         icon={SwatchBook}
                         label="抽样方法"
                         value={dataset.samplingMethod}
+                        className="flex-shrink-0"
                     />
                 )}
 
                 {parentDataset && (
-                    <div className="flex items-start gap-2">
+                    <div className="flex items-start gap-2 flex-shrink-0">
                       <Link className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-xs text-muted-foreground mb-1">基线数据集</p>
                         <Button
                             variant="link"
@@ -282,6 +269,23 @@ export function OverviewTab({
                           {parentDataset.titleCn}
                         </Button>
                       </div>
+                    </div>
+                )}
+              </div>
+              
+              {/* 描述文本单独一行 */}
+              <div>
+                {isEditing ? (
+                    <textarea
+                        value={editableFields.description}
+                        onChange={(e) => setEditableFields(prev => ({...prev, description: e.target.value}))}
+                        className="w-full min-h-[100px] p-3 border rounded-md text-sm bg-white"
+                        placeholder="请输入数据集描述..."
+                        maxLength={2000}
+                    />
+                ) : (
+                    <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line break-words">
+                      {dataset.description || "暂无描述"}
                     </div>
                 )}
               </div>
@@ -505,27 +509,21 @@ export function OverviewTab({
 
             {/* 版本信息 */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/20 rounded-lg">
-              {dataset.versionNumber && (
-                  <InfoItem
-                      icon={Database}
-                      label="版本号"
-                      value={dataset.versionNumber}
-                  />
-              )}
-              {dataset.firstPublishedDate && (
-                  <InfoItem
-                      icon={Calendar}
-                      label="首次发布日期"
-                      value={formatDate(dataset.firstPublishedDate)}
-                  />
-              )}
-              {dataset.currentVersionDate && (
-                  <InfoItem
-                      icon={Calendar}
-                      label="当前版本日期"
-                      value={formatDate(dataset.currentVersionDate)}
-                  />
-              )}
+              <InfoItem
+                  icon={Calendar}
+                  label="首次发布日期"
+                  value={dataset.firstPublishedDate  ? formatDate(dataset.firstPublishedDate) : '未发布'}
+              />
+              <InfoItem
+                  icon={Calendar}
+                  label="当前版本日期"
+                  value={dataset.currentVersionDate ? formatDate(dataset.currentVersionDate) : '未发布'}
+              />
+              <InfoItem
+                  icon={Eye}
+                  label="历史访问量"
+                  value={dataset.historyVisits.toString()}
+              />
             </div>
           </CardContent>
         </Card>

@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Database, Calendar, Building, User, Target, BarChart3, Eye, Star, Clock } from "lucide-react";
+import {Users, Database, Calendar, Building, User, Target, BarChart3, Eye, Star, Clock, Hash} from "lucide-react";
 import { DatasetTypes } from "@/lib/enums";
 import { formatDate } from "@/lib/utils";
 import {getLatestApprovedVersion} from "@/lib/datasetUtils.ts";
@@ -29,9 +29,9 @@ export const DatasetGrid = ({ datasets, onDatasetClick }: DatasetGridProps) => {
               >
                 <CardHeader>
                   {/* 标题和类型标签 */}
-                  <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="flex items-start justify-between gap-2 h-11">
                       <CardTitle
-                          className="font-semibold text-gray-900 mb-1 cursor-pointer hover:text-blue-600 transition-colors text-lg leading-tight line-clamp-2 flex-1"
+                          className="font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors text-lg leading-tight line-clamp-2 flex-1"
                           title={dataset.titleCn}
                           onClick={() => onDatasetClick(dataset)}
                       >
@@ -81,10 +81,10 @@ export const DatasetGrid = ({ datasets, onDatasetClick }: DatasetGridProps) => {
                   </div>
 
                   {/* 核心数据指标 */}
-                  <div className="grid grid-cols-2 gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div className={`grid ${dataset.followUpDatasets && dataset.followUpDatasets.length > 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-3 p-3 bg-gray-50 rounded-lg`}>
                     <div className="text-center">
                       <div className="flex items-center justify-center gap-1 mb-1">
-                        <Users className="h-4 w-4 text-blue-600" />
+                        <Hash className="h-4 w-4 text-blue-600" />
                         <span className="font-semibold text-gray-800">{recordCount?.toLocaleString() || '-'}</span>
                       </div>
                       <span className="text-xs text-gray-600">样本记录</span>
@@ -96,6 +96,15 @@ export const DatasetGrid = ({ datasets, onDatasetClick }: DatasetGridProps) => {
                       </div>
                       <span className="text-xs text-gray-600">研究变量</span>
                     </div>
+                    {dataset.followUpDatasets && dataset.followUpDatasets.length > 0 && (
+                      <div className="text-center">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                          <Calendar className="h-4 w-4 text-purple-600" />
+                          <span className="font-semibold text-gray-800">{dataset.followUpDatasets.length}</span>
+                        </div>
+                        <span className="text-xs text-gray-600">随访数据集</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* 详细信息 */}
@@ -127,7 +136,7 @@ export const DatasetGrid = ({ datasets, onDatasetClick }: DatasetGridProps) => {
                       <div className="flex items-center gap-2">
                         <span>提供者: {dataset.provider?.realName || '未知'}</span>
                         <span>•</span>
-                        <span>近期访问: {dataset.searchCount || 0}</span>
+                        <span>访问热度 {dataset.weeklyPopularity || 0}</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
@@ -135,7 +144,7 @@ export const DatasetGrid = ({ datasets, onDatasetClick }: DatasetGridProps) => {
                       </div>
                     </div>
 
-                    <Button size="sm" variant="outline" className="gap-2"
+                    <Button size="sm" variant="outline" className="gap-2 ml-1"
                             onClick={() => onDatasetClick(dataset)}>
                       <BarChart3 className="h-4 w-4" />
                       查看详情

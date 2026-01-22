@@ -23,6 +23,7 @@ const Datasets = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedType, setSelectedType] = useState("all");
     const [selectedCategory, setSelectedCategory] = useState("all");
+    const [selectedInstitution, setSelectedInstitution] = useState<string[] | null>(null);
     const [dateFrom, setDateFrom] = useState<Date | undefined>();
     const [dateTo, setDateTo] = useState<Date | undefined>();
     const [selectedDataset, setSelectedDataset] = useState(null);
@@ -125,13 +126,14 @@ const Datasets = () => {
             searchTerm: debouncedSearchTerm || undefined,
             type: typeEnumValue,
             subjectAreaId: subject?.id,
+            institutionId: selectedInstitution?.[0],
             dateFrom: dateFrom,
             dateTo: dateTo,
             loadTimeline: true
         });
 
         return response.data;
-    }, [debouncedSearchTerm, selectedType, selectedCategory, dateFrom, dateTo, researchSubjects]);
+    }, [debouncedSearchTerm, selectedType, selectedCategory, selectedInstitution, dateFrom, dateTo, researchSubjects]);
 
     const handleDatasetClick = (dataset: any) => {
         setSelectedDataset(dataset);
@@ -143,6 +145,7 @@ const Datasets = () => {
         setSearchTerm("");
         setSelectedType("all");
         setSelectedCategory("all");
+        setSelectedInstitution(null);
         setDateFrom(undefined);
         setDateTo(undefined);
         setFiltersChanged(!filtersChanged);
@@ -248,19 +251,21 @@ const Datasets = () => {
                     {/* Filters */}
                     <CardContent className="p-6">
                         <DatasetFilters
-                            searchTerm={searchTerm}
-                            onSearchTermChange={setSearchTerm}
-                            selectedType={selectedType}
-                            onSelectedTypeChange={setSelectedType}
-                            selectedCategory={selectedCategory}
-                            onSelectedCategoryChange={setSelectedCategory}
-                            dateFrom={dateFrom}
-                            onDateFromChange={setDateFrom}
-                            dateTo={dateTo}
-                            onDateToChange={setDateTo}
-                            researchSubjects={researchSubjects}
-                            onResetFilters={resetFilters}
-                        />
+                                searchTerm={searchTerm}
+                                onSearchTermChange={setSearchTerm}
+                                selectedType={selectedType}
+                                onSelectedTypeChange={setSelectedType}
+                                selectedCategory={selectedCategory}
+                                onSelectedCategoryChange={setSelectedCategory}
+                                selectedInstitution={selectedInstitution}
+                                onSelectedInstitutionChange={setSelectedInstitution}
+                                dateFrom={dateFrom}
+                                onDateFromChange={setDateFrom}
+                                dateTo={dateTo}
+                                onDateToChange={setDateTo}
+                                researchSubjects={researchSubjects}
+                                onResetFilters={resetFilters}
+                            />
                     </CardContent>
 
                     {/* View Controls and Results Summary */}
@@ -305,7 +310,7 @@ const Datasets = () => {
                                 <PaginatedList
                                     fetchData={fetchDatasets}
                                     renderItem={viewMode === 'grid' ? renderGridItem : renderTreeItem}
-                                    pageSize={viewMode === 'grid' ? 12 : 10}
+                                    pageSize={viewMode === 'grid' ? 9 : 5}
                                     gridLayout={viewMode === 'grid'}
                                     gap={viewMode === 'grid' ? 6 : 4}
                                     renderEmptyState={renderEmptyState}

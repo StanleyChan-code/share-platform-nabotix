@@ -28,7 +28,8 @@ export interface Dataset {
     currentVersionDate: string; // ISO格式日期时间
     createdAt: string;
     updatedAt: string; // ISO格式日期时间
-    searchCount: number;
+    weeklyPopularity: number; // 7天内访问量（热度）
+    historyVisits: number; // 历史总访问数
 
     // 关联信息
     subjectArea: {
@@ -89,7 +90,8 @@ export interface ResearchSubject {
     active: boolean;
     createdAt: string;
     updatedAt: string;
-    searchCount: number;
+    weeklyPopularity: number; // 7天内访问量（热度）
+    historyVisits: number; // 历史总访问数
 }
 
 // 分页查询参数

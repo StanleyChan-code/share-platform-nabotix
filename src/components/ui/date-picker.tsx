@@ -190,7 +190,7 @@ export const CustomDatePicker = React.forwardRef<HTMLButtonElement, DatePickerPr
           <Button
             variant="ghost"
             size="sm"
-            className="absolute -top-2 -right-2 h-5 w-5 p-0 rounded-full"
+            className="absolute -top-2 -right-2 h-5 w-5 p-0 rounded-full  bg-gray-50 border border-gray-300 hover:bg-gray-200"
             onClick={() => onChange(null)}
             type="button"
           >

@@ -5,6 +5,7 @@ import { ResearchSubject } from "@/integrations/api/datasetApi.ts";
 import { DatasetTypes } from "@/lib/enums.ts";
 import { Input } from "@/components/ui/FormValidator.tsx";
 import { CustomDatePicker } from "@/components/ui/date-picker";
+import { AdminInstitutionSelector } from "@/components/admin/institution/AdminInstitutionSelector";
 
 interface DatasetFiltersProps {
     searchTerm: string;
@@ -13,6 +14,8 @@ interface DatasetFiltersProps {
     onSelectedTypeChange: (value: string) => void;
     selectedCategory: string;
     onSelectedCategoryChange: (value: string) => void;
+    selectedInstitution: string[] | null;
+    onSelectedInstitutionChange: (value: string[] | null) => void;
     dateFrom: Date | undefined;
     onDateFromChange: (value: Date | undefined) => void;
     dateTo: Date | undefined;
@@ -28,6 +31,8 @@ export function DatasetFilters({
                                    onSelectedTypeChange,
                                    selectedCategory,
                                    onSelectedCategoryChange,
+                                   selectedInstitution,
+                                   onSelectedInstitutionChange,
                                    dateFrom,
                                    onDateFromChange,
                                    dateTo,
@@ -37,37 +42,47 @@ export function DatasetFilters({
                                }: DatasetFiltersProps) {
 
     return (
-        <div className="flex flex-col lg:flex-row gap-4">
+        <div className="flex flex-col lg:flex-row gap-2">
             {/* 搜索框 - 占据主要宽度 */}
-            <div className="relative flex-1 min-w-0">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4"/>
+            <div className="relative flex-1 min-w-[150px]">
                 <Input
                     placeholder="搜索数据集标题或关键词..."
                     value={searchTerm}
                     onChange={(e) => onSearchTermChange(e.target.value)}
-                    className="pl-10"
+                    className="pl-8 pr-8"
                 />
+                <Search className="absolute left-2 top-5 transform -translate-y-1/2 text-muted-foreground h-4 w-4"/>
                 {searchTerm && (
                     <Button
                         variant="ghost"
                         size="sm"
-                        className="absolute right-0 top-1/2 transform -translate-y-1/2 h-full px-3 rounded-l-none"
+                        className="absolute right-1 top-2.5 h-5 w-5 p-1 rounded-full"
                         onClick={() => {
                             onSearchTermChange("");
                         }}
                     >
-                        <X className="h-4 w-4"/>
+                        <X className="h-3 w-3"/>
                     </Button>
                 )}
+            </div>
+
+            <div className="relative min-w-[150px]">
+                <AdminInstitutionSelector
+                    value={selectedInstitution}
+                    onChange={onSelectedInstitutionChange}
+                    placeholder="全部机构"
+                    allowMultiple={false}
+                />
             </div>
 
             {/* 筛选器区域 - 优化布局 */}
             <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
                 {/* 第一行：类型和学科选择器 */}
+
                 <div className="flex gap-2 flex-wrap">
                     <div className="relative">
                         <Select value={selectedType} onValueChange={onSelectedTypeChange}>
-                            <SelectTrigger className="w-[140px]">
+                            <SelectTrigger className="w-[150px]">
                                 <SelectValue placeholder="研究类型"/>
                             </SelectTrigger>
                             <SelectContent>
@@ -81,7 +96,7 @@ export function DatasetFilters({
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="absolute -top-2 -right-2 h-5 w-5 p-0 rounded-full"
+                                className="absolute -top-2 -right-2 h-5 w-5 p-0 rounded-full bg-gray-50 border border-gray-300 hover:bg-gray-200"
                                 onClick={() => onSelectedTypeChange("all")}
                             >
                                 <X className="h-3 w-3"/>
@@ -91,7 +106,7 @@ export function DatasetFilters({
 
                     <div className="relative">
                         <Select value={selectedCategory} onValueChange={onSelectedCategoryChange}>
-                            <SelectTrigger className="w-[140px]">
+                            <SelectTrigger className="w-[150px]">
                                 <SelectValue placeholder="学科领域"/>
                             </SelectTrigger>
                             <SelectContent>
@@ -107,7 +122,7 @@ export function DatasetFilters({
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="absolute -top-2 -right-2 h-5 w-5 p-0 rounded-full"
+                                className="absolute -top-2 -right-2 h-5 w-5 p-0 rounded-full bg-gray-50 border border-gray-300 hover:bg-gray-200"
                                 onClick={() => onSelectedCategoryChange("all")}
                             >
                                 <X className="h-3 w-3"/>
@@ -119,7 +134,7 @@ export function DatasetFilters({
                 {/* 第二行：日期选择器和重置按钮 */}
                 <div className="flex gap-2 flex-wrap items-center">
                     {/* 开始日期选择器 */}
-                    <div className="relative min-w-[150px]">
+                    <div className="relative w-[150px]">
                         <CustomDatePicker
                             selected={dateFrom}
                             onChange={(date) => onDateFromChange(date || undefined)}
@@ -131,7 +146,7 @@ export function DatasetFilters({
                     </div>
 
                     {/* 结束日期选择器 */}
-                    <div className="relative min-w-[150px]">
+                    <div className="relative w-[150px]">
                         <CustomDatePicker
                             selected={dateTo}
                             onChange={(date) => onDateToChange(date || undefined)}

@@ -130,22 +130,23 @@ export function AdminInstitutionSelector({
             disabled={disabled}
           >
             <div className="flex items-center gap-2">
-                <Building className="h-4 w-4" />
+                <Building className="h-4 w-4 text-gray-500" />
                 {value && value.length > 0 
                   ? (allowMultiple ? `${value.length} 个机构已选择` : selectedInstitutions[0]?.fullName)
                   : placeholder}
               </div>
             <div className="flex items-center gap-2">
               {value && value.length > 0 && !disabled && (
-                <X 
-                  className="h-4 w-4 opacity-50 hover:opacity-100" 
+                <X
+                  className="h-4 w-4 opacity-50 hover:opacity-100 cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation();
                     clearSelection();
                   }}
+                  style={{ pointerEvents: 'all' }}
                 />
               )}
-              <ChevronsUpDown className="h-4 w-4 opacity-50" />
+              <ChevronsUpDown className="h-4 w-4 opacity-50 cursor-pointer hover:opacity-100" style={{ pointerEvents: 'all' }} />
             </div>
           </Button>
         </PopoverTrigger>
@@ -153,7 +154,7 @@ export function AdminInstitutionSelector({
           <Command shouldFilter={false}>
             <div className="relative">
               <CommandInput
-                placeholder="搜索机构..."
+                placeholder="搜索机构全称..."
                 value={searchTerm}
                 onValueChange={setSearchTerm}
                 className="pl-2"
@@ -161,7 +162,7 @@ export function AdminInstitutionSelector({
             </div>
             <CommandList>
               <CommandEmpty>
-                {searchLoading ? "搜索中..." : "未找到相关机构"}
+                {searchLoading ? "搜索中..." : searchTerm === "" ? "请输入关键词（最多显示5个）" : "未找到相关机构"}
               </CommandEmpty>
               <CommandGroup>
                 {searchResults.map((institution) => (

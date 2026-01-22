@@ -244,7 +244,7 @@ export function DatasetTreeView({datasets, onDatasetClick}: DatasetTreeViewProps
                                 </div>
 
                                 {/* 数据规模统计 */}
-                                <div className="grid grid-cols-2 md:grid-cols-2 gap-3 p-3 bg-white rounded-lg border">
+                                <div className={`grid ${dataset.followUpDatasets && dataset.followUpDatasets.length > 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-3 p-3 bg-white rounded-lg border`}>
                                     <div className="text-center">
                                         <div className="flex items-center justify-center gap-1 mb-1">
                                             <Hash className="h-4 w-4 text-blue-600"/>
@@ -259,6 +259,15 @@ export function DatasetTreeView({datasets, onDatasetClick}: DatasetTreeViewProps
                                         </div>
                                         <span className="text-xs text-gray-600">研究变量</span>
                                     </div>
+                                    {dataset.followUpDatasets && dataset.followUpDatasets.length > 0 && (
+                                        <div className="text-center">
+                                            <div className="flex items-center justify-center gap-1 mb-1">
+                                                <Calendar className="h-4 w-4 text-purple-600" />
+                                                <span className="font-semibold text-gray-800">{dataset.followUpDatasets.length}</span>
+                                            </div>
+                                            <span className="text-xs text-gray-600">随访数据集</span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* 描述 */}
@@ -340,10 +349,10 @@ export function DatasetTreeView({datasets, onDatasetClick}: DatasetTreeViewProps
                                             <Clock className="h-3 w-3"/>
                                             <span>发布于 {formatDate(dataset.firstPublishedDate)}</span>
                                         </div>
-                                        {dataset.searchCount !== undefined && dataset.searchCount > 0 && (
+                                        {dataset.weeklyPopularity !== undefined && (
                                             <div className="flex items-center gap-1">
                                                 <Eye className="h-3 w-3"/>
-                                                <span>近期访问 {dataset.searchCount} 次</span>
+                                                <span>访问热度 {dataset.weeklyPopularity}</span>
                                             </div>
                                         )}
                                     </div>
