@@ -15,14 +15,14 @@ export function DatasetTypeChart({ data }: DatasetTypeChartProps) {
         color: getColorForType(type)
       }))
     : [
-        { name: "队列研究", value: 28, color: "hsl(var(--chart-1))" },
-        { name: "病例对照", value: 22, color: "hsl(var(--chart-2))" },
-        { name: "横断面研究", value: 18, color: "hsl(var(--chart-3))" },
-        { name: "随机对照试验", value: 15, color: "hsl(var(--chart-4))" },
-        { name: "登记研究", value: 10, color: "hsl(var(--chart-5))" },
-        { name: "生物样本库", value: 4, color: "hsl(var(--primary))" },
-        { name: "组学数据", value: 2, color: "hsl(var(--secondary))" },
-        { name: "可穿戴设备", value: 1, color: "hsl(var(--accent))" },
+        { name: "队列研究", value: 0, color: "hsl(var(--chart-1))" },
+        { name: "病例对照", value: 0, color: "hsl(var(--chart-2))" },
+        { name: "横断面研究", value: 0, color: "hsl(var(--chart-3))" },
+        { name: "随机对照试验", value: 0, color: "hsl(var(--chart-4))" },
+        { name: "登记研究", value: 0, color: "hsl(var(--chart-5))" },
+        { name: "生物样本库", value: 0, color: "hsl(var(--primary))" },
+        { name: "组学数据", value: 0, color: "hsl(var(--secondary))" },
+        { name: "可穿戴设备", value: 0, color: "hsl(var(--accent))" },
       ];
 
   // 计算总数用于百分比计算

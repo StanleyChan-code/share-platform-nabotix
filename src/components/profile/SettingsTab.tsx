@@ -42,7 +42,7 @@ const SettingsTab = ({ user }: SettingsTabProps) => {
       setPhone(user.phone);
       toast({
         title: "验证码已发送",
-        description: "验证码已发送至您的手机，请注意查收",
+        description: "验证码已发送至您的手机，5分钟内有效",
       });
     } catch (error: any) {
       console.error('Error sending verification code:', error);

@@ -11,6 +11,7 @@ import SettingsTab from "@/components/profile/SettingsTab";
 import {User, FileText, Settings, Award, Calendar, Building, Star} from "lucide-react";
 import {formatDate} from "@/lib/utils";
 import {refreshUserInfo, UserInfo, clearTokens} from "@/lib/authUtils";
+import {toast} from "@/components/ui/use-toast.ts";
 
 const Profile = () => {
     const [activeTab, setActiveTab] = useState<"profile" | "applications" | "outputs" | "datasets" | "settings">("profile");
@@ -107,8 +108,15 @@ const Profile = () => {
             // @ts-ignore
             if (error?.response?.status === 401) {
                 clearTokens(true);
+                if (mountedRef.current) navigate('/auth');
+            } else {
+                if (mountedRef.current) navigate('/');
+                toast({
+                    title: "错误",
+                    description: "获取用户信息时发生错误",
+                    variant: "destructive",
+                });
             }
-            if (mountedRef.current) navigate('/auth');
         }
     }
 
@@ -118,11 +126,14 @@ const Profile = () => {
 
     if (loading) {
         return (
-            <div
-                className="min-h-screen bg-gradient-to-br from-gray-50/30 to-blue-50/10 flex items-center justify-center">
-                <div className="text-center space-y-4">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                    <p className="text-muted-foreground">加载中...</p>
+            <div className="min-h-screen bg-gradient-to-br from-gray-50/30 to-blue-50/10">
+                <Navigation/>
+                <div
+                    className="min-h-screen bg-gradient-to-br from-gray-50/30 to-blue-50/10 flex items-center justify-center">
+                    <div className="text-center space-y-4">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                        <p className="text-muted-foreground">加载中...</p>
+                    </div>
                 </div>
             </div>
         );

@@ -13,6 +13,7 @@ import {
     Building2,
     Target,
     Award,
+    History
 } from "lucide-react";
 import UserManagementTab from "@/components/admin/user/UserManagementTab.tsx";
 import ApplicationReviewTab from "@/components/admin/ApplicationReviewTab";
@@ -20,10 +21,11 @@ import InstitutionManagementTab from "@/components/admin/institution/Institution
 import InstitutionProfileTab from "@/components/admin/institution/InstitutionProfileTab.tsx";
 import ResearchSubjectManagementTab from "@/components/admin/researchsubject/ResearchSubjectManagementTab.tsx";
 import {institutionApi} from "@/integrations/api/institutionApi";
-import {getCurrentUserInfoFromSession} from "@/lib/authUtils";
+import {getCurrentUserInfoFromSession, refreshUserInfo} from "@/lib/authUtils";
 import {getPermissionRoleDisplayName, hasPermissionRole, PermissionRoles} from "@/lib/permissionUtils";
 import DatasetsTab from "@/components/admin/dataset/DatasetsTab.tsx";
 import ResearchOutputsManagementTab from "@/components/admin/researchoutput/ResearchOutputsManagementTab.tsx";
+import AuditLogsTab from "@/components/admin/auditlog/AuditLogsTab.tsx";
 import {
     getCounts,
     pendingCountsController
@@ -127,6 +129,15 @@ const UnifiedDashboard = () => {
                 allowRoles: [PermissionRoles.PLATFORM_ADMIN],
                 color: "amber"
             },
+            {
+                value: "audit-logs",
+                label: "审计日志",
+                icon: History,
+                description: "查看系统操作审计日志",
+                content: <AuditLogsTab/>,
+                allowRoles: [PermissionRoles.PLATFORM_ADMIN],
+                color: "gray"
+            },
         ]
     };
 
@@ -147,7 +158,7 @@ const UnifiedDashboard = () => {
         const checkAuthorization = async () => {
             try {
                 setIsCheckingAuth(true);
-                const userInfo = getCurrentUserInfoFromSession();
+                const userInfo = await refreshUserInfo();
                 setCurrentUserInfo(userInfo);
 
                 if (!userInfo) {
@@ -158,12 +169,7 @@ const UnifiedDashboard = () => {
                 // 检查用户权限
                 const userRoles = userInfo.roles || [];
                 if (userRoles.length === 0) {
-                    toast({
-                        title: "访问被拒绝",
-                        description: "您没有权限访问管理面板",
-                        variant: "destructive",
-                    });
-                    if (mountedRef.current) navigate("/");
+                    if (mountedRef.current) navigate("/profile", {replace: true});
                     return;
                 }
 
@@ -174,12 +180,7 @@ const UnifiedDashboard = () => {
                 );
 
                 if (!hasAdminAccess) {
-                    toast({
-                        title: "访问被拒绝",
-                        description: "您没有管理权限",
-                        variant: "destructive",
-                    });
-                    if (mountedRef.current) navigate("/");
+                    if (mountedRef.current) navigate("/profile", {replace: true});
                     return;
                 }
 
@@ -222,7 +223,7 @@ const UnifiedDashboard = () => {
                 console.error("检查授权时出错:", error);
                 toast({
                     title: "错误",
-                    description: error.message || "检查用户权限时发生错误",
+                    description: "检查用户权限时发生错误",
                     variant: "destructive",
                 });
                 if (mountedRef.current) navigate("/");
@@ -261,11 +262,14 @@ const UnifiedDashboard = () => {
 
     if (isCheckingAuth) {
         return (
-            <div
-                className="min-h-screen bg-gradient-to-br from-gray-50/30 to-blue-50/10 flex items-center justify-center">
-                <div className="text-center space-y-4">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                    <p className="text-muted-foreground">正在验证权限...</p>
+            <div className="min-h-screen bg-gradient-to-br from-gray-50/30 to-blue-50/10">
+                <Navigation/>
+                <div
+                    className="min-h-screen bg-gradient-to-br from-gray-50/30 to-blue-50/10 flex items-center justify-center">
+                    <div className="text-center space-y-4">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                        <p className="text-muted-foreground">正在验证权限...</p>
+                    </div>
                 </div>
             </div>
         );

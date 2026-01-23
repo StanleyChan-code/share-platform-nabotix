@@ -46,7 +46,7 @@ export function formatDateTime(date: Date | string | number): string {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
-export function formatISOString(date: Date | string | number): string {
+export function formatISOString(date: Date | string | number, toDayEnd: boolean = false): string {
   if (!date) return '';
 
   const d = new Date(date);
@@ -55,6 +55,11 @@ export function formatISOString(date: Date | string | number): string {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
+
+  if (toDayEnd) {
+    // 格式化日期为 yyyy-MM-dd 23:59:59 格式
+    return `${year}-${month}-${day}T23:59:59Z`;
+  }
 
   // 直接构造 UTC 时间的 ISO 字符串
   return `${year}-${month}-${day}T00:00:00Z`;

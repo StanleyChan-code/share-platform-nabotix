@@ -26,7 +26,7 @@ import SubmitOutputDialog from "@/components/outputs/SubmitOutputDialog";
 import OutputDetailDialog from "@/components/outputs/OutputDetailDialog";
 import { getAllOutputTypes, getJournalPartitionName, getOutputTypeDisplayName } from "@/lib/outputUtils";
 import { outputApi, ResearchOutput } from "@/integrations/api/outputApi";
-import { formatDate } from "@/lib/utils";
+import {cn, formatDate } from "@/lib/utils";
 import PaginatedList from "@/components/ui/PaginatedList";
 import { useNavigate } from "react-router-dom";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -113,7 +113,17 @@ const Outputs = () => {
         return (
             <Card
                 key={output.id}
-                className="group transition-all duration-300 border-2 border-transparent hover:border-blue-200/50 bg-gradient-to-br from-white to-blue-50/20 relative overflow-hidden shadow-sm hover:shadow-blue-100/30"
+                className={cn(
+                    "group relative overflow-hidden rounded-xl",
+                    // 默认状态：显示浅色边框
+                    "border-2",
+                    "bg-gradient-to-br from-white via-white to-blue-50/20",
+                    "transition-all duration-300 ease-in-out",
+                    "shadow-sm hover:shadow-lg hover:shadow-blue-100/40",
+                    // 悬停时统一变为蓝色边框
+                    "hover:border-blue-300/80",
+                    "hover:-translate-y-0.5"
+                )}
             >
                 {/* 类型角标 */}
                 <div className={`absolute top-0 right-0 px-3 py-1.5 text-xs font-bold text-white rounded-bl-lg shadow-sm ${

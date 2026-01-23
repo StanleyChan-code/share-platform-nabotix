@@ -280,7 +280,6 @@ export function DatasetTreeView({datasets, onDatasetClick}: DatasetTreeViewProps
                                 {/* 关键词 */}
                                 {dataset.keywords && dataset.keywords.length > 0 && (
                                     <div className="flex flex-wrap gap-1">
-                                        <span className="text-xs text-gray-500 font-medium">关键词:</span>
                                         {dataset.keywords.slice(0, 4).map((keyword, index) => (
                                             <Badge key={index} variant="outline" className="text-xs bg-white">
                                                 {keyword}

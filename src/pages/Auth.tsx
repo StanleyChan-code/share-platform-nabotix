@@ -4,7 +4,6 @@ import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/compo
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import LoginTab from "@/components/auth/LoginTab";
 import SignupTab from "@/components/auth/SignupTab";
-import {Database, Shield} from "lucide-react";
 import {Navigation} from "@/components/Navigation.tsx";
 import RcImageComponent from "@/components/ui/RcImageComponent.tsx";
 
@@ -13,18 +12,6 @@ const Auth = () => {
     const [activeTab, setActiveTab] = useState("login");
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    
-    // 在组件加载时，如果当前没有记录的重定向路径，则记录当前访问路径
-    useEffect(() => {
-        const currentPath = window.location.pathname;
-        const existingRedirectPath = sessionStorage.getItem('redirectAfterLogin');
-        
-        // 如果没有已存在的重定向路径，且当前路径不是auth页面，则记录当前路径
-        if (!existingRedirectPath && currentPath !== '/auth') {
-            sessionStorage.setItem('redirectAfterLogin', currentPath);
-        }
-    }, []);
-
     const handleLoginSuccess = () => {
         // 登录成功后的处理已在LoginTab组件中完成，这里可以添加额外的逻辑
     };

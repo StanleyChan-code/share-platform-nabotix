@@ -21,7 +21,6 @@ import {
 import {useToast} from "@/hooks/use-toast";
 import {logout} from "@/integrations/api/authApi";
 import {
-    clearTokens,
     getCurrentUserInfoFromSession,
     getOrFetchUserInfo,
     isAuthenticated,
@@ -34,11 +33,26 @@ import {AUTH_BROADCAST_CHANNEL, USER_INFO_KEY} from "@/lib/constants.ts";
 
 const navigationItems = [
     {name: "首页", name_en: "Home", href: "/", icon: Home, description: "平台概览", authRequired: false},
-    {name: "数据集", name_en: "Datasets", href: "/datasets", icon: Database, description: "浏览数据集", authRequired: false},
+    {
+        name: "数据集",
+        name_en: "Datasets",
+        href: "/datasets",
+        icon: Database,
+        description: "浏览数据集",
+        authRequired: false
+    },
     {name: "研究成果", name_en: "Outputs", href: "/outputs", icon: Award, description: "查看成果", authRequired: false},
     {name: "关于平台", name_en: "About", href: "/about", icon: Info, description: "了解平台", authRequired: false},
     {name: "个人中心", name_en: "My Center", href: "/profile", icon: User, description: "个人管理", authRequired: true},
-    {name: "管理面板", name_en: "Admin", href: "/admin", icon: Shield, description: "系统管理", authRequired: true, adminOnly: true},
+    {
+        name: "管理面板",
+        name_en: "Admin",
+        href: "/admin",
+        icon: Shield,
+        description: "系统管理",
+        authRequired: true,
+        adminOnly: true
+    },
 ];
 
 // 需要认证的页面路径
@@ -62,7 +76,9 @@ export function Navigation() {
 
     useEffect(() => {
         mountedRef.current = true;
-        return () => { mountedRef.current = false; };
+        return () => {
+            mountedRef.current = false;
+        };
     }, []);
 
     // 创建全局导航函数
@@ -99,7 +115,7 @@ export function Navigation() {
             // 如果有用户信息，直接使用
             if (userInfo) {
                 await fetchAndSetAuthStatus(userInfo);
-            } 
+            }
             // 如果有强制刷新标志或者localStorage中没有用户信息，重新获取
             else if (forceRefresh || !getCurrentUserInfoFromSession()) {
                 await fetchAndSetAuthStatus();
@@ -150,24 +166,12 @@ export function Navigation() {
                 setUserProfile(userInfo);
                 setUser(userInfo.user);
                 setUserRoles(userInfo.roles || []);
-
-                // 如果当前在认证页面且成功获取用户信息，重定向到之前页面或首页
-                if (location.pathname === '/auth') {
-                    const from = (location.state as any)?.from || '/';
-                    navigate(from, { replace: true });
-                }
             } else {
                 const info = await getOrFetchUserInfo();
                 if (info && mountedRef.current) {
                     setUserProfile(info);
                     setUser(info.user);
                     setUserRoles(info.roles || []);
-
-                    // 如果当前在认证页面且成功获取用户信息，重定向到之前页面或首页
-                    if (location.pathname === '/auth') {
-                        const from = (location.state as any)?.from || '/';
-                        navigate(from, { replace: true });
-                    }
                 } else if (mountedRef.current) {
                     clearAuthState();
                 }
@@ -224,7 +228,10 @@ export function Navigation() {
             window.removeEventListener('storage', handleStorageChange);
             window.removeEventListener('online', handleOnline);
             if (bc) {
-                try { bc.close(); } catch (e) { /* ignore */ }
+                try {
+                    bc.close();
+                } catch (e) { /* ignore */
+                }
             }
         };
     }, []);
@@ -253,41 +260,39 @@ export function Navigation() {
 
         const currentPath = location.pathname;
 
-        // 如果访问需要认证的页面但未登录，重定向到登录页
-        if (AUTH_REQUIRED_PATHS.includes(currentPath) && !isAuthenticated()) {
-            redirectToAuth(currentPath);
+        // 没有登录只考虑是否访问需要认证的页面
+        if (!isAuthenticated() && AUTH_REQUIRED_PATHS.includes(currentPath)) {
+            redirectToAuth(window.location.href);
             return;
         }
 
-        // 如果已登录但访问登录页，重定向到首页或个人中心
-        if (currentPath === '/auth' && isAuthenticated()) {
-            const from = (location.state as any)?.from || '/profile';
-            navigate(from, { replace: true });
-            return;
-        }
+        // 如果已经登录
+        if (isAuthenticated()) {
+            // 访问登录页，重定向到首页或个人中心
+            if (currentPath === '/auth') {
+                const from = (location.state as any)?.from || '/profile';
+                navigate(from, {replace: true});
+                return;
+            }
 
-        // 检查访问权限
-        if (AUTH_REQUIRED_PATHS.includes(currentPath) && isAuthenticated()) {
-            const hasAccess = hasPageAccess(currentPath);
-            if (!hasAccess) {
-                toast({
-                    title: "访问受限",
-                    description: "您没有权限访问该页面",
-                    variant: "destructive",
-                });
-                navigate(-1); // 返回上一页
+            // 如果访问需要考虑权限的页面，检查权限，当无权限时，跳转到个人中心
+            if (AUTH_REQUIRED_PATHS.includes(currentPath)) {
+                const hasAccess = hasPageAccess(currentPath);
+                if (!hasAccess) {
+                    navigate('/profile', {replace: true});
+                    return;
+                }
             }
         }
+
+        // 其他情况不做处理
+
     }, [location.pathname, authChecking, navigate, user]);
 
     const handleLogout = async () => {
         try {
             setIsOpen(false);
             await logout();
-            toast({
-                title: "已登出",
-                description: "您已成功登出",
-            });
         } catch (error) {
             console.error('登出API错误:', error);
             toast({
@@ -297,11 +302,8 @@ export function Navigation() {
             });
         } finally {
             clearAuthState();
-
-            // 如果当前在需要认证的页面，重定向到首页
-            if (AUTH_REQUIRED_PATHS.includes(location.pathname)) {
-                navigate('/', { replace: true });
-            }
+            // 退出登录后直接跳转到首页，避免页面刷新
+            navigate('/', { replace: true });
         }
     };
 
@@ -333,10 +335,10 @@ export function Navigation() {
 
         // 检查访问权限
         if (!hasPageAccess(item.href)) {
-            if (!isAuthenticated()) {
-                redirectToAuth(item.href);
-            } else {
-                toast({
+                if (!isAuthenticated()) {
+                    redirectToAuth(item.href);
+                } else {
+                    toast({
                     title: "权限不足",
                     description: `您没有权限访问${item.name}`,
                     variant: "destructive",
@@ -408,7 +410,7 @@ export function Navigation() {
                             </div>
 
                             {!canAccess && mobile && (
-                                <AlertCircle className="h-4 w-4 text-amber-500 ml-auto" />
+                                <AlertCircle className="h-4 w-4 text-amber-500 ml-auto"/>
                             )}
                             {isActive && !mobile && canAccess && (
                                 <div className="ml-auto w-2 h-2 bg-white rounded-full"></div>
@@ -440,12 +442,14 @@ export function Navigation() {
     }
 
     return (
-        <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md supports-[backdrop-filter]:bg-white/60 shadow-sm">
+        <header
+            className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md supports-[backdrop-filter]:bg-white/60 shadow-sm">
             <div className="container flex h-16 items-center px-4">
                 {/* Logo */}
                 <div className="flex items-center gap-3 min-w-[230px]">
                     <Link to="/" className="flex items-center space-x-3 group">
-                        <div className="p-1 bg-white rounded-2xl shadow-lg group-hover:shadow-xl transition-shadow duration-300">
+                        <div
+                            className="p-1 bg-white rounded-2xl shadow-lg group-hover:shadow-xl transition-shadow duration-300">
                             <RcImageComponent
                                 src="/logo.jpeg"
                                 alt="老年疾病国家临床医学研究中心（华西）"
@@ -453,10 +457,12 @@ export function Navigation() {
                             />
                         </div>
                         <div className="flex flex-col min-w-0">
-                            <span className="text-xl font-bold bg-gradient-to-r from-gray-900 to-blue-800 bg-clip-text text-transparent">
+                            <span
+                                className="text-xl font-bold bg-gradient-to-r from-gray-900 to-blue-800 bg-clip-text text-transparent">
                                 老年疾病国家临床医学研究中心（华西）
                             </span>
-                            <span className="text-xs text-muted-foreground -mt-1 hidden md:block">临床科研数据共享平台</span>
+                            <span
+                                className="text-xs text-muted-foreground -mt-1 hidden md:block">临床科研数据共享平台</span>
                         </div>
                     </Link>
                 </div>
@@ -478,11 +484,13 @@ export function Navigation() {
                                         size="sm"
                                         className="flex items-center gap-2 px-3 py-2 rounded-2xl hover:bg-blue-50/50 transition-colors relative"
                                     >
-                                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-sm relative">
+                                        <div
+                                            className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-sm relative">
                                             <User className="h-4 w-4 text-white"/>
                                             {/* 用户头像上的红点 */}
                                             {hasPendingItems && hasAdminPermission() && (
-                                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[18px] h-4.5 flex items-center justify-center px-1 border-2 border-white text-[10px] font-bold">
+                                                <span
+                                                    className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[18px] h-4.5 flex items-center justify-center px-1 border-2 border-white text-[10px] font-bold">
                                                         {pendingTotalCount > 99 ? '99+' : pendingTotalCount}
                                                     </span>
                                             )}
@@ -498,11 +506,13 @@ export function Navigation() {
                                         <ChevronDown className="h-4 w-4 text-muted-foreground"/>
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-64 border-blue-200/50 shadow-xl rounded-xl">
+                                <DropdownMenuContent align="end"
+                                                     className="w-64 border-blue-200/50 shadow-xl rounded-xl">
                                     {/* 用户信息头部 */}
                                     <div className="p-4 border-b border-blue-200/30">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-sm relative">
+                                            <div
+                                                className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-sm relative">
                                                 <User className="h-6 w-6 text-white"/>
                                             </div>
                                             <div className="flex-1 min-w-0">
@@ -516,12 +526,14 @@ export function Navigation() {
                                                 <div className="flex items-center justify-between mt-1">
                                                     <div className="flex flex-wrap gap-1 flex-1">
                                                         {userRoles.map((role, index) => (
-                                                            <Badge key={index} variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
+                                                            <Badge key={index} variant="secondary"
+                                                                   className="bg-blue-100 text-blue-800 text-xs">
                                                                 {getPermissionRoleDisplayName(role)}
                                                             </Badge>
                                                         ))}
                                                         {userRoles.length === 0 && (
-                                                            <Badge variant="outline" className="text-xs">普通用户</Badge>
+                                                            <Badge variant="outline"
+                                                                   className="text-xs">普通用户</Badge>
                                                         )}
                                                     </div>
                                                 </div>
@@ -529,7 +541,8 @@ export function Navigation() {
                                         </div>
                                     </div>
 
-                                    <DropdownMenuItem onClick={() => navigate('/profile?tab=profile')} className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-blue-50/50">
+                                    <DropdownMenuItem onClick={() => navigate('/profile?tab=profile')}
+                                                      className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-blue-50/50">
                                         <User className="h-4 w-4 text-blue-600"/>
                                         <span className="font-medium">个人资料</span>
                                     </DropdownMenuItem>
@@ -542,14 +555,16 @@ export function Navigation() {
                                             <Shield className="h-4 w-4 text-blue-600"/>
                                             <span className="font-medium flex-1">管理面板</span>
                                             {pendingTotalCount > 0 && (
-                                                <span className="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center ml-2 font-bold">
+                                                <span
+                                                    className="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center ml-2 font-bold">
                                                     {pendingTotalCount > 99 ? '99+' : pendingTotalCount}
                                                 </span>
                                             )}
                                         </DropdownMenuItem>
                                     )}
 
-                                    <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 cursor-pointer text-red-600 hover:bg-red-50/50">
+                                    <DropdownMenuItem onClick={handleLogout}
+                                                      className="flex items-center gap-3 px-4 py-3 cursor-pointer text-red-600 hover:bg-red-50/50">
                                         <LogOut className="h-4 w-4"/>
                                         <span className="font-medium">退出登录</span>
                                     </DropdownMenuItem>
@@ -557,27 +572,31 @@ export function Navigation() {
                             </DropdownMenu>
                         </div>
                     ) : (
-                        <Button asChild variant="default" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200 rounded-md">
-                            <Link to="/auth" className="flex items-center gap-1.5">
+                        <Button asChild variant="default" size="sm"
+                                className="bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200 rounded-md">
+                            <Button className="flex items-center gap-1.5" onClick={() => redirectToAuth(window.location.href)}>
                                 <User className="h-3.5 w-3.5"/>
                                 <span className="font-medium text-sm">登录 | 注册</span>
-                            </Link>
+                            </Button>
                         </Button>
                     )}
 
                     {/* Mobile Navigation Trigger */}
                     <Sheet open={isOpen} onOpenChange={setIsOpen}>
                         <SheetTrigger asChild>
-                            <Button variant="ghost" className="lg:hidden p-2 rounded-xl hover:bg-blue-50/50" size="icon">
+                            <Button variant="ghost" className="lg:hidden p-2 rounded-xl hover:bg-blue-50/50"
+                                    size="icon">
                                 {isOpen ? <X className="h-5 w-5"/> : <Menu className="h-5 w-5"/>}
                                 <span className="sr-only">切换菜单</span>
                             </Button>
                         </SheetTrigger>
-                        <SheetContent side="right" className="w-80 pr-0 border-l-blue-200/50 bg-white/95 backdrop-blur-md">
+                        <SheetContent side="right"
+                                      className="w-80 pr-0 border-l-blue-200/50 bg-white/95 backdrop-blur-md">
                             <div className="flex flex-col h-full">
                                 {/* Header */}
                                 <div className="p-6 border-b border-blue-200/30">
-                                    <Link to="/" className="flex items-center space-x-3 group" onClick={() => setIsOpen(false)}>
+                                    <Link to="/" className="flex items-center space-x-3 group"
+                                          onClick={() => setIsOpen(false)}>
                                         <div className="p-1 bg-gradient-to-br rounded-2xl shadow-lg">
                                             <RcImageComponent
                                                 src="/logo.jpeg"
@@ -586,10 +605,12 @@ export function Navigation() {
                                             />
                                         </div>
                                         <div className="flex flex-col min-w-0">
-                                            <span className="text-lg font-bold bg-gradient-to-r from-gray-900 to-blue-800 bg-clip-text text-transparent">
+                                            <span
+                                                className="text-lg font-bold bg-gradient-to-r from-gray-900 to-blue-800 bg-clip-text text-transparent">
                                                 老年疾病国家临床医学研究中心（华西）
                                             </span>
-                                            <span className="text-xs text-muted-foreground -mt-1">临床科研数据共享平台</span>
+                                            <span
+                                                className="text-xs text-muted-foreground -mt-1">临床科研数据共享平台</span>
                                         </div>
                                     </Link>
                                 </div>
@@ -603,12 +624,15 @@ export function Navigation() {
                                 <div className="p-4 border-t border-blue-200/30 bg-blue-50/30">
                                     {isAuthenticated() ? (
                                         <div className="space-y-4">
-                                            <div className="flex items-center gap-3 p-3 bg-white/50 rounded-xl border border-blue-200/30 relative">
-                                                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl flex items-center justify-center shadow-sm relative">
+                                            <div
+                                                className="flex items-center gap-3 p-3 bg-white/50 rounded-xl border border-blue-200/30 relative">
+                                                <div
+                                                    className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl flex items-center justify-center shadow-sm relative">
                                                     <User className="h-5 w-5 text-white"/>
                                                     {/* 移动端用户头像上的红点 */}
                                                     {hasPendingItems && hasAdminPermission() && (
-                                                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 border-2 border-white text-[10px] font-bold">
+                                                        <span
+                                                            className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 border-2 border-white text-[10px] font-bold">
                                                             {pendingTotalCount > 99 ? '99+' : pendingTotalCount}
                                                         </span>
                                                     )}
@@ -623,28 +647,36 @@ export function Navigation() {
                                                     <div className="flex items-center justify-between mt-1">
                                                         <div className="flex flex-wrap gap-1 flex-1">
                                                             {userRoles.slice(0, 2).map((role, index) => (
-                                                                <Badge key={index} variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
+                                                                <Badge key={index} variant="secondary"
+                                                                       className="bg-blue-100 text-blue-800 text-xs">
                                                                     {getPermissionRoleDisplayName(role)}
                                                                 </Badge>
                                                             ))}
                                                             {userRoles.length > 2 && (
-                                                                <Badge variant="outline" className="text-xs">+{userRoles.length - 2}</Badge>
+                                                                <Badge variant="outline"
+                                                                       className="text-xs">+{userRoles.length - 2}</Badge>
                                                             )}
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <Button onClick={handleLogout} variant="outline" className="w-full border-red-200 text-red-600 hover:bg-red-50">
+                                            <Button onClick={handleLogout} variant="outline"
+                                                    className="w-full border-red-200 text-red-600 hover:bg-red-50">
                                                 <LogOut className="h-4 w-4 mr-2"/>
                                                 退出登录
                                             </Button>
                                         </div>
                                     ) : (
-                                        <Button asChild variant="default" size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                                            <Link to="/auth" onClick={() => setIsOpen(false)} className="flex items-center justify-center gap-1.5">
+                                        <Button asChild variant="default" size="sm"
+                                                className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                                            <div  onClick={() => {
+                                                setIsOpen(false);
+                                                redirectToAuth(window.location.href);
+                                            }}
+                                                  className="flex items-center justify-center gap-1.5">
                                                 <User className="h-3.5 w-3.5"/>
                                                 <span className="font-medium text-sm">登录 | 注册</span>
-                                            </Link>
+                                            </div>
                                         </Button>
                                     )}
                                 </div>

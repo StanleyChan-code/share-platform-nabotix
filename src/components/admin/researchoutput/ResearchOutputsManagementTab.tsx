@@ -71,12 +71,7 @@ const ResearchOutputsManagementTab = () => {
       
       // 只有平台管理员可以访问该组件
       if (!isPlatformAdminUser) {
-        toast({
-          title: "访问被拒绝",
-          description: "您没有权限访问成果管理功能",
-          variant: "destructive"
-        });
-        navigate("/");
+        navigate("/profile");
         return;
       }
 
@@ -363,7 +358,7 @@ const ResearchOutputsManagementTab = () => {
                 {/* 分页控件和总数显示 */}
                 <div className="flex justify-between items-center mt-6">
                   <div className="text-sm text-muted-foreground">
-                    总计 {totalElements} 条记录
+                    共 {totalElements} 条记录
                   </div>
 
                   {totalPages > 1 && (

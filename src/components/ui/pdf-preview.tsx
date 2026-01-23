@@ -21,7 +21,7 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ open, onOpenChange, fileUrl, fi
     if (open && fileUrl) {
       // 设置PDF URL
       setPdfUrl(fileUrl);
-      setLoading(false);
+      setLoading(true); // 开始加载时设置为true
       setError(null);
     } else {
       setPdfUrl(null);
@@ -57,7 +57,7 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ open, onOpenChange, fileUrl, fi
   }, [pdfUrl]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(value) => !loading && onOpenChange(value)}>
       <DialogContent className="max-w-6xl max-h-[90vh] w-full h-[90vh] flex flex-col">
         <DialogHeader className="flex-row items-center justify-between">
           <DialogTitle>{fileName || 'PDF预览'}</DialogTitle>
@@ -90,7 +90,7 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ open, onOpenChange, fileUrl, fi
             </div>
           )}
           
-          {pdfUrl && !loading && !error && (
+          {pdfUrl && !error && (
             <iframe
               src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0`}
               className="w-full h-full border-0"
@@ -99,7 +99,11 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ open, onOpenChange, fileUrl, fi
                 transformOrigin: 'center center',
               }}
               title={fileName || 'PDF预览'}
-              onError={() => setError('PDF加载失败')}
+              onLoad={() => setLoading(false)} // 加载完成后设置为false
+              onError={() => {
+                setError('PDF加载失败');
+                setLoading(false);
+              }}
             />
           )}
           

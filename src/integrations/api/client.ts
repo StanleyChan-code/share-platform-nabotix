@@ -43,10 +43,11 @@ function handleAuthFailure() {
   _isHandlingAuthFailure = true;
 
   try {
+    const currentUrl = window.location.href;
     const currentPath = window.location.pathname;
     if (currentPath.startsWith('/admin') || currentPath.startsWith('/profile')) {
       // 对于管理页和个人中心，跳转到登录页面
-      redirectToAuth(currentPath);
+      redirectToAuth(currentUrl);
       // 重置标志
       _isHandlingAuthFailure = false;
     } else if (currentPath !== '/auth') {

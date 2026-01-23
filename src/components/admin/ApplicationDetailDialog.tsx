@@ -25,6 +25,7 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
     const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
     const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
     const [pdfPreviewUrl, setPdfPreviewUrl] = useState('');
+    const [isPreviewLoading, setIsPreviewLoading] = useState(false);
     const {toast} = useToast();
 
     // 当对话框打开且选中有审批文档的应用时，获取文件信息
@@ -237,6 +238,7 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
         }
 
         try {
+            setIsPreviewLoading(true);
             // 获取文件下载响应
             const response:any = await downloadApplicationFile(application.id, application.approvalDocumentId);
             // 创建PDF预览URL
@@ -250,6 +252,8 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
                 description: "无法预览文件，请尝试下载后查看",
                 variant: "destructive"
             });
+        } finally {
+            setIsPreviewLoading(false);
         }
     };
 
@@ -353,9 +357,10 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
                                                                     variant="outline"
                                                                     size="sm"
                                                                     className="w-full"
+                                                                    disabled={isPreviewLoading}
                                                                 >
                                                                     <Eye className="h-4 w-4 mr-2"/>
-                                                                    预览
+                                                                    {isPreviewLoading ? '加载中' : '预览'}
                                                                 </Button>
                                                             )}
                                                             <Button

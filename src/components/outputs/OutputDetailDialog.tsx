@@ -44,6 +44,7 @@ const OutputDetailDialog = ({
     const [isDatasetModalOpen, setIsDatasetModalOpen] = useState(false);
     const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
     const [pdfPreviewUrl, setPdfPreviewUrl] = useState('');
+    const [isPreviewLoading, setIsPreviewLoading] = useState(false);
     const [currentOutput, setCurrentOutput] = useState<ResearchOutput | null>(output); // 新增：内部状态管理
 
     // 当外部传入的 output 变化时，更新内部状态
@@ -166,6 +167,7 @@ const OutputDetailDialog = ({
         }
 
         try {
+            setIsPreviewLoading(true);
             let response;
             if (isSubmitter) {
                 response = await outputApi.downloadOutputFile(currentOutput.id, currentOutput.fileId);
@@ -185,6 +187,8 @@ const OutputDetailDialog = ({
                 description: "无法预览文件，请尝试下载后查看",
                 variant: "destructive"
             });
+        } finally {
+            setIsPreviewLoading(false);
         }
     };
 
@@ -512,9 +516,10 @@ const OutputDetailDialog = ({
                                                             onClick={handlePreviewPdf}
                                                             variant="outline"
                                                             size="sm"
+                                                            disabled={isPreviewLoading}
                                                         >
                                                             <Eye className="h-4 w-4 mr-2"/>
-                                                            预览
+                                                            {isPreviewLoading ? '加载中' : '预览'}
                                                         </Button>
                                                     )}
                                                     <Button

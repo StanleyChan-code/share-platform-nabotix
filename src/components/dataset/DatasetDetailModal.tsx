@@ -87,8 +87,13 @@ export function DatasetDetailModal({
 
                 // 检查是否有待审核的版本，如果是高级查询模式，则默认跳转到版本标签页
                 if (useAdvancedQuery && datasetResponse?.data?.versions) {
+
                     const hasPendingVersion = datasetResponse?.data?.versions.some(
-                        (version: any) => version.approved === null);
+                        (version: any) =>
+                            version.institutionApproved === null ||
+                            (version.institutionApproved && version.approved === null)
+                    );
+
                     if (hasPendingVersion) {
                         setDefaultTab('versions');
                     } else {

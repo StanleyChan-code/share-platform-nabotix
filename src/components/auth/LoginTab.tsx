@@ -5,11 +5,12 @@ import { useToast } from "@/hooks/use-toast";
 import { ApiError } from "@/integrations/api/client";
 import { login, sendVerificationCode } from "@/integrations/api/authApi";
 import { Phone, Lock, Shield, Eye, EyeOff, User, Mail } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { FormValidator, Input } from "@/components/ui/FormValidator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { refreshUserInfo, isAuthenticated, clearTokens, getCurrentUserInfoFromSession } from "@/lib/authUtils";
+import {AxiosError} from "axios";
 
 interface LoginTabProps {
   phone: string;
@@ -42,6 +43,7 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
 
   // 清理定时器
   useEffect(() => {
@@ -167,8 +169,11 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
 
       if (apiError.response?.data?.message) {
         errorMessage = apiError.response.data.message;
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
+      } else {
+        const axiosError = error as AxiosError;
+        if (axiosError.code !== "ERR_NETWORK") {
+          errorMessage = axiosError.message;
+        }
       }
 
       toast({
@@ -275,11 +280,6 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
         throw new Error("获取用户信息失败");
       }
 
-      toast({
-        title: "登录成功",
-        description: `欢迎回来，${userProfile.user.realName || userProfile.user.phone}!`,
-      });
-
       onLoginSuccess();
 
       // 处理重定向逻辑
@@ -295,20 +295,22 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
 
   // 处理登录后重定向
   const handleRedirect = async () => {
-    // 优先使用location.state中的重定向路径
+    // 优先使用URL查询参数中的重定向URL
+    const redirectTo = searchParams.get('redirectTo');
+    
+    if (redirectTo && !redirectTo.includes('/auth')) {
+      window.location.href = redirectTo;
+      return;
+    }
+    
+    // 其次使用location.state中的重定向路径
     const from = (location.state as any)?.from;
 
     if (from && from !== '/auth' && from !== location.pathname) {
       navigate(from, { replace: true });
     } else {
-      // 回退到sessionStorage中的路径或首页
-      const redirectPath = sessionStorage.getItem('redirectAfterLogin');
-      if (redirectPath && redirectPath !== '/auth') {
-        sessionStorage.removeItem('redirectAfterLogin');
-        navigate(redirectPath, { replace: true });
-      } else {
-        navigate('/', { replace: true });
-      }
+      // 默认重定向到首页
+      navigate('/', { replace: true });
     }
   };
 

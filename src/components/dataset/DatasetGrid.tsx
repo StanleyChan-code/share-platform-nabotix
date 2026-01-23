@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {Users, Database, Calendar, Building, User, Target, BarChart3, Eye, Star, Clock, Hash} from "lucide-react";
 import { DatasetTypes } from "@/lib/enums";
-import { formatDate } from "@/lib/utils";
+import {cn, formatDate} from "@/lib/utils";
 import {getLatestApprovedVersion} from "@/lib/datasetUtils.ts";
 
 // Type mappings for database enum values
@@ -25,7 +25,18 @@ export const DatasetGrid = ({ datasets, onDatasetClick }: DatasetGridProps) => {
           return (
               <Card
                   key={dataset.id}
-                  className="hover:shadow-md transition-shadow h-full w-full max-w-lg"
+                  className={cn(
+                      "group relative overflow-hidden rounded-xl",
+                      // 默认状态：显示浅色边框
+                      "border-2",
+                      "bg-gradient-to-br from-white via-white to-blue-50/20",
+                      "transition-all duration-300 ease-in-out",
+                      "shadow-sm hover:shadow-lg hover:shadow-blue-100/40",
+                      // 悬停时统一变为蓝色边框
+                      "hover:border-blue-300/80",
+                      "hover:-translate-y-0.5",
+                      "h-full w-full max-w-lg"
+                  )}
               >
                 <CardHeader>
                   {/* 标题和类型标签 */}

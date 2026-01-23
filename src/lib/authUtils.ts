@@ -192,17 +192,18 @@ export const clearCookies = (): void => {
 
 /**
  * 统一跳转到认证页面
- * @param from 来源页面路径，用于登录后返回
+ * @param from 来源完整URL，用于登录后返回
  */
 export const redirectToAuth = (from?: string): void => {
-  // 记录来源页面路径
+  // 构建重定向URL
+  let redirectUrl: string | null = null;
   if (from && from !== '/auth') {
-    sessionStorage.setItem('redirectAfterLogin', from);
+    redirectUrl = from;
   } else {
-    // 如果没有提供来源路径，使用当前路径
-    const currentPath = window.location.pathname;
-    if (currentPath !== '/auth') {
-      sessionStorage.setItem('redirectAfterLogin', currentPath);
+    // 如果没有提供来源URL，使用当前完整URL
+    const currentUrl = window.location.href;
+    if (!currentUrl.includes('/auth')) {
+      redirectUrl = currentUrl;
     }
   }
 
@@ -212,8 +213,12 @@ export const redirectToAuth = (from?: string): void => {
   // 清除Cookies
   clearCookies();
   
-  // 跳转到认证页面
-  window.location.href = '/auth';
+  // 跳转到认证页面，带重定向参数
+  if (redirectUrl) {
+    window.location.href = `/auth?redirectTo=${encodeURIComponent(redirectUrl)}`;
+  } else {
+    window.location.href = '/auth';
+  }
 };
 
 /**

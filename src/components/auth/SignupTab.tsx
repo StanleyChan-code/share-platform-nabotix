@@ -180,7 +180,7 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
       if (response.data.success) {
         toast({
           title: "发送成功",
-          description: "验证码已发送至您的手机，请注意查收",
+          description: "验证码已发送至您的手机，5分钟内有效",
         });
         setCountdown(60);
       } else {
