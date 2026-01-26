@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { CustomDatePicker } from '@/components/ui/date-picker.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import { toast } from '@/hooks/use-toast.ts';
-import {formatDateTime, formatISOString} from '@/lib/utils.ts';
+import {cn, formatDateTime, formatISOString} from '@/lib/utils.ts';
 import { Search, Filter, X, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { auditLogApi, AuditLog, AuditLogParams } from '@/integrations/api/auditLogApi.ts';
 import ReactPaginate from 'react-paginate';
@@ -388,14 +388,12 @@ export default function AuditLogsTab() {
                       <TableCell
                           title={log.operatorId}
                           className={'font-mono text-sm truncate overflow-hidden text-ellipsis whitespace-nowrap max-w-[120px]'}>
-                        <Button
-                          variant="link"
-                          onClick={() => log.operatorId && fetchUserInfo(log.operatorId)}
-                          disabled={!log.operatorId || userLoading}
-                          className="p-0 h-auto text-primary hover:text-primary/80"
+                        <span
+                          onClick={() => log.operatorId && !userLoading && fetchUserInfo(log.operatorId)}
+                          className={cn(userLoading ? 'cursor-wait' : "hover:underline p-0 h-auto text-primary hover:text-primary/80 truncate cursor-pointer")}
                         >
-                          {log.operatorId}
-                        </Button>
+                          {log.operatorId || '-'}
+                        </span>
                       </TableCell>
                       <TableCell className={'font-mono text-sm'}>{log.ipAddress}</TableCell>
                       <TableCell className={'font-mono text-sm text-center'}>
@@ -491,10 +489,8 @@ export default function AuditLogsTab() {
           <UserInfoDialog
             open={userInfoDialogOpen}
             onOpenChange={setUserInfoDialogOpen}
-            user={currentUser}
-            institutionMap={institutionMap}
-            userRoles={userRoles}
-            isPlatformAdmin={isPlatformAdmin}
+            userId={currentUser?.id || ''}
+            showUserId={isPlatformAdmin}
           />
     </div>
   );

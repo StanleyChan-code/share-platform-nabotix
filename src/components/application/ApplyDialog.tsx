@@ -297,7 +297,6 @@ const ApplyDialog = ({ open, onOpenChange, datasetId, onSubmitted }: ApplyDialog
     // 验证数据使用目的
     const validatePurpose = (value: string): string | true => {
         if (!value.trim()) return "数据使用目的为必填项";
-        if (value.trim().length < 10) return "数据使用目的至少需要10个字符";
         if (value.trim().length > 1000) return "数据使用目的不能超过1000个字符";
         return true;
     };

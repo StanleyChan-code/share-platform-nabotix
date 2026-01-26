@@ -1,12 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.tsx';
 import { ScrollArea } from '@/components/ui/scroll-area.tsx';
 import { Button } from '@/components/ui/button.tsx';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip.tsx';
-import { formatDateTime } from '@/lib/utils.ts';
+import {cn, formatDateTime} from '@/lib/utils.ts';
 import { AuditLog } from '@/integrations/api/auditLogApi.ts';
 import { Shield, Clock, User, Globe, Activity, FileText, Hash, FileX, Copy, Check } from 'lucide-react';
 import { AuditLogConstants, ACTION_DISPLAY_NAMES } from '@/lib/auditLogConstants.ts';
+import UserInfoDialog from '@/components/admin/user/UserInfoDialog.tsx';
+import { userApi } from '@/integrations/api/userApi.ts';
+import { toast } from '@/components/ui/use-toast.ts';
+import { institutionApi } from '@/integrations/api/institutionApi.ts';
 
 interface AuditLogDetailDialogProps {
   open: boolean;
@@ -15,12 +19,13 @@ interface AuditLogDetailDialogProps {
 }
 
 // 信息卡片组件 - 支持 truncate 和 tooltip
-const InfoCard = ({ label, value, icon, isMonospace = false, copyable = false }: {
+const InfoCard = ({ label, value, icon, isMonospace = false, copyable = false, onClick = undefined }: {
   label: string;
   value: React.ReactNode;
   icon?: React.ReactNode;
   isMonospace?: boolean;
   copyable?: boolean;
+  onClick?: () => void;
 }) => {
   const [copied, setCopied] = React.useState(false);
 
@@ -59,7 +64,15 @@ const InfoCard = ({ label, value, icon, isMonospace = false, copyable = false }:
             )}
           </div>
         </div>
-        <div className={`text-sm ${isMonospace ? 'font-mono' : ''} text-foreground ${isLongText ? 'truncate' : ''}`}>
+        <div onClick={onClick}
+            className={cn(
+                'text-sm',
+                'text-foreground',
+                isMonospace ? 'font-mono' : '',
+                isLongText ? 'truncate' : '',
+                onClick !== undefined ? 'cursor-pointer truncate hover:underline' : ''
+            )}
+        >
           {displayValue || '-'}
         </div>
       </div>
@@ -124,6 +137,51 @@ const AuditLogDetailDialog: React.FC<AuditLogDetailDialogProps> = ({
                                                                    }) => {
   if (!auditLog) return null;
 
+  // 状态管理
+  const [userInfoDialogOpen, setUserInfoDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [institutionMap, setInstitutionMap] = useState<Record<string, { fullName: string }>>({});
+  const [userRoles, setUserRoles] = useState<Record<string, string[]>>({});
+  const [userLoading, setUserLoading] = useState(false);
+
+  // 获取用户信息
+  const fetchUserInfo = async (userId: string) => {
+    setUserLoading(true);
+    try {
+      // 获取用户基本信息
+      const response = await userApi.getUserById(userId);
+      const user = response.data;
+      setUserRoles(prev => ({
+        ...prev,
+        [userId]: user.authorities || []
+      }));
+      setSelectedUser(user);
+
+      // 获取用户所属机构信息
+      if (user.institutionId) {
+        const institutionResponse = await institutionApi.getInstitutionById(user.institutionId);
+        if (institutionResponse.success) {
+          setInstitutionMap(prev => ({
+            ...prev,
+            [user.institutionId]: { fullName: institutionResponse.data.fullName }
+          }));
+        }
+      }
+
+      // 打开用户详情对话框
+      setUserInfoDialogOpen(true);
+    } catch (error) {
+      console.error('获取用户信息失败:', error);
+      toast({
+        title: '错误',
+        description: '获取用户信息失败，请稍后重试',
+        variant: 'destructive',
+      });
+    } finally {
+      setUserLoading(false);
+    }
+  };
+
   return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0">
@@ -182,10 +240,11 @@ const AuditLogDetailDialog: React.FC<AuditLogDetailDialogProps> = ({
                       copyable
                   />
                   <InfoCard
-                      label="操作用户"
+                      label="操作用户ID"
                       value={auditLog.operatorId}
                       icon={<User className="w-3.5 h-3.5" />}
                       copyable
+                      onClick={auditLog.operatorId ? () => fetchUserInfo(auditLog.operatorId) : undefined}
                   />
                   <InfoCard
                       label="IP地址"
@@ -275,6 +334,14 @@ const AuditLogDetailDialog: React.FC<AuditLogDetailDialogProps> = ({
             </Button>
           </div>
         </DialogContent>
+
+        {/* 用户信息对话框 */}
+        <UserInfoDialog
+            open={userInfoDialogOpen}
+            onOpenChange={setUserInfoDialogOpen}
+            userId={selectedUser?.id || ''}
+            showUserId={true}
+        />
       </Dialog>
   );
 };

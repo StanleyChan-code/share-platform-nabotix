@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button.tsx";
 import { useToast } from "@/hooks/use-toast.ts";
 import { ResearchOutput } from "@/integrations/api/outputApi.ts";
 import OutputDetailDialog from "@/components/outputs/OutputDetailDialog.tsx";
-import { AdminInstitutionSelector } from "@/components/admin/institution/AdminInstitutionSelector.tsx";
+import { InstitutionSelector } from "@/components/admin/institution/InstitutionSelector.tsx";
 import { api } from "@/integrations/api/client.ts";
 import { useNavigate } from "react-router-dom";
 import {
@@ -279,7 +279,7 @@ const ResearchOutputsManagementTab = () => {
             {isPlatformAdmin && (
                 <div className="mb-6 p-4 border rounded-lg bg-muted/50">
                   <div className="flex-1">
-                    <AdminInstitutionSelector
+                    <InstitutionSelector
                         value={selectedInstitution}
                         onChange={setSelectedInstitution}
                         placeholder="选择要管理的机构（可选）"

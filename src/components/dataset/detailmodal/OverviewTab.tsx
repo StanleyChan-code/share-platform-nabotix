@@ -22,7 +22,7 @@ import { DatasetDetailModal } from "@/components/dataset/DatasetDetailModal.tsx"
 import { institutionApi } from "@/integrations/api/institutionApi.ts";
 import { datasetApi } from "@/integrations/api/datasetApi.ts";
 import { toast } from "sonner";
-import { AdminInstitutionSelector } from "@/components/admin/institution/AdminInstitutionSelector.tsx";
+import { InstitutionSelector } from "@/components/admin/institution/InstitutionSelector.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import {canUploadDataset} from "@/lib/permissionUtils.ts";
 import { CopyButton } from "@/components/ui/CopyButton.tsx";
@@ -456,7 +456,7 @@ export function OverviewTab({
                           </div>
 
                           {editableFields.applicationInstitutionIds !== null && (
-                            <AdminInstitutionSelector
+                            <InstitutionSelector
                               value={editableFields.applicationInstitutionIds}
                               onChange={(value) => {
                                 setEditableFields(prev => ({

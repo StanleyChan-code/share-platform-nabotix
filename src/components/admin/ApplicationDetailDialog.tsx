@@ -5,11 +5,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast.ts';
-import { Clock, User, Building, CheckCircle, XCircle, Plus, FileText, Download, Eye, AlertCircle } from 'lucide-react';
+import {
+    Clock,
+    User,
+    Building,
+    CheckCircle,
+    XCircle,
+    Plus,
+    FileText,
+    Download,
+    Eye,
+    AlertCircle
+} from 'lucide-react';
 import { formatDateTime, formatFileSize } from '@/lib/utils.ts';
 import { fileApi, FileInfo } from '@/integrations/api/fileApi.ts';
 import {Application, downloadApplicationFile, getApplicationRelatedUsers} from '@/integrations/api/applicationApi.ts';
 import PDFPreview from '@/components/ui/pdf-preview.tsx'
+import DatasetInfoDisplay from "@/components/dataset/DatasetInfoDisplay.tsx";
 
 interface ApplicationDetailDialogProps {
     open: boolean;
@@ -197,20 +209,23 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
 
         try {
             // 下载文件
-            let response;
-            response = await downloadApplicationFile(application.id, application.approvalDocumentId);
+            const response = await downloadApplicationFile(application.id, application.approvalDocumentId);
 
             // 创建下载链接
             const url = window.URL.createObjectURL(new Blob([response]));
             const link = document.createElement('a');
             link.href = url;
             link.download = fileInfo?.fileName || `approval-document-${application.id}`;
+
+            // 触发下载
             document.body.appendChild(link);
             link.click();
 
             // 清理
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(link);
+            setTimeout(() => {
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(link);
+            }, 100);
 
             toast({
                 title: "开始下载",
@@ -273,12 +288,8 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
                     <div className="flex-1 overflow-hidden overflow-y-auto">
                         <ScrollArea className="h-full w-full pr-4">
                             {/* 数据集名称单独一行显示 */}
-                            <div className="p-4 bg-muted rounded-lg mb-4">
-                                <div className="flex items-center gap-2">
-                                    <FileText className="h-4 w-4 text-muted-foreground"/>
-                                    <p className="font-medium">数据集</p>
-                                </div>
-                                <p>{application.datasetTitle}</p>
+                            <div className={"mb-4"}>
+                                <DatasetInfoDisplay dataset={application.dataset} title={"相关数据集信息"} />
                             </div>
 
                             <Tabs defaultValue="basic" className="w-full">
@@ -294,29 +305,20 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
                                                 <label className="text-sm font-medium text-muted-foreground">项目名称</label>
                                                 <p className="mt-1">{application.projectTitle}</p>
                                             </div>
-                                            <div>
-                                                <label className="text-sm font-medium text-muted-foreground">申请人</label>
-                                                <p className="mt-1">{application.applicantName}</p>
-                                            </div>
                                         </div>
 
-                                        {application.supervisorName && (
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <label className="text-sm font-medium text-muted-foreground">监督人</label>
-                                                    <p className="mt-1">{application.supervisorName}</p>
+                                                    <label className="text-sm font-medium text-muted-foreground">申请人</label>
+                                                    <p className="mt-1">{application.applicantName}</p>
                                                 </div>
                                                 <div>
-                                                    {/* 占位符，保持布局一致 */}
+                                                    <label className="text-sm font-medium text-muted-foreground">项目负责人</label>
+                                                    <p className="mt-1">{application.projectLeader}</p>
                                                 </div>
                                             </div>
-                                        )}
 
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="text-sm font-medium text-muted-foreground">项目负责人</label>
-                                                <p className="mt-1">{application.projectLeader}</p>
-                                            </div>
+                                        <div className="grid grid-cols-1 gap-4">
                                             <div>
                                                 <label className="text-sm font-medium text-muted-foreground">资金来源</label>
                                                 <p className="mt-1">{application.fundingSource}</p>
@@ -325,12 +327,12 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
 
                                         <div>
                                             <label className="text-sm font-medium text-muted-foreground">项目描述</label>
-                                            <p className="mt-1 p-2 bg-muted rounded text-sm">{application.projectDescription}</p>
+                                            <p className="mt-1 p-3 bg-muted rounded text-sm break-words whitespace-pre-line">{application.projectDescription}</p>
                                         </div>
 
                                         <div>
-                                            <label className="text-sm font-medium text-muted-foreground">申请用途</label>
-                                            <p className="mt-1 p-2 bg-muted rounded text-sm">{application.purpose}</p>
+                                            <label className="text-sm font-medium text-muted-foreground">申请用途:</label>
+                                            <p className="mt-1 p-3 bg-muted rounded text-sm break-words whitespace-pre-line">{application.purpose}</p>
                                         </div>
 
                                         <div>

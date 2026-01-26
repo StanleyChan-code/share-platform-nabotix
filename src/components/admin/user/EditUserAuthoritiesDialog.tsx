@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
-import {getCurrentUserRolesFromSession} from "@/lib/authUtils";
+import {getCurrentUserInfoFromSession, getCurrentUserRolesFromSession} from "@/lib/authUtils";
 import { Label } from "@/components/ui/label.tsx";
 
 interface EditUserAuthoritiesDialogProps {
@@ -28,6 +28,7 @@ const EditUserAuthoritiesDialog = ({ open, onOpenChange, user, onAuthoritiesUpda
     const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
 
     // 定义管理员角色
     const adminRoles: string[] = [PermissionRoles.PLATFORM_ADMIN, PermissionRoles.INSTITUTION_SUPERVISOR];
@@ -68,6 +69,7 @@ const EditUserAuthoritiesDialog = ({ open, onOpenChange, user, onAuthoritiesUpda
     useEffect(() => {
         if (user && open) {
             setLoading(true);
+            setIsPlatformAdmin(getCurrentUserInfoFromSession().roles.includes(PermissionRoles.PLATFORM_ADMIN));
             userApi.getUserAuthorities(user.id)
                 .then(roles => {
                     // 过滤掉研究成果审核员角色，只保留当前可见的角色选项
@@ -122,11 +124,9 @@ const EditUserAuthoritiesDialog = ({ open, onOpenChange, user, onAuthoritiesUpda
         const hasAdmin = hasAdminRoleSelected();
         const hasNormal = hasNormalRoleSelected();
         const isRoleAdmin = isAdminRole(roleId);
-        const currentUserRoles = getCurrentUserRolesFromSession();
-        const isCurrentUserPlatformAdmin = currentUserRoles.includes(PermissionRoles.PLATFORM_ADMIN);
 
-        // 如果是机构管理员角色，只有平台管理员可以选择
-        if (roleId === PermissionRoles.INSTITUTION_SUPERVISOR && !isCurrentUserPlatformAdmin) {
+        // 如果是机构用户管理员角色，只有平台管理员或机构管理员可以选择
+        if (roleId === PermissionRoles.INSTITUTION_USER_MANAGER && !isCurrentUserPlatformAdmin && !isCurrentUserInstitutionAdmin) {
             return false;
         }
 
@@ -142,8 +142,8 @@ const EditUserAuthoritiesDialog = ({ open, onOpenChange, user, onAuthoritiesUpda
             return !isRoleAdmin;
         }
 
-        // 如果没有任何选择，所有角色都可选（除了机构管理员，只有平台管理员可以选）
-        return roleId !== PermissionRoles.INSTITUTION_SUPERVISOR || isCurrentUserPlatformAdmin;
+        // 如果没有任何选择，所有角色都可选
+        return true;
     };
 
     const handleSave = async () => {
@@ -176,21 +176,25 @@ const EditUserAuthoritiesDialog = ({ open, onOpenChange, user, onAuthoritiesUpda
     };
 
     // 权限角色选项
-    const roleOptions: { id: string; name: string; isAdmin: boolean }[] = [
-        { id: PermissionRoles.INSTITUTION_SUPERVISOR, name: getPermissionRoleDisplayName(PermissionRoles.INSTITUTION_SUPERVISOR), isAdmin: true },
+    const roleOptions: { id: string; name: string; isAdmin: boolean }[] = [];
+    const currentUserRoles = getCurrentUserRolesFromSession();
+    const isCurrentUserPlatformAdmin = currentUserRoles.includes(PermissionRoles.PLATFORM_ADMIN);
+    const isCurrentUserInstitutionAdmin = currentUserRoles.includes(PermissionRoles.INSTITUTION_SUPERVISOR);
+
+    // 如果是平台管理员，可以看到平台管理员和机构管理员角色
+    if (isCurrentUserPlatformAdmin) {
+        roleOptions.push(
+            { id: PermissionRoles.PLATFORM_ADMIN, name: getPermissionRoleDisplayName(PermissionRoles.PLATFORM_ADMIN), isAdmin: true },
+            { id: PermissionRoles.INSTITUTION_SUPERVISOR, name: getPermissionRoleDisplayName(PermissionRoles.INSTITUTION_SUPERVISOR), isAdmin: true }
+        );
+    }
+
+    // 所有用户都可以看到普通角色
+    roleOptions.push(
         { id: PermissionRoles.INSTITUTION_USER_MANAGER, name: getPermissionRoleDisplayName(PermissionRoles.INSTITUTION_USER_MANAGER), isAdmin: false },
         { id: PermissionRoles.DATASET_UPLOADER, name: getPermissionRoleDisplayName(PermissionRoles.DATASET_UPLOADER), isAdmin: false },
-        { id: PermissionRoles.DATASET_APPROVER, name: getPermissionRoleDisplayName(PermissionRoles.DATASET_APPROVER), isAdmin: false },
-    ];
-
-    // 如果是平台管理员，添加平台管理员选项到最前面
-    if (getCurrentUserRolesFromSession().includes(PermissionRoles.PLATFORM_ADMIN)) {
-        roleOptions.unshift({
-            id: PermissionRoles.PLATFORM_ADMIN,
-            name: getPermissionRoleDisplayName(PermissionRoles.PLATFORM_ADMIN),
-            isAdmin: true
-        });
-    }
+        { id: PermissionRoles.DATASET_APPROVER, name: getPermissionRoleDisplayName(PermissionRoles.DATASET_APPROVER), isAdmin: false }
+    );
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -222,9 +226,11 @@ const EditUserAuthoritiesDialog = ({ open, onOpenChange, user, onAuthoritiesUpda
 
                         <div className="space-y-2 flex-grow overflow-hidden flex flex-col">
                             <Label className="text-sm text-muted-foreground">请选择用户权限角色：</Label>
-                            <div className="text-xs text-muted-foreground mb-2">
-                                <p>• 管理员角色与普通角色不能同时选择</p>
-                            </div>
+                            {isPlatformAdmin && (
+                                <div className="text-xs text-muted-foreground mb-2">
+                                    <p>• 管理员角色与普通角色不能同时选择</p>
+                                </div>
+                            )}
 
                             <ScrollArea className="flex-grow overflow-auto pr-2">
                                 <div className="space-y-2">

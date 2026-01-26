@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import UserInfoDialog from "./UserInfoDialog.tsx";
 import {Switch} from "@/components/ui/switch.tsx";
-import {AdminInstitutionSelector} from "@/components/admin/institution/AdminInstitutionSelector.tsx";
+import {InstitutionSelector} from "@/components/admin/institution/InstitutionSelector.tsx";
 import {getCurrentUserInfoFromSession, refreshUserInfo} from "@/lib/authUtils";
 import {
     Dialog,
@@ -46,6 +46,7 @@ import {ScrollArea} from "@radix-ui/react-scroll-area";
 import {institutionApi} from "@/integrations/api/institutionApi.ts";
 import {useDebounce} from "@/hooks/useDebounce";
 import {Input} from "@/components/ui/FormValidator.tsx";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 
 const UserManagementTab = () => {
     const [users, setUsers] = useState<any[]>([]);
@@ -54,7 +55,6 @@ const UserManagementTab = () => {
     const [showAddUserDialog, setShowAddUserDialog] = useState(false);
     const [selectedInstitutionId, setSelectedInstitutionId] = useState<string[] | null>(null);
     const [isPlatformAdmin, setIsPlatformAdmin] = useState<boolean>(false);
-    const [userInstitutionId, setUserInstitutionId] = useState<string | null>(null);
     const [selectedUser, setSelectedUser] = useState<any>(null);
     const [showUserInfoDialog, setShowUserInfoDialog] = useState(false);
     const [currentPage, setCurrentPage] = useState(0);
@@ -63,8 +63,8 @@ const UserManagementTab = () => {
     const [showEditUserDialog, setShowEditUserDialog] = useState(false);
     const [showEditPhoneDialog, setShowEditPhoneDialog] = useState(false);
     const [showEditAuthoritiesDialog, setShowEditAuthoritiesDialog] = useState(false);
-    const [searchPhone, setSearchPhone] = useState(""); // 新增手机号搜索状态
-    const [searchResultUser, setSearchResultUser] = useState<any>(null); // 存储搜索结果用户
+    const [searchType, setSearchType] = useState("realName"); // 搜索类型：realName 或 phone
+    const [searchValue, setSearchValue] = useState(""); // 搜索值
     // 存储机构信息的状态
     const [institutionMap, setInstitutionMap] = useState<Record<string, { fullName: string }>>({});
     const {toast} = useToast();
@@ -73,15 +73,13 @@ const UserManagementTab = () => {
     const userHasAnyAuthorityOf = (user: any, ...roles: string[]) => roles.some(role => user.authorities.includes(role));
 
     // 添加防抖处理，延迟550ms
-    const debouncedSearchPhone = useDebounce(searchPhone, 550);
+    const debouncedSearchValue = useDebounce(searchValue, 550);
     // 检查用户是否为平台管理员并获取用户所属机构，同时初始化用户列表
     useEffect(() => {
         const userInfo = getCurrentUserInfoFromSession();
         if (userInfo) {
             const isPlatformAdminUser = userInfo.roles.includes(PermissionRoles.PLATFORM_ADMIN);
             setIsPlatformAdmin(isPlatformAdminUser);
-            setUserInstitutionId(userInfo.user.institutionId);
-
             // 从 userInfo.institution 获取机构名称
             setInstitutionMap({
                 [userInfo.user.institutionId]: {
@@ -101,8 +99,7 @@ const UserManagementTab = () => {
         // 平台管理员：可以立即获取（不选机构时获取所有用户）
         // 非平台管理员：需要等待机构设置
         if (isPlatformAdmin || selectedInstitutionId?.length > 0) {
-            setCurrentPage(0);
-            fetchUsers(0);
+            handleClearSearch();
         }
     }, [isPlatformAdmin, selectedInstitutionId]);
 
@@ -128,7 +125,7 @@ const UserManagementTab = () => {
         }
     };
 
-    const fetchUsers = async (page: number = 0) => {
+    const fetchUsers = async (page: number = 0, realName?: string) => {
         if (!selectedInstitutionId && !isPlatformAdmin) {
             setUsers([]);
             setUserRoles({});
@@ -141,13 +138,9 @@ const UserManagementTab = () => {
             const size = 5;
             let response;
 
-            if (isPlatformAdmin && (!selectedInstitutionId || selectedInstitutionId.length === 0)) {
-                // 平台管理员且未选择机构时，获取所有用户
-                response = await userApi.getAllUsers(page, size);
-            } else {
-                // 获取指定机构的用户列表
-                response = await userApi.getUsers(page, size, selectedInstitutionId![0]);
-            }
+            // 使用统一的getUsers方法获取用户列表
+            // 平台管理员未选择机构时，institutionId为undefined，将获取所有用户
+            response = await userApi.getUsers(page, size, selectedInstitutionId?.[0], realName);
 
             const userList = response.data.content;
             setUsers(userList);
@@ -184,14 +177,22 @@ const UserManagementTab = () => {
 
     // 根据手机号搜索用户
     const handleSearchByPhone = async (phone?: string) => {
-        const searchPhoneValue = phone || debouncedSearchPhone;
+        const phoneToSearch = phone || searchValue;
 
         // 如果搜索框为空，清空搜索结果并重新加载用户列表
-        if (!searchPhoneValue.trim()) {
-            setSearchResultUser(null);
-            setSearchPhone(""); // 清空搜索框
+        if (!phoneToSearch.trim()) {
+            setSearchValue(""); // 清空搜索框
             fetchUsers(0); // 重置到第一页
             setCurrentPage(0);
+            return;
+        }
+
+        // 验证手机号格式
+        if (phoneToSearch.trim().length !== 11) {
+            toast({
+                title: "提示",
+                description: "请输入11位有效手机号",
+            });
             return;
         }
 
@@ -207,11 +208,10 @@ const UserManagementTab = () => {
 
         setLoading(true);
         try {
-            const apiResponse = await userApi.getUserByPhone(searchPhoneValue);
+            const apiResponse = await userApi.getUserByPhone(phoneToSearch);
             const user = apiResponse.data;
 
             if (apiResponse.success) {
-                setSearchResultUser(user);
 
                 // 更新用户角色信息
                 const rolesMap = {...userRoles};
@@ -233,15 +233,17 @@ const UserManagementTab = () => {
                 setCurrentPage(0);
 
             } else {
-                setSearchResultUser(null);
                 toast({
                     title: "提示",
                     description: apiResponse.message || "搜索用户失败，请确认手机号是否正确",
                 });
+                setUsers([]);
+                setTotalPages(0);
+                setTotalElements(0); // 设置总元素数为1
+                setCurrentPage(0);
             }
         } catch (error: any) {
             console.error("搜索用户失败:", error);
-            setSearchResultUser(null);
             toast({
                 title: "错误",
                 description: error.response?.data?.message || "搜索用户失败，请确认手机号是否正确",
@@ -254,21 +256,20 @@ const UserManagementTab = () => {
 
     // 修改清空搜索的逻辑
     const handleClearSearch = () => {
-        setSearchPhone("");
-        setSearchResultUser(null);
+        setSearchValue("");
         setCurrentPage(0);
         fetchUsers(0);
     };
 
     // 监听刷新事件
-    useEffect(() => {
+        useEffect(() => {
         const handleRefreshUsers = () => {
-            if (debouncedSearchPhone.trim()) {
+            if (debouncedSearchValue.trim() && searchType === "phone") {
                 // 如果正在搜索但还没有结果，执行搜索
                 handleSearchByPhone();
             } else {
                 // 否则正常刷新用户列表
-                fetchUsers(currentPage);
+                fetchUsers(currentPage, searchType === "realName" ? debouncedSearchValue : undefined);
             }
         };
 
@@ -277,42 +278,52 @@ const UserManagementTab = () => {
         return () => {
             window.removeEventListener('refresh-users', handleRefreshUsers);
         };
-    }, [selectedInstitutionId, currentPage, debouncedSearchPhone, searchResultUser]);
+    }, [selectedInstitutionId, currentPage, debouncedSearchValue, searchType]);
 
     // 监听防抖后的搜索值变化，执行搜索
     useEffect(() => {
         // 只有当搜索值不为空时才执行搜索
-        if (debouncedSearchPhone.trim() && debouncedSearchPhone.trim().length === 11) {
-            handleSearchByPhone();
+        if (debouncedSearchValue.trim()) {
+            if (searchType === "phone" && debouncedSearchValue.trim().length === 11) {
+                handleSearchByPhone();
+            } else if (searchType === "realName") {
+                // 姓名搜索，重置当前页并重新获取用户列表
+                setCurrentPage(0);
+                fetchUsers(0, debouncedSearchValue);
+            }
         }
-    }, [debouncedSearchPhone]);
+    }, [debouncedSearchValue]);
+
+    // 监听切换的搜索类型变化，执行清空搜索
+    useEffect(() => {
+        // 只有当搜索值不为空时才执行清空搜索
+        if (debouncedSearchValue.trim()) {
+            handleClearSearch();
+        }
+    }, [searchType]);
 
     const handleUserAdded = () => {
         // 根据是否有搜索条件决定刷新方式
-        if (searchPhone.trim()) {
+        if (searchType === "phone" && searchValue.trim()) {
             handleSearchByPhone();
         } else {
-            fetchUsers(currentPage);
+            fetchUsers(currentPage, searchType === "realName" ? debouncedSearchValue : undefined);
         }
         setShowAddUserDialog(false);
     };
 
-    const showUserDetails = (user: any) => {
-        setSelectedUser(user);
+   // 处理查看用户详情
+    const showUserDetails = (userId: string) => {
+        setSelectedUser(userId);
         setShowUserInfoDialog(true);
-
-        // 确保机构信息已加载
-        if (user.institutionId && !institutionMap[user.institutionId]) {
-            fetchInstitutionDetails(user.institutionId);
-        }
     };
 
     const handleUserUpdated = () => {
         // 根据是否有搜索条件决定刷新方式
-        if (searchPhone.trim()) {
+        if (searchType === "phone" && searchValue.trim()) {
             handleSearchByPhone();
         } else {
-            fetchUsers(currentPage);
+            fetchUsers(currentPage, searchType === "realName" ? debouncedSearchValue : undefined);
         }
         // 如果修改了自己的信息，刷新当前cookie中的用户信息
         if (selectedUser?.id === getCurrentUserInfoFromSession()?.user?.id) {
@@ -324,21 +335,26 @@ const UserManagementTab = () => {
 
     const handlePhoneUpdated = (newPhone: string) => {
         // 根据是否有搜索条件决定刷新方式
-        if (searchPhone.trim()) {
-            setSearchPhone(newPhone);
+        if (searchType === "phone" && searchValue.trim()) {
+            setSearchValue(newPhone);
             handleSearchByPhone(newPhone);
         } else {
-            fetchUsers(currentPage);
+            fetchUsers(currentPage, searchType === "realName" ? debouncedSearchValue : undefined);
         }
+        // 如果修改了自己的信息，刷新当前cookie中的用户信息
+        if (selectedUser?.id === getCurrentUserInfoFromSession()?.user?.id) {
+            refreshUserInfo();
+        }
+
         setShowEditPhoneDialog(false);
     };
 
     const handleAuthoritiesUpdated = () => {
         // 根据是否有搜索条件决定刷新方式
-        if (searchPhone.trim()) {
+        if (searchType === "phone" && searchValue.trim()) {
             handleSearchByPhone();
         } else {
-            fetchUsers(currentPage);
+            fetchUsers(currentPage, searchType === "realName" ? debouncedSearchValue : undefined);
         }
         setShowEditAuthoritiesDialog(false);
     };
@@ -359,7 +375,7 @@ const UserManagementTab = () => {
             }
 
             // 检查是否禁用平台管理员
-            const userToUpdate = searchResultUser || users.find(u => u.id === userId);
+            const userToUpdate = users.find(u => u.id === userId);
             if (userToUpdate?.authorities?.includes(PermissionRoles.PLATFORM_ADMIN)) {
                 toast({
                     title: "错误",
@@ -372,11 +388,7 @@ const UserManagementTab = () => {
             await userApi.updateUserDisabledStatus(userId, disabled);
 
             // 更新本地状态
-            if (searchResultUser) {
-                setSearchResultUser(prev => ({...prev, disabled}));
-            } else {
-                setUsers(prev => prev.map(u => u.id === userId ? {...u, disabled} : u));
-            }
+            setUsers(prev => prev.map(u => u.id === userId ? {...u, disabled} : u));
 
             toast({
                 title: "成功",
@@ -395,16 +407,16 @@ const UserManagementTab = () => {
 
     // 处理页面更改
     const handlePageClick = (event: { selected: number }) => {
-        const page = event.selected;
-        setCurrentPage(page);
-        fetchUsers(page);
+        const newPage = event.selected;
+        setCurrentPage(newPage);
+        fetchUsers(newPage, searchType === "realName" ? debouncedSearchValue : undefined);
     };
 
     return (
         <div className="space-y-6">
             {isPlatformAdmin && (
                 <div className="mb-6 p-4 border rounded-lg bg-muted/50">
-                    <AdminInstitutionSelector
+                    <InstitutionSelector
                         value={selectedInstitutionId}
                         onChange={setSelectedInstitutionId}
                         placeholder="选择要管理的机构（可选）"
@@ -412,45 +424,67 @@ const UserManagementTab = () => {
                     />
                 </div>
             )}
-            {/* 手机号搜索框 */}
+            {/* 搜索区域 */}
             <div className="mb-6 p-4 border rounded-lg bg-muted/50  flex justify-between items-center">
                 <div className="flex gap-2 max-w-lg">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground"/>
-                        <Input
-                            placeholder="输入完整手机号搜索用户"
-                            value={searchPhone}
-                            onChange={(e) => {
-                                setSearchPhone(e.target.value);
-                                // 如果清空搜索框，立即清空搜索结果
-                                if (!e.target.value.trim()) {
-                                    handleClearSearch();
-                                }
-                            }}
-                            className="pl-8 w-72"
-                            onKeyDown={async (e) => {
-                                if (e.key === 'Enter') {
-                                    await handleSearchByPhone();
-                                }
-                            }}
-                            maxLength={11}
-                        />
-                    </div>
-                    <Button
-                        onClick={() => handleSearchByPhone()}
-                        disabled={loading || !searchPhone.trim()}
-                    >
-                        {loading ? "搜索中..." : "搜索"}
-                    </Button>
-                    {(searchResultUser || searchPhone) && (
+                    <div className="flex gap-2 items-center">
+                        <Select value={searchType} onValueChange={setSearchType}>
+                            <SelectTrigger className="w-28">
+                                <SelectValue placeholder="搜索方式" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="realName">姓名</SelectItem>
+                                <SelectItem value="phone">手机号</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <div className="relative">
+                            {searchType === "phone" ? (
+                                <Phone className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground"/>
+                            ) : (
+                                <User className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground"/>
+                            )}
+                            <Input
+                                placeholder={searchType === "phone" ? "输入手机号搜索用户" : "输入姓名模糊搜索用户"}
+                                value={searchValue}
+                                onChange={(e) => setSearchValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" && searchValue.trim()) {
+                                        if (searchType === "phone") {
+                                            handleSearchByPhone();
+                                        } else {
+                                            setCurrentPage(0);
+                                            fetchUsers(0, searchValue);
+                                        }
+                                    }
+                                }}
+                                className="pl-8 w-72"
+                                maxLength={searchType === "phone" ? 11 : undefined}
+                            />
+                        </div>
                         <Button
-                            variant="outline"
-                            onClick={handleClearSearch}
-                            disabled={loading}
+                            variant={'outline'}
+                            onClick={() => {
+                                if (searchType === "phone") {
+                                    handleSearchByPhone();
+                                } else {
+                                    setCurrentPage(0);
+                                    fetchUsers(0, searchValue);
+                                }
+                            }}
+                            disabled={loading || !searchValue.trim()}
                         >
-                            清空搜索
+                            {loading ? "刷新中..." : "刷新"}
                         </Button>
-                    )}
+                        {searchValue && (
+                            <Button
+                                variant="outline"
+                                onClick={handleClearSearch}
+                                disabled={loading}
+                            >
+                                清空
+                            </Button>
+                        )}
+                    </div>
                 </div>
                 <div className="flex gap-2">
                     <Dialog open={showAddUserDialog} onOpenChange={setShowAddUserDialog}>
@@ -521,7 +555,7 @@ const UserManagementTab = () => {
                                     return (
                                         <TableRow key={user.id} className={user.id === getCurrentUserInfoFromSession()?.user?.id ? 'bg-yellow-50' : ''}>
                                             <TableCell className="font-medium">
-                                                <a onClick={() => showUserDetails(user)} className="hover:underline hover:text-primary cursor-pointer">
+                                                <a onClick={() => showUserDetails(user.id)} className="hover:underline hover:text-primary cursor-pointer">
                                                     {user.realName}
                                                 </a>
                                             </TableCell>
@@ -584,7 +618,7 @@ const UserManagementTab = () => {
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    onClick={() => showUserDetails(user)}
+                                                    onClick={() => showUserDetails(user.id)}
                                                     className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-all duration-200"
                                                 >
                                                     <Eye className="h-4 w-4" />
@@ -612,7 +646,6 @@ const UserManagementTab = () => {
                     </Table>
 
                     {/* 显示总数信息 */}
-                    {!searchResultUser && (
                         <div className="mt-4 text-sm text-muted-foreground flex justify-between items-center">
                             <div>
                                 共 {totalElements} 条记录
@@ -655,7 +688,6 @@ const UserManagementTab = () => {
                                 </div>
                             )}
                         </div>
-                    )}
                 </>
             ) : (
                 <div className="text-center py-8 text-muted-foreground">
@@ -669,10 +701,8 @@ const UserManagementTab = () => {
                     <UserInfoDialog
                         open={showUserInfoDialog}
                         onOpenChange={setShowUserInfoDialog}
-                        user={selectedUser}
-                        institutionMap={institutionMap}
-                        userRoles={userRoles}
-                        isPlatformAdmin={isPlatformAdmin}
+                        userId={selectedUser}
+                        showUserId={isPlatformAdmin}
                     />
                     <EditUserDialog
                         open={showEditUserDialog}

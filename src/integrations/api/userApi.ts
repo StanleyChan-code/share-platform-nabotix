@@ -82,6 +82,8 @@ export interface RelatedUsersDto {
   institutionSupervisors: UserDto[];
 
   platformAdmins?: UserDto[];
+
+  submitters?: UserDto[];
 }
 
 
@@ -95,17 +97,9 @@ export const userApi = {
   },
 
   // 获取用户列表（分页）
-  async getUsers(page: number = 0, size: number = 10, institutionId?: string) {
+  async getUsers(page: number = 0, size: number = 10, institutionId?: string, realName?: string) {
     const response = await api.get<Page<User>>('/manage/users', {
-      params: { page, size, institutionId }
-    });
-    return response.data;
-  },
-
-  // 平台管理员获取全部用户列表（分页）
-  async getAllUsers(page: number = 0, size: number = 10) {
-    const response = await api.get<Page<User>>('/manage/users/all', {
-      params: { page, size }
+      params: { page, size, institutionId, realName }
     });
     return response.data;
   },

@@ -5,7 +5,7 @@ import { ResearchSubject } from "@/integrations/api/datasetApi.ts";
 import { DatasetTypes } from "@/lib/enums.ts";
 import { Input } from "@/components/ui/FormValidator.tsx";
 import { CustomDatePicker } from "@/components/ui/date-picker";
-import { AdminInstitutionSelector } from "@/components/admin/institution/AdminInstitutionSelector";
+import { InstitutionSelector } from "@/components/admin/institution/InstitutionSelector.tsx";
 
 interface DatasetFiltersProps {
     searchTerm: string;
@@ -67,7 +67,7 @@ export function DatasetFilters({
             </div>
 
             <div className="relative min-w-[150px]">
-                <AdminInstitutionSelector
+                <InstitutionSelector
                     value={selectedInstitution}
                     onChange={onSelectedInstitutionChange}
                     placeholder="全部机构"

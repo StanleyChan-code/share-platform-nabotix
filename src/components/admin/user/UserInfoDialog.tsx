@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import {
     Dialog as InfoDialog,
@@ -11,15 +11,16 @@ import { formatDateTime } from '@/lib/utils';
 import { getPermissionRoleDisplayName } from '@/lib/permissionUtils';
 import { ID_TYPES, EducationLevels } from '@/lib/enums';
 import { Skeleton } from '@/components/ui/skeleton';
+import { userApi } from '@/integrations/api/userApi';
+import { institutionApi } from '@/integrations/api/institutionApi';
+import { useToast } from '@/hooks/use-toast';
 
 // 定义组件属性接口
 interface UserInfoDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    user: any;
-    institutionMap: Record<string, { fullName: string }>;
-    userRoles: Record<string, string[]>;
-    isPlatformAdmin: boolean;
+    userId: string;
+    showUserId?: boolean;
 }
 
 // 对证件号码进行脱敏处理
@@ -56,11 +57,75 @@ const renderInfoField = (label: string, value: string | React.ReactNode, isImpor
 const UserInfoDialog: React.FC<UserInfoDialogProps> = ({
                                                            open,
                                                            onOpenChange,
-                                                           user,
-                                                           institutionMap,
-                                                           userRoles,
-                                                           isPlatformAdmin
+                                                           userId,
+                                                           showUserId = false
                                                        }) => {
+    const [user, setUser] = useState<any>(null);
+    const [institutionName, setInstitutionName] = useState<string>('未分配');
+    const [userRoles, setUserRoles] = useState<string[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const { toast } = useToast();
+
+    // 加载用户信息
+    useEffect(() => {
+        const fetchUserInfo = async () => {
+            if (!open || !userId) {
+                return;
+            }
+
+            setLoading(true);
+            try {
+                // 获取用户基本信息
+                const response = await userApi.getUserById(userId);
+                if (!response.success) {
+                    toast({
+                        title: '错误',
+                        description: response.message || '获取用户信息失败，请稍后重试',
+                        variant: 'destructive',
+                    });
+
+                } else {
+                    const userData = response.data;
+                    setUser(userData);
+
+                    // 获取用户角色
+                    if (userData.authorities) {
+                        setUserRoles(userData.authorities);
+                    } else {
+                        setUserRoles([]);
+                    }
+
+                    // 获取机构信息
+                    if (userData.institutionId) {
+                        try {
+                            const institutionResponse = await institutionApi.getInstitutionById(userData.institutionId);
+                            if (institutionResponse.success){
+                                setInstitutionName(institutionResponse.data.fullName);
+                            } else {
+                                setInstitutionName('加载失败');
+                            }
+                        } catch (error) {
+                            console.error(`获取机构 ${userData.institutionId} 信息失败:`, error);
+                            setInstitutionName(userData.institutionId);
+                        }
+                    } else {
+                        setInstitutionName('未分配');
+                    }
+                }
+            } catch (error) {
+                console.error('获取用户信息失败:', error);
+                toast({
+                    title: '错误',
+                    description: '获取用户信息失败，请稍后重试',
+                    variant: 'destructive',
+                });
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchUserInfo();
+    }, [open, userId, toast]);
     // 生成角色徽章颜色
     const getRoleBadgeColor = (role: string) => {
         const roleColors: Record<string, string> = {
@@ -86,7 +151,7 @@ const UserInfoDialog: React.FC<UserInfoDialogProps> = ({
     );
 
     // 用户信息内容
-    const userInfoContent = user ? (
+    const userInfoContent = loading ? renderLoadingSkeleton() : (user ? (
         <div className="divide-y divide-border/50">
             {/* 基础信息区域 */}
             <div className="p-6">
@@ -95,15 +160,13 @@ const UserInfoDialog: React.FC<UserInfoDialogProps> = ({
                     基础信息
                 </h3>
                 <dl className="space-y-1">
-                    {isPlatformAdmin && renderInfoField("用户ID", user.id, true)}
-                    {renderInfoField("真实姓名", user.realName, true)}
+                    {showUserId && renderInfoField("用户ID", user.id, true)}
+                    {renderInfoField("姓名", user.realName, true)}
                     {renderInfoField("邮箱地址", user.email)}
                     {renderInfoField("手机号码", user.phone || "未填写")}
                     {renderInfoField(
                         "所属机构",
-                        user.institutionId
-                            ? (institutionMap[user.institutionId]?.fullName || user.institutionId)
-                            : "未分配"
+                        institutionName
                     )}
                     {renderInfoField("注册时间", formatDateTime(user.createdAt))}
                 </dl>
@@ -156,8 +219,8 @@ const UserInfoDialog: React.FC<UserInfoDialogProps> = ({
                     系统角色
                 </h3>
                 <div className="flex flex-wrap gap-2 pl-[calc(33.333%+1rem)]">
-                    {userRoles[user.id]?.length > 0 ? (
-                        userRoles[user.id].map((role, index) => (
+                    {userRoles.length > 0 ? (
+                        userRoles.map((role, index) => (
                             <Badge
                                 key={index}
                                 variant="outline"
@@ -173,8 +236,10 @@ const UserInfoDialog: React.FC<UserInfoDialogProps> = ({
             </div>
         </div>
     ) : (
-        renderLoadingSkeleton()
-    );
+        <div>
+            加载失败
+        </div>
+    ));
 
     return (
         <InfoDialog open={open} onOpenChange={onOpenChange}>

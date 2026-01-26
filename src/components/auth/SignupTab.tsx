@@ -9,7 +9,7 @@ import { Phone, Lock, Send, CreditCard, Shield, BadgeCheck } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {FormValidator, Input, ValidatedSelect} from "@/components/ui/FormValidator";
 import {ID_TYPES} from "@/lib/enums.ts";
-import { AdminInstitutionSelector } from "@/components/admin/institution/AdminInstitutionSelector";
+import { InstitutionSelector } from "@/components/admin/institution/InstitutionSelector.tsx";
 
 interface SignupTabProps {
   phone: string;
@@ -62,16 +62,16 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
   // 修复：realName 验证函数
   const validateRealName = (value: string): boolean | string => {
     if (!value.trim()) {
-      return "真实姓名不能为空";
+      return "姓名不能为空";
     }
     if (value.trim().length < 2) {
-      return "真实姓名至少需要2个字符";
+      return "姓名至少需要2个字符";
     }
     if (value.trim().length > 20) {
-      return "真实姓名不能超过20个字符";
+      return "姓名不能超过20个字符";
     }
     if (!/^[\u4e00-\u9fa5a-zA-Z\s·]+$/.test(value.trim())) {
-      return "真实姓名只能包含中文、英文和空格";
+      return "姓名只能包含中文、英文和空格";
     }
     return true;
   };
@@ -263,7 +263,7 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
             所属机构 <span className="text-red-500">*</span>
           </Label>
           <div className="relative">
-            <AdminInstitutionSelector
+            <InstitutionSelector
               value={institutionId}
               onChange={(value) => setInstitutionId(value)}
               placeholder="请选择所属机构"
@@ -280,10 +280,10 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
           </div>
         </div>
 
-        {/* 真实姓名 */}
+        {/* 姓名 */}
         <div className="space-y-2">
           <Label htmlFor="signup-realname" className="text-sm font-medium flex items-center gap-1">
-            真实姓名 <span className="text-red-500">*</span>
+            姓名 <span className="text-red-500">*</span>
           </Label>
           <div className="relative">
             <BadgeCheck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -291,7 +291,7 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
                 id="signup-realname"
                 name="realName"
                 type="text"
-                placeholder="请输入真实姓名，支持中文、英文"
+                placeholder="请输入姓名"
                 value={realName} // 确保 value 正确绑定
                 onChange={handleRealNameChange} // 使用专门的 change handler
                 className="pl-10 h-11"
@@ -299,7 +299,7 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
                 required
                 validationType="custom"
                 customValidation={validateRealName}
-                errorMessage="真实姓名格式不正确"
+                errorMessage="姓名格式不正确"
             />
           </div>
         </div>

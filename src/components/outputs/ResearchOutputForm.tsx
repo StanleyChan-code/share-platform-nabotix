@@ -152,7 +152,7 @@ const ResearchOutputForm = ({
         return (
             <DatasetInfoDisplay 
                 dataset={selectedDataset} 
-                title="关联数据集信息"
+                title="研究成果关联的数据集信息"
             />
         );
     };
@@ -162,7 +162,7 @@ const ResearchOutputForm = ({
             <DatasetSelectorComponent
                 selectedDataset={selectedDataset}
                 onDatasetSelect={onDatasetSelect}
-                label="关联数据集"
+                label="研究成果关联的数据集"
                 required
             />
         );

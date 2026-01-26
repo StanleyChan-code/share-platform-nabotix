@@ -19,7 +19,7 @@ import {
     ChevronRightIcon,
     Search,
     Filter,
-    RefreshCw
+    RefreshCw, Users, BookOpen, Tag, UserCheck, Target, CalendarCheck
 } from "lucide-react";
 import {Button} from "@/components/ui/button.tsx";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip.tsx";
@@ -41,7 +41,7 @@ import {DatasetTypes} from "@/lib/enums.ts";
 import {DatasetUploadForm} from "@/components/admin/dataset/DatasetUploadForm.tsx";
 import ReactPaginate from "react-paginate";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
-import {AdminInstitutionSelector} from "@/components/admin/institution/AdminInstitutionSelector.tsx";
+import {InstitutionSelector} from "@/components/admin/institution/InstitutionSelector.tsx";
 import {useDebounce} from "@/hooks/useDebounce";
 import {Input} from "@/components/ui/FormValidator.tsx";
 import {Switch} from "@/components/ui/switch.tsx";
@@ -406,7 +406,7 @@ const DatasetsTab = () => {
                         </div>
                         {dataset.provider && (
                             <div className="flex items-center gap-2">
-                                <User className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
+                                <UserCheck className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
                                 <span className="font-medium">数据集提供者: </span>
                                 <span className="truncate">
                   {dataset.provider.realName}
@@ -423,7 +423,7 @@ const DatasetsTab = () => {
                     <div className="space-y-2">
                         <div className="flex items-center gap-2">
                             <Building className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                            <span className="font-medium">收集单位:</span>
+                            <span className="font-medium">采集单位:</span>
                             <span className="truncate" title={dataset.dataCollectionUnit}>
                 {dataset.dataCollectionUnit}
               </span>
@@ -433,21 +433,28 @@ const DatasetsTab = () => {
                             <span className="font-medium">版本数:</span>
                             <span>{dataset.versions.length}</span>
                         </div>
+                        <div className="flex items-center gap-2">
+                            <CalendarCheck className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
+                            <span className="font-medium">首次发布时间:</span>
+                            <span className="truncate">{formatDateTime(dataset.firstPublishedDate) || '未发布'}</span>
+                        </div>
                     </div>
 
                     <div className="space-y-2">
-                        <div>
+                        <div className="flex items-center gap-2">
+                            <Target className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
                             <span className="font-medium">学科领域:</span>
-                            <span className="ml-2">{dataset.subjectArea?.name || '未指定'}</span>
+                            <span>{dataset.subjectArea?.name || '未指定'}</span>
                         </div>
-                        <div>
+                        <div className="flex items-center gap-2">
+                            <BookOpen className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
                             <span className="font-medium">数据集类型:</span>
-                            <span
-                                className="ml-2">{DatasetTypes[dataset.type as keyof typeof DatasetTypes] || dataset.type}</span>
+                            <span >{DatasetTypes[dataset.type as keyof typeof DatasetTypes] || dataset.type}</span>
                         </div>
-                        <div>
+                        <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
                             <span className="font-medium">更新时间:</span>
-                            <span className="ml-2">{formatDateTime(dataset.updatedAt)}</span>
+                            <span>{formatDateTime(dataset.updatedAt)}</span>
                         </div>
                     </div>
                 </div>
@@ -543,7 +550,7 @@ const DatasetsTab = () => {
                         {/* 平台管理员机构选择器 */}
                         {hasPermissionRole(PermissionRoles.PLATFORM_ADMIN) && (
                             <div className="mb-6 p-4 border rounded-lg bg-muted/50">
-                                <AdminInstitutionSelector
+                                <InstitutionSelector
                                     value={institutionId}
                                     onChange={setInstitutionId}
                                     placeholder="选择要管理的机构（可选）"

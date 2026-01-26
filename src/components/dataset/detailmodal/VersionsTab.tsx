@@ -238,7 +238,7 @@ export function VersionsTab({
                                         <QAItem
                                             number={1}
                                             title="版本创建"
-                                            description="数据集提供者（上传员）在创建数据集时，系统会自动创建第一个数据集版本。"
+                                            description="数据集提供者在创建数据集时，系统会自动创建第一个数据集版本。"
                                         />
                                         
                                         <QAItem

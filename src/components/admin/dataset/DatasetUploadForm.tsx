@@ -10,7 +10,7 @@ import FileUploader from "@/components/fileuploader/FileUploader.tsx";
 import { FileUploaderHandles } from "@/components/fileuploader/types.ts";
 import {formatFileSize, formatISOString} from "@/lib/utils.ts";
 import { BaselineDatasetSelector } from "@/components/admin/dataset/BaselineDatasetSelector.tsx";
-import { AdminInstitutionSelector } from "@/components/admin/institution/AdminInstitutionSelector.tsx";
+import { InstitutionSelector } from "@/components/admin/institution/InstitutionSelector.tsx";
 import { datasetApi } from "@/integrations/api/datasetApi.ts";
 import { institutionApi } from "@/integrations/api/institutionApi.ts";
 import { getCurrentUserRolesFromSession } from "@/lib/authUtils";
@@ -950,7 +950,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                         <Info className="h-3 w-3" />
                         作为平台管理员，您可以为数据集指定所属机构。
                       </p>
-                      <AdminInstitutionSelector
+                      <InstitutionSelector
                           value={formData.institutionId}
                           onChange={(value) => setFormData(prev => ({ ...prev, institutionId: value }))}
                       />
@@ -983,7 +983,7 @@ export function DatasetUploadForm({ onSuccess }: DatasetUploadFormProps) {
                   </div>
 
                   {!formData.noInstitutionRestriction && (
-                    <AdminInstitutionSelector
+                    <InstitutionSelector
                       value={formData.applicationInstitutionIds}
                       onChange={(value) => {
                         setFormData(prev => ({

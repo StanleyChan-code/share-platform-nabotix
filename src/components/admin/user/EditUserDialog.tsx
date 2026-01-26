@@ -20,10 +20,10 @@ import {Loader2, User, Mail, Phone, IdCard, GraduationCap, Briefcase, Target, As
 import {FormValidator, Input, ValidatedSelect} from "@/components/ui/FormValidator";
 import {z} from "zod";
 
-// 修正表单验证规则 - 只有真实姓名、手机号、证件类型、证件号码是必填
+// 修正表单验证规则 - 只有姓名、手机号、证件类型、证件号码是必填
 const formSchema = z.object({
     // 必填字段
-    realName: z.string().min(1, "真实姓名不能为空"),
+    realName: z.string().min(1, "姓名不能为空"),
     phone: z.string().min(1, "手机号不能为空").regex(/^1[3-9]\d{9}$/, "请输入有效的手机号码"),
     idType: z.enum(Object.keys(ID_TYPES) as [string, ...string[]], {
         errorMap: () => ({message: "请选择证件类型"})
@@ -149,15 +149,15 @@ const EditUserDialog = ({open, onOpenChange, user, onUserUpdated}: EditUserDialo
         }
     };
 
-    // 重新组织字段分组 - 只有真实姓名、手机号、证件类型、证件号码是必填
+    // 重新组织字段分组 - 只有姓名、手机号、证件类型、证件号码是必填
     const fieldGroups = [
         {
             title: "身份信息（必填）",
-            description: "请填写用户的真实身份信息",
+            description: "请填写用户的身份信息",
             icon: User,
             required: true,
             fields: [
-                {name: "realName", label: "真实姓名", icon: User, required: true},
+                {name: "realName", label: "姓名", icon: User, required: true},
                 {name: "phone", label: "手机号码", icon: Phone, required: true, type: "tel", disabled: true},
             ]
         },
@@ -324,7 +324,7 @@ const EditUserDialog = ({open, onOpenChange, user, onUserUpdated}: EditUserDialo
                             <div
                                 className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t">
                                 <div className="text-xs text-muted-foreground">
-                                    必填字段：真实姓名、手机号、证件类型、证件号码
+                                    必填字段：姓名、手机号、证件类型、证件号码
                                 </div>
                                 <div className="flex space-x-3 w-full sm:w-auto">
                                     <Button

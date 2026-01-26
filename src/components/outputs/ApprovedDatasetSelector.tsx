@@ -19,7 +19,7 @@ interface ApprovedDatasetSelectorProps {
 export function ApprovedDatasetSelector({ 
   selectedDataset, 
   onDatasetSelect, 
-  label = "关联数据集", 
+  label = "关联已申请审核通过的数据集",
   required = true,
   disabled = false,
   size = 5
@@ -36,7 +36,7 @@ export function ApprovedDatasetSelector({
   useEffect(() => {
     const searchDatasets = async () => {
       if (debouncedDatasetSearchTerm.trim() === "" || disabled) {
-        // 如果没有搜索词，获取最新的已审核通过的数据集
+        // 如果没有搜索词，获取最新的已申请审核通过的数据集
         try {
           setDatasetSearchLoading(true);
           const response = await datasetApi.getMyApprovedDatasets({ size: size });
@@ -54,7 +54,7 @@ export function ApprovedDatasetSelector({
             setFilteredDatasets(filtered.slice(0, size));
           }
         } catch (error) {
-          console.error("获取已审核通过数据集时出错:", error);
+          console.error("获取已申请审核通过数据集时出错:", error);
           setFilteredDatasets([]);
         } finally {
           setDatasetSearchLoading(false);
@@ -74,7 +74,7 @@ export function ApprovedDatasetSelector({
         );
         setFilteredDatasets(filtered.slice(0, size));
       } catch (error) {
-        console.error("搜索已审核通过数据集时出错:", error);
+        console.error("搜索已申请审核通过数据集时出错:", error);
         setFilteredDatasets([]);
       } finally {
         setDatasetSearchLoading(false);
@@ -106,7 +106,13 @@ export function ApprovedDatasetSelector({
             disabled={disabled}
           >
             <span className="truncate">
-              {selectedDataset ? (selectedDataset.titleCn?.length > 30 ? `${selectedDataset.titleCn.substring(0, 30)}...` : selectedDataset.titleCn) : "选择使用的数据集"}
+              {selectedDataset ?
+                  (selectedDataset.titleCn?.length > 30 ?
+                      `${selectedDataset.titleCn.substring(0, 30)}...` :
+                      selectedDataset.titleCn)
+                  :
+                  "选择已申请审核通过的数据集"
+              }
             </span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
@@ -120,7 +126,7 @@ export function ApprovedDatasetSelector({
             datasetSearchLoading={datasetSearchLoading}
             onDatasetSelect={handleDatasetSelect}
             disabled={disabled}
-            placeholder="搜索已申请通过的数据集..."
+            placeholder="搜索已申请审核通过的数据集..."
           />
         </PopoverContent>
       </Popover>

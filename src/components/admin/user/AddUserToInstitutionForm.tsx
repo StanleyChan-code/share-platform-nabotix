@@ -4,8 +4,7 @@ import { Label } from "@/components/ui/label.tsx";
 import { useToast } from "@/hooks/use-toast.ts";
 import { PermissionRoles, getPermissionRoleDisplayName } from "@/lib/permissionUtils.ts";
 import { userApi } from "@/integrations/api/userApi.ts";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card.tsx";
-import { AdminInstitutionSelector } from "@/components/admin/institution/AdminInstitutionSelector.tsx";
+import { InstitutionSelector } from "@/components/admin/institution/InstitutionSelector.tsx";
 import { getCurrentUserInfoFromSession } from "@/lib/authUtils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
 import { Separator } from "@/components/ui/separator.tsx";
@@ -33,15 +32,17 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+  const [isInstitutionAdmin, setIsInstitutionAdmin] = useState(false);
   const [selectedInstitutionId, setSelectedInstitutionId] = useState<string[] | null>(propInstitutionId ? [propInstitutionId] : null);
   const { toast } = useToast();
 
-  // 检查用户是否为平台管理员
+  // 检查用户是否为平台管理员或机构管理员
   useEffect(() => {
     const userInfo = getCurrentUserInfoFromSession();
     if (userInfo) {
-      setIsPlatformAdmin(userInfo.roles.includes('PLATFORM_ADMIN'));
-      if (!userInfo.roles.includes('PLATFORM_ADMIN') && propInstitutionId) {
+      setIsPlatformAdmin(userInfo.roles.includes(PermissionRoles.PLATFORM_ADMIN));
+      setIsInstitutionAdmin(userInfo.roles.includes(PermissionRoles.INSTITUTION_SUPERVISOR));
+      if (!userInfo.roles.includes(PermissionRoles.PLATFORM_ADMIN) && propInstitutionId) {
         setSelectedInstitutionId([propInstitutionId]);
       }
     }
@@ -91,6 +92,11 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
       return true;
     }
 
+    // 如果是机构用户管理员角色，只有平台管理员或机构管理员可以选择
+    if (role === PermissionRoles.INSTITUTION_USER_MANAGER && !isPlatformAdmin && !isInstitutionAdmin) {
+      return true;
+    }
+
     if (selectedRoles.includes(PermissionRoles.PLATFORM_ADMIN) || selectedRoles.includes(PermissionRoles.INSTITUTION_SUPERVISOR)) {
       return !selectedRoles.includes(role);
     }
@@ -132,7 +138,7 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
     try {
       // 1. 检查所有必填字段
       const requiredFields = [
-        { field: 'realName' as keyof typeof formData, label: '真实姓名' },
+        { field: 'realName' as keyof typeof formData, label: '姓名' },
         { field: 'phone' as keyof typeof formData, label: '手机号' },
         { field: 'idType' as keyof typeof formData, label: '证件类型' },
         { field: 'idNumber' as keyof typeof formData, label: '证件号码' }
@@ -282,7 +288,7 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
       icon: User,
       required: true,
       fields: [
-        { name: "realName", label: "真实姓名", icon: User, required: true, type: "text" },
+        { name: "realName", label: "姓名", icon: User, required: true, type: "text" },
         { name: "phone", label: "手机号", icon: Phone, required: true, type: "tel" },
       ]
     },
@@ -413,7 +419,7 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
                         所属机构
                         <Asterisk className="h-3 w-3 text-red-500" />
                       </Label>
-                      <AdminInstitutionSelector
+                      <InstitutionSelector
                           value={selectedInstitutionId}
                           onChange={setSelectedInstitutionId}
                           placeholder="请选择机构"
@@ -431,9 +437,11 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
                 </div>
 
                 <div className="space-y-2 mb-4">
-                  <p className="text-xs text-blue-600">
-                    <strong>注意：</strong>平台管理员和机构管理员角色与其他角色互斥，不能同时选择。
-                  </p>
+                  {isPlatformAdmin && (
+                      <p className="text-xs text-blue-600">
+                        <strong>注意：</strong>平台管理员和机构管理员角色与其他角色互斥，不能同时选择。
+                      </p>
+                  )}
                   <p className="text-xs text-blue-600">
                     <strong>提示：</strong>如果不选择任何角色，用户将只有基础访问权限。
                   </p>
@@ -506,7 +514,7 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
 
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t">
                 <div className="text-xs text-muted-foreground space-y-1">
-                  <div>必填字段：真实姓名、手机号、证件类型、证件号码{isPlatformAdmin && '、所属机构'}</div>
+                  <div>必填字段：姓名、手机号、证件类型、证件号码{isPlatformAdmin && '、所属机构'}</div>
                   <div>创建账号后须使用手机验证码登录，登录后修改密码后才可以使用密码登录。</div>
                 </div>
                 <div className="flex gap-2">

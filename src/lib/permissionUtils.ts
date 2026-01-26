@@ -17,9 +17,9 @@ export const PERMISSION_ROLE_DISPLAY_NAMES: Record<string, string> = {
     'PLATFORM_ADMIN': '平台管理员',
     'INSTITUTION_SUPERVISOR': '机构管理员',
     'INSTITUTION_USER_MANAGER': '机构用户管理员',
-    'DATASET_UPLOADER': '数据集上传员',
-    'DATASET_APPROVER': '数据集审核员',
-    'RESEARCH_OUTPUT_APPROVER': '研究成果审核员'
+    'DATASET_UPLOADER': '机构数据集提供者',
+    'DATASET_APPROVER': '机构数据集审核员',
+    'RESEARCH_OUTPUT_APPROVER': '机构研究成果审核员'
 };
 
 /**
@@ -56,22 +56,4 @@ export function canUploadDataset(): boolean {
     return hasPermissionRole(PermissionRoles.DATASET_UPLOADER) ||
         hasPermissionRole(PermissionRoles.INSTITUTION_SUPERVISOR) ||
         hasPermissionRole(PermissionRoles.PLATFORM_ADMIN);
-}
-
-export function canMangageApplication(application: Application): boolean {
-    if (hasPermissionRole(PermissionRoles.PLATFORM_ADMIN)) return true;
-
-    const userInfo = getCurrentUserInfoFromSession();
-    if (!userInfo) return false;
-    const user = userInfo.user;
-
-    // 机构的数据集管理员
-    if (application.datasetInstitutionId === user.institutionId &&
-        (hasPermissionRole(PermissionRoles.INSTITUTION_SUPERVISOR) || hasPermissionRole(PermissionRoles.DATASET_APPROVER)
-    )) {
-        return true;
-    }
-
-    // 数据集提供者
-    return user.id === application.providerId;
 }

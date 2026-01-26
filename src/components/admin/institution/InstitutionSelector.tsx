@@ -18,7 +18,7 @@ interface AdminInstitutionSelectorProps {
   allowMultiple?: boolean;
 }
 
-export function AdminInstitutionSelector({ 
+export function InstitutionSelector({
   value, 
   onChange, 
   disabled,
@@ -162,7 +162,7 @@ export function AdminInstitutionSelector({
             </div>
             <CommandList>
               <CommandEmpty>
-                {searchLoading ? "搜索中..." : searchTerm === "" ? "请输入关键词（最多显示5个）" : "未找到相关机构"}
+                {searchLoading ? "搜索中..." : searchTerm === "" ? "最多显示5个相关机构" : "未找到相关机构"}
               </CommandEmpty>
               <CommandGroup>
                 {searchResults.map((institution) => (

@@ -3,7 +3,7 @@ import {ResearchOutput} from "@/integrations/api/outputApi";
 import {Badge} from "@/components/ui/badge";
 import {getOutputTypeDisplayName, getOutputTypeIconComponent} from "@/lib/outputUtils";
 import {Button} from "@/components/ui/button";
-import {Trash2, Pencil, Eye, Calendar, Building, CheckCircle, XCircle, Clock, User} from "lucide-react";
+import {Trash2, Pencil, Eye, Calendar, Building, CheckCircle, XCircle, Clock, User, Database} from "lucide-react";
 import {formatDateTime} from "@/lib/utils";
 import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
 import {getCurrentUserInfoFromSession} from "@/lib/authUtils";
@@ -24,6 +24,7 @@ import {api} from "@/integrations/api/client.ts";
 import RelatedUsersDialog from "./RelatedUsersDialog";
 import {RelatedUsersDto} from "@/integrations/api/userApi.ts";
 import {outputApi} from "@/integrations/api/outputApi.ts";
+import {DatasetDetailModal} from "@/components/dataset/DatasetDetailModal.tsx";
 
 interface OutputItemProps {
     output: ResearchOutput;
@@ -34,18 +35,19 @@ interface OutputItemProps {
     managementMode?: boolean; // 管理模式，用于调整UI
 }
 
-const OutputItem = ({ 
-    output, 
-    onEdit, 
-    onDelete, 
-    onDetail, 
-    isEditable = true,
-    managementMode = false
-}: OutputItemProps) => {
+const OutputItem = ({
+                        output,
+                        onEdit,
+                        onDelete,
+                        onDetail,
+                        isEditable = true,
+                        managementMode = false
+                    }: OutputItemProps) => {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [relatedUsersDialogOpen, setRelatedUsersDialogOpen] = useState(false);
     const [relatedUsers, setRelatedUsers] = useState<RelatedUsersDto | null>(null);
     const [relatedUsersLoading, setRelatedUsersLoading] = useState(false);
+    const [datasetModalOpen, setDatasetModalOpen] = useState(false);
     const {toast} = useToast();
 
     const getTypeIcon = (type: string) => {
@@ -82,11 +84,11 @@ const OutputItem = ({
 
     const getStatusBadge = (approved: boolean | null) => {
         const statusConfig = {
-            approved: { variant: "default" as const, icon: CheckCircle, text: "已审核" },
-            rejected: { variant: "destructive" as const, icon: XCircle, text: "已拒绝" },
-            pending: { variant: "secondary" as const, icon: Clock, text: "待审核" }
+            approved: {variant: "default" as const, icon: CheckCircle, text: "已审核"},
+            rejected: {variant: "destructive" as const, icon: XCircle, text: "已拒绝"},
+            pending: {variant: "secondary" as const, icon: Clock, text: "待审核"}
         };
-        
+
         let statusKey: keyof typeof statusConfig;
         if (approved === true) {
             statusKey = "approved";
@@ -95,11 +97,11 @@ const OutputItem = ({
         } else {
             statusKey = "pending";
         }
-        
-        const { variant, icon: Icon, text } = statusConfig[statusKey];
-        
+
+        const {variant, icon: Icon, text} = statusConfig[statusKey];
+
         return (
-            <Badge 
+            <Badge
                 variant={variant}
                 className="flex items-center whitespace-nowrap min-w-[100px] justify-center"
             >
@@ -155,7 +157,7 @@ const OutputItem = ({
         <Card
             className={`hover:shadow-md transition-all duration-200 border-l-4 ${managementMode ? 'border-l-primary' : 'border-l-primary'} max-w-full`}
         >
-            <CardContent className="p-6 max-w-full">
+            <CardContent className="px-6 py-4 max-w-full">
                 <div className="flex flex-col sm:flex-row items-start gap-4 max-w-full">
                     <div className="flex-1 min-w-0 max-w-full">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 max-w-full">
@@ -261,25 +263,31 @@ const OutputItem = ({
                         </div>
 
                         {/* 基本信息行 */}
-                        <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-4 text-sm text-muted-foreground mb-2 max-w-full">
+                        <div
+                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 mb-2 max-w-full text-sm text-muted-foreground">
                             {output.submitter && (
                                 <div className="flex items-center gap-2 min-w-0 max-w-full">
                                     <User className="h-4 w-4 flex-shrink-0"/>
-                                    <span className="truncate" title={output.submitter.realName || output.submitter.phone}>
+                                    <span className="truncate"
+                                          title={output.submitter.realName || output.submitter.phone}>
                                         提交者: {truncateText(output.submitter.realName || output.submitter.phone, 15)}
                                     </span>
                                 </div>
                             )}
-                            
                             {output.dataset && (
-                                <div className="flex items-center gap-2 min-w-0 max-w-full">
-                                    <Building className="h-4 w-4 flex-shrink-0"/>
-                                    <span className="truncate" title={output.dataset.titleCn}>数据集: {truncateText(output.dataset.titleCn, 20)}</span>
+                                <div className="flex flex-row items-center gap-2 min-w-0 flex-1 max-w-full">
+                                    <Database className="h-4 w-4 flex-shrink-0"/>
+                                    <h3 className="truncate">
+                                        数据集: <span
+                                        onClick={() => setDatasetModalOpen(true)}
+                                        className={"hover:underline hover:cursor-pointer"}>{output.dataset.titleCn}</span>
+                                    </h3>
                                 </div>
                             )}
                         </div>
-                        
-                        <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-6 text-sm text-muted-foreground mb-3 max-w-full">
+
+                        <div
+                            className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground mb-4 max-w-full">
                             <div className="flex items-center gap-2">
                                 <Calendar className="h-4 w-4 flex-shrink-0"/>
                                 <span>提交时间: {formatDateTime(output.createdAt)}</span>
@@ -295,15 +303,15 @@ const OutputItem = ({
 
                         {/* 摘要 */}
                         {output.abstractText && (
-                            <div className="mb-3 max-w-full">
-                                <p className="text-sm text-muted-foreground line-clamp-3 break-words">
+                            <div className="mb-4 max-w-full">
+                                <p className="line-clamp-3 break-words whitespace-pre-line">
                                     {output.abstractText}
                                 </p>
                             </div>
                         )}
 
                         {/* 其他关键信息预览 */}
-                        <div className="flex flex-wrap gap-2 text-xs">
+                        <div className="flex flex-wrap gap-4 text-xs">
                             {output.otherInfo?.authors && (
                                 <Badge variant="secondary" className="text-xs">
                                     作者: {truncateText(output.otherInfo.authors, 30)}
@@ -314,7 +322,7 @@ const OutputItem = ({
 
                 </div>
             </CardContent>
-            
+
             {/* 删除确认对话框 */}
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <AlertDialogContent>
@@ -343,6 +351,14 @@ const OutputItem = ({
                 relatedUsers={relatedUsers}
                 loading={relatedUsersLoading}
                 highlightedUserIds={getHighlightedUserIds()}
+            />
+
+            {/* 相关数据集详情对话框 */}
+            <DatasetDetailModal
+                dataset={datasetModalOpen && output.dataset}
+                onOpenChange={setDatasetModalOpen}
+                open={datasetModalOpen}
+                useAdvancedQuery={managementMode}
             />
         </Card>
     );

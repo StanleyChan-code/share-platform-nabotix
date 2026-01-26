@@ -1,18 +1,14 @@
 import { api, Page } from './client';
 import {RelatedUsersDto} from "@/integrations/api/userApi.ts";
+import {Dataset} from "@/integrations/api/datasetApi.ts";
 
 // 申请记录接口定义
 export interface Application {
   id: string;
-  datasetId: string;
-  datasetInstitutionId: string;
-  datasetTitle: string;
+  dataset: Dataset;
+
   applicantId: string;
   applicantName: string;
-  supervisorId: string | null;
-  supervisorName: string | null;
-  providerId: string | null;
-  providerName: string | null;
   applicantRole: string;
   applicantType: string;
   projectTitle: string;
@@ -21,15 +17,22 @@ export interface Application {
   purpose: string;
   projectLeader: string;
   approvalDocumentId: string | null;
-  status: 'SUBMITTED' | 'PENDING_PROVIDER_REVIEW' | 'PENDING_INSTITUTION_REVIEW' | 'APPROVED' | 'DENIED';
-  adminNotes: string | null;
-  providerNotes: string | null;
   submittedAt: string;
+
+  providerId: string | null;
+  providerName: string | null;
+  providerNotes: string | null;
   providerReviewedAt: string | null;
-  institutionReviewedAt: string | null;
-  approvedAt: string | null;
   providerReviewResult: boolean | null;
+
+  supervisorId: string | null;
+  supervisorName: string | null;
+  adminNotes: string | null;
+  institutionReviewedAt: string | null;
   institutionReviewResult: boolean | null;
+
+  approvedAt: string | null; // 定义改为审结时间（通过或者最终拒绝的时间）
+  status: 'SUBMITTED' | 'PENDING_PROVIDER_REVIEW' | 'PENDING_INSTITUTION_REVIEW' | 'APPROVED' | 'DENIED';
 }
 
 // 创建申请请求体
@@ -120,12 +123,6 @@ export async function downloadApplicationFile(applicationId: string, fileId: str
   const response = await api.get(`/applications/${applicationId}/files/${fileId}`, {
     responseType: 'blob'
   });
-  return response.data;
-}
-
-// 新增：获取指定数据集的已批准研究成果（用于ResearchOutputsTab）
-export async function getApprovedResearchOutputs(datasetId: string, page: number = 0, size: number = 10) {
-  const response = await api.get<Page<Application>>(`/datasets/${datasetId}/approved-research-outputs?page=${page}&size=${size}`);
   return response.data;
 }
 

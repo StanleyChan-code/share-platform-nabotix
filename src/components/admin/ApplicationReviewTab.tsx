@@ -11,7 +11,7 @@ import ApplicationDetailDialog from './ApplicationDetailDialog';
 import {useToast} from '@/components/ui/use-toast';
 import {DatasetDetailModal} from '@/components/dataset/DatasetDetailModal';
 import {hasPermissionRole, PermissionRoles} from "@/lib/permissionUtils.ts";
-import {AdminInstitutionSelector} from "@/components/admin/institution/AdminInstitutionSelector.tsx";
+import {InstitutionSelector} from "@/components/admin/institution/InstitutionSelector.tsx";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
 import {ChevronLeftIcon, ChevronRightIcon} from "lucide-react";
 import ApplicationItem from "./ApplicationItem";
@@ -102,8 +102,8 @@ const ApplicationReviewTab: React.FC = () => {
     const handleViewDataset = (application: Application) => {
         // 创建一个模拟的数据集对象，包含必要的字段
         const dataset = {
-            id: application.datasetId,
-            titleCn: application.datasetTitle,
+            id: application.dataset.id,
+            titleCn: application.dataset.titleCn,
             // 可以根据需要添加其他字段
         };
         setSelectedDataset(dataset);
@@ -236,7 +236,7 @@ const ApplicationReviewTab: React.FC = () => {
                 {/* 平台管理员机构选择器 */}
                 {hasPermissionRole(PermissionRoles.PLATFORM_ADMIN) && (
                     <div className="mb-6 p-4 border rounded-lg bg-muted/50">
-                        <AdminInstitutionSelector
+                        <InstitutionSelector
                             value={institutionId}
                             onChange={setInstitutionId}
                             placeholder="选择要管理的机构（可选）"
@@ -354,6 +354,7 @@ const ApplicationReviewTab: React.FC = () => {
                         dataset={selectedDataset}
                         open={isDatasetModalOpen}
                         onOpenChange={setIsDatasetModalOpen}
+                        useAdvancedQuery={true}
                     />
                 )}
             </>
