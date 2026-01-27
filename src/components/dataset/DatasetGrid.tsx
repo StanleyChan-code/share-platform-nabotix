@@ -42,7 +42,7 @@ export const DatasetGrid = ({ datasets, onDatasetClick }: DatasetGridProps) => {
                   {/* 标题和类型标签 */}
                   <div className="flex items-start justify-between gap-2 h-11">
                       <CardTitle
-                          className="font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors text-lg leading-tight line-clamp-2 flex-1"
+                          className="font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors text-lg leading-tight break-all whitespace-pre-wrap line-clamp-2 flex-1"
                           title={dataset.titleCn}
                           onClick={() => onDatasetClick(dataset)}
                       >
@@ -86,7 +86,7 @@ export const DatasetGrid = ({ datasets, onDatasetClick }: DatasetGridProps) => {
                 <CardContent className="space-y-4">
                   {/* 描述 */}
                   <div className="space-y-2 h-[65px]">
-                    <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed whitespace-pre-line">
+                    <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed break-all whitespace-pre-wrap">
                       {dataset.description || "暂无描述信息"}
                     </p>
                   </div>

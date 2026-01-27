@@ -9,7 +9,8 @@ import {toast} from "@/hooks/use-toast";
 
 import {ChunkTask, FileUploaderHandles, FileUploaderProps, UploadState} from './types';
 import {ErrorClassifier, FileValidator, ProgressCalculator, SpeedCalculator, UploadQueue} from './uploadUtils';
-import {formatFileSize, downloadFile} from "@/lib/utils.ts";
+import {formatFileSize, downloadTemplateFile, downloadFile} from "@/lib/utils.ts";
+import {api} from "@/integrations/api/client.ts";
 
 // 清理状态类型
 interface CleanupState {
@@ -1015,17 +1016,32 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
             }
 
             // 显示下载开始的toast提示
+            let filename = downloadFileName;
+            if (isStaticTemplateFile) {
+                // 静态模版文件直接从/template/路径下载，不通过API代理
+                await downloadTemplateFile(templateFile, downloadFileName);
+            } else {
+                // 动态模版文件通过API代理下载
+                const response = await api.getDownloadToken(templateFile);
+                if (!response || !response.success) {
+                    toast({
+                        title: "下载失败",
+                        description: response.message || "无法下载模板文件，请稍后重试",
+                        variant: "destructive"
+                    });
+                    return;
+                }
+                filename = await downloadFile(response.data);
+            }
             toast({
                 title: "开始下载",
-                description: `文件 "${downloadFileName}" 已开始下载`
+                description: `文件 "${filename}" 已开始下载`
             });
-
-            await downloadFile(templateFile, downloadFileName, isStaticTemplateFile);
         } catch (error) {
             console.error('下载模板失败:', error);
             toast({
                 title: "下载失败",
-                description: "模板文件下载失败，请稍后重试",
+                description: error.response?.data?.message || "模板文件下载失败，请稍后重试",
                 variant: "destructive"
             });
         }

@@ -335,36 +335,19 @@ export const datasetApi = {
         return response.data;
     },
 
-    // 管理接口 - 根据标题模糊搜索数据集列表
-    async searchManageableDatasets(title: string, params?: Pageable) {
-        const queryParams = new URLSearchParams();
-        queryParams.append('title', title);
-
-        if (params?.page !== undefined) queryParams.append('page', params.page.toString());
-        if (params?.size !== undefined) queryParams.append('size', params.size.toString());
-        if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
-        if (params?.sortDir) queryParams.append('sortDir', params.sortDir);
-
-        const response = await api.get<Page<Dataset>>(`/manage/datasets/search?${queryParams.toString()}`);
-        return response.data;
+    // 获取数据集版本的数据字典文件下载令牌
+    async getDownloadDataDictionaryToken(datasetId: string, versionId: string) {
+        return await api.getDownloadToken(`/datasets/${datasetId}/versions/${versionId}/data-dictionary`);
     },
 
-    // 下载数据集版本的数据字典文件
-    async downloadDataDictionary(datasetId: string, versionId: string) {
-        const response = await api.downloadFile(`/datasets/${datasetId}/versions/${versionId}/data-dictionary`);
-        return response.data;
+    // 获取数据集版本的使用协议文件下载令牌
+    async getDownloadTermsAgreementToken(datasetId: string, versionId: string) {
+        return await api.getDownloadToken(`/datasets/${datasetId}/versions/${versionId}/terms-agreement`);
     },
 
-    // 下载数据集版本的使用协议文件
-    async downloadTermsAgreement(datasetId: string, versionId: string) {
-        const response = await api.downloadFile(`/datasets/${datasetId}/versions/${versionId}/terms-agreement`);
-        return response.data;
-    },
-
-    // 下载数据集版本的数据分享文件
-    async downloadDataSharing(datasetId: string, versionId: string) {
-        const response = await api.downloadFile(`/datasets/${datasetId}/versions/${versionId}/data-sharing`);
-        return response.data;
+    // 获取数据集版本的数据分享文件下载令牌
+    async getDownloadDataSharingToken(datasetId: string, versionId: string) {
+        return await api.getDownloadToken(`/datasets/${datasetId}/versions/${versionId}/data-sharing`);
     },
 
     // 软删除数据集

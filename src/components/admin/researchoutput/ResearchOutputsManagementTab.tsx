@@ -44,7 +44,6 @@ const ResearchOutputsManagementTab = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
-  const [canApproveOutputs, setCanApproveOutputs] = useState(false);
   const [searchTitle, setSearchTitle] = useState(""); // 搜索标题
   const [selectedStatus, setSelectedStatus] = useState<string>("pending"); // 状态筛选
   const [selectedType, setSelectedType] = useState<string>("all"); // 类型筛选
@@ -75,10 +74,8 @@ const ResearchOutputsManagementTab = () => {
         return;
       }
 
-      const canApprove = isPlatformAdminUser;
 
       setIsPlatformAdmin(isPlatformAdminUser);
-      setCanApproveOutputs(canApprove);
 
       // 如果不是平台管理员，设置默认机构为用户所属机构
       if (!isPlatformAdminUser && userInfo.user.institutionId) {
@@ -405,7 +402,7 @@ const ResearchOutputsManagementTab = () => {
               open={detailDialogOpen}
               onOpenChange={setDetailDialogOpen}
               output={selectedOutput}
-              canApprove={canApproveOutputs}
+              canApprove={true}
               onApprovalChange={() => {
                   fetchResearchOutputs(currentPage);
                   // 刷新待审核数量

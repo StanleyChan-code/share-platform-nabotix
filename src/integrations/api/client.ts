@@ -23,6 +23,14 @@ export interface ApiResponse<T = any> {
   timestamp: string;
 }
 
+// 定义文件下载令牌结构
+export interface FileDownloadTokenDto {
+  token: string;
+  fileId: string;
+  saveFileName: string;
+  downloadUrlTemplate: string;
+}
+
 // 定义分页响应结构
 export interface Page<T> {
   content: T[];
@@ -187,11 +195,10 @@ class ApiClient {
     return this.client.delete<ApiResponse<T>>(endpoint, config);
   }
 
-  async downloadFile(endpoint: string, config?: AxiosRequestConfig) {
-    return this.client.get(endpoint, {
-      ...config,
-      responseType: 'blob',
-    });
+  async getDownloadToken(endpoint: string, config?: AxiosRequestConfig) {
+    // 获取下载令牌和URL模板
+    const response = await this.client.get<ApiResponse<FileDownloadTokenDto>>(endpoint, config);
+    return response.data;
   }
 
   // 设置认证token

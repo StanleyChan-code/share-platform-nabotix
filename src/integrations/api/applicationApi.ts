@@ -117,13 +117,10 @@ export async function reviewApplicationByApprover(id: string, request: ReviewApp
 }
 
 /**
- * 下载申请文件
+ * 获取申请文件下载令牌
  */
-export async function downloadApplicationFile(applicationId: string, fileId: string) {
-  const response = await api.get(`/applications/${applicationId}/files/${fileId}`, {
-    responseType: 'blob'
-  });
-  return response.data;
+export async function getDownloadApplicationFileToken(applicationId: string, fileId: string) {
+  return await api.getDownloadToken(`/applications/${applicationId}/files/${fileId}`);
 }
 
 // 新增：获取所有申请记录（管理端，支持筛选）
@@ -163,4 +160,3 @@ export async function getApplicationRelatedUsers(applicationId: string) {
   const response = await api.get<RelatedUsersDto>(`/applications/related-users/${applicationId}`);
   return response.data;
 }
-

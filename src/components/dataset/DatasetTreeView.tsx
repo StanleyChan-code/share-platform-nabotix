@@ -115,14 +115,14 @@ export function DatasetTreeView({datasets, onDatasetClick}: DatasetTreeViewProps
             outcomeCount = Object.keys(dataset.outcomeFields).length;
         }
 
-        return { recordCount, variableCount, demographicCount, outcomeCount };
+        return {recordCount, variableCount, demographicCount, outcomeCount};
     };
 
     const getLevelStyles = (level: number) => {
         const baseStyles = "relative rounded-lg transition-all duration-200 hover:shadow-md";
 
         if (level === 0) {
-            return cn(baseStyles, "bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500");
+            return cn(baseStyles, "border-l-4 border-blue-500");
         } else if (level === 1) {
             return cn(baseStyles, "bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 ml-6");
         } else {
@@ -174,13 +174,13 @@ export function DatasetTreeView({datasets, onDatasetClick}: DatasetTreeViewProps
                         }
                     }}
                 >
-                    <CardContent className="p-6">
+                    <CardContent className="px-2 pt-6 pb-4">
                         <div className="flex items-start gap-3">
                             {/* 展开/收起按钮 */}
                             {hasChildren && (
                                 <button
                                     onClick={(e) => handleExpandClick(e, dataset.id)}
-                                    className="shrink-0 mt-0.5 p-1 rounded-full hover:bg-black/5 transition-colors"
+                                    className="shrink-0 mt-0.5 m-1 rounded-full border border-muted-foreground hover:bg-black/5 transition-colors"
                                 >
                                     {isExpanded ? (
                                         <ChevronDown className="h-10 w-10 text-muted-foreground"/>
@@ -191,18 +191,14 @@ export function DatasetTreeView({datasets, onDatasetClick}: DatasetTreeViewProps
                             )}
                             {!hasChildren && <div className="w-10"/>}
 
-                            {/* 数据集图标 */}
-                            <div className="shrink-0 mt-0.5">
-                                {getDatasetIcon(level)}
-                            </div>
 
                             {/* 主要内容 */}
                             <div className="flex-1 min-w-0 space-y-3 pr-4">
                                 {/* 标题和标签行 */}
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="min-w-0 flex-1">
-                                        <h3 
-                                            className="font-semibold text-lg leading-tight text-gray-900 mb-1 cursor-pointer hover:text-blue-600 transition-colors"
+                                        <h3
+                                            className="font-semibold text-lg leading-tight text-gray-900 mb-4 cursor-pointer line-clamp-2 truncate break-all whitespace-pre-wrap hover:text-blue-600 transition-colors"
                                             onClick={(e) => handleDetailClick(e, dataset)}
                                         >
                                             {dataset.titleCn}
@@ -217,7 +213,8 @@ export function DatasetTreeView({datasets, onDatasetClick}: DatasetTreeViewProps
                                                 </div>
                                             )}
                                             {dataset.samplingMethod && (
-                                                <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700">
+                                                <Badge variant="outline"
+                                                       className="text-xs bg-orange-50 text-orange-700">
                                                     采样方法: {dataset.samplingMethod}
                                                 </Badge>
                                             )}
@@ -244,11 +241,13 @@ export function DatasetTreeView({datasets, onDatasetClick}: DatasetTreeViewProps
                                 </div>
 
                                 {/* 数据规模统计 */}
-                                <div className={`grid ${dataset.followUpDatasets && dataset.followUpDatasets.length > 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-3 p-3 bg-white rounded-lg border`}>
+                                <div
+                                    className={`grid ${dataset.followUpDatasets && dataset.followUpDatasets.length > 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-3 py-3 bg-white rounded-lg border`}>
                                     <div className="text-center">
                                         <div className="flex items-center justify-center gap-1 mb-1">
                                             <Hash className="h-4 w-4 text-blue-600"/>
-                                            <span className="font-bold text-gray-800">{fieldStats.recordCount.toLocaleString()}</span>
+                                            <span
+                                                className="font-bold text-gray-800">{fieldStats.recordCount.toLocaleString()}</span>
                                         </div>
                                         <span className="text-xs text-gray-600">样本记录</span>
                                     </div>
@@ -262,8 +261,9 @@ export function DatasetTreeView({datasets, onDatasetClick}: DatasetTreeViewProps
                                     {dataset.followUpDatasets && dataset.followUpDatasets.length > 0 && (
                                         <div className="text-center">
                                             <div className="flex items-center justify-center gap-1 mb-1">
-                                                <Calendar className="h-4 w-4 text-purple-600" />
-                                                <span className="font-semibold text-gray-800">{dataset.followUpDatasets.length}</span>
+                                                <Calendar className="h-4 w-4 text-purple-600"/>
+                                                <span
+                                                    className="font-semibold text-gray-800">{dataset.followUpDatasets.length}</span>
                                             </div>
                                             <span className="text-xs text-gray-600">随访数据集</span>
                                         </div>
@@ -272,7 +272,7 @@ export function DatasetTreeView({datasets, onDatasetClick}: DatasetTreeViewProps
 
                                 {/* 描述 */}
                                 {dataset.description && (
-                                    <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed whitespace-pre-line">
+                                    <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed whitespace-pre-wrap break-all">
                                         {dataset.description}
                                     </p>
                                 )}
@@ -300,7 +300,8 @@ export function DatasetTreeView({datasets, onDatasetClick}: DatasetTreeViewProps
                                             <Calendar className="h-4 w-4 text-blue-500"/>
                                             <div>
                                                 <span className="font-medium">采集周期:</span>
-                                                <span className="ml-1">{formatDate(dataset.startDate)} - {formatDate(dataset.endDate)}</span>
+                                                <span
+                                                    className="ml-1">{formatDate(dataset.startDate)} - {formatDate(dataset.endDate)}</span>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">

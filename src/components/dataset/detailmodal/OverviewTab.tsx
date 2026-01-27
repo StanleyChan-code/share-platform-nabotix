@@ -149,7 +149,7 @@ export function OverviewTab({
         <Icon className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
         <div className="min-w-0 flex-1">
           <p className="text-xs text-muted-foreground mb-1">{label}</p>
-          <p className="text-sm font-medium break-words">{value || '未设置'}</p>
+          <p className="text-sm font-medium whitespace-pre-wrap break-all">{value || '未设置'}</p>
         </div>
       </div>
   );
@@ -234,10 +234,10 @@ export function OverviewTab({
           <CardContent className="space-y-6">
             {/* 标题和学科分类 */}
             <div className="p-4 bg-muted/20 rounded-lg">
-              <h3 className="font-semibold text-lg mb-3">{dataset.titleCn}</h3>
+              <h3 className="font-semibold text-lg mb-6">{dataset.titleCn}</h3>
               
               {/* 学科分类、抽样方法、基线数据集水平排列 */}
-              <div className="flex flex-wrap gap-6 mb-4">
+              <div className="flex flex-wrap gap-6 mb-3">
                 {dataset.subjectArea && (
                     <InfoItem
                         icon={Layers2}
@@ -257,19 +257,18 @@ export function OverviewTab({
                 )}
 
                 {parentDataset && (
-                    <div className="flex items-start gap-2 flex-shrink-0">
-                      <Link className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-xs text-muted-foreground mb-1">基线数据集</p>
-                        <Button
-                            variant="link"
-                            className="p-0 font-medium justify-start text-left line-clamp-2 break-words whitespace-normal"
-                            onClick={() => setIsParentDatasetModalOpen(true)}
-                        >
-                          {parentDataset.titleCn}
-                        </Button>
-                      </div>
-                    </div>
+                    <InfoItem
+                        icon={Link}
+                        label="基线数据集"
+                        value={
+                          <p
+                              className="p-0 justify-start text-left line-clamp-2 whitespace-pre-wrap break-all cursor-pointer hover:text-blue-600"
+                              onClick={() => setIsParentDatasetModalOpen(true)}
+                          >
+                            {parentDataset.titleCn}
+                          </p>}
+                        className="flex-shrink-0"
+                    />
                 )}
               </div>
               
@@ -284,7 +283,7 @@ export function OverviewTab({
                         maxLength={2000}
                     />
                 ) : (
-                    <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line break-words">
+                    <div className="text-sm leading-relaxed whitespace-pre-wrap break-all">
                       {dataset.description || "暂无描述"}
                     </div>
                 )}

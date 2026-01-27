@@ -162,7 +162,7 @@ const OutputItem = ({
                     <div className="flex-1 min-w-0 max-w-full">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 max-w-full">
                             <div className="flex flex-col sm:flex-row sm:items-center gap-2 min-w-0 flex-1 max-w-full">
-                                <Badge variant="outline" className="flex items-center min-w-fit gap-1 text-sm whitespace-nowrap">
+                                <Badge variant="outline" className="flex items-center min-w-fit gap-1 text-sm whitespace-nowrap max-w-32">
                                     {getTypeIcon(output.type)}
                                     {getOutputTypeDisplayName(output.type)}
                                 </Badge>
@@ -304,7 +304,7 @@ const OutputItem = ({
                         {/* 摘要 */}
                         {output.abstractText && (
                             <div className="mb-4 max-w-full">
-                                <p className="line-clamp-3 break-words whitespace-pre-line">
+                                <p className="line-clamp-3 break-all whitespace-pre-wrap">
                                     {output.abstractText}
                                 </p>
                             </div>

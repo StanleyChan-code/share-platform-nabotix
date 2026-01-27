@@ -13,6 +13,7 @@ import {getLatestApprovedVersion} from "@/lib/datasetUtils.ts";
 import {formatDate} from "@/lib/utils.ts";
 import {Application} from "@/integrations/api/applicationApi.ts";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
+import {datasetApi} from "@/integrations/api/datasetApi.ts";
 
 interface TermsAndFilesTabProps {
     dataset: any;
@@ -127,71 +128,32 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
         }
 
         try {
-            let endpoint = '';
-            let filename = '';
-            let fileId = '';
+            let downloadTokenResponse = null;
 
             switch (fileType) {
                 case 'data':
-                    endpoint = `/datasets/${dataset.id}/versions/${currentVersion.id}/data-sharing`;
-                    filename = `${dataset.titleCn}_v${currentVersion.versionNumber}_数据文件`;
-                    fileId = currentVersion?.dataSharingRecordId;
+                    downloadTokenResponse = await datasetApi.getDownloadDataSharingToken(dataset.id, currentVersion.id);
                     break;
                 case 'dictionary':
-                    endpoint = `/datasets/${dataset.id}/versions/${currentVersion.id}/data-dictionary`;
-                    filename = `${dataset.titleCn}_v${currentVersion.versionNumber}_数据字典`;
-                    fileId = currentVersion?.dataDictRecordId;
+                    downloadTokenResponse = await datasetApi.getDownloadDataDictionaryToken(dataset.id, currentVersion.id);
                     break;
                 case 'terms':
-                    endpoint = `/datasets/${dataset.id}/versions/${currentVersion.id}/terms-agreement`;
-                    filename = `${dataset.titleCn}_v${currentVersion.versionNumber}_使用协议`;
-                    fileId = currentVersion?.termsAgreementRecordId;
+                    downloadTokenResponse = await datasetApi.getDownloadTermsAgreementToken(dataset.id, currentVersion.id);
                     break;
                 default:
                     throw new Error('未知文件类型');
             }
-
-            // 先查询文件信息
-            if (!fileId) {
+            if (!downloadTokenResponse || !downloadTokenResponse.success) {
                 toast({
-                    title: "文件不可用",
-                    description: "该文件已被删除",
-                    variant: "destructive",
-                });
-                return;
-            }
-            
-            try {
-                const fileInfo = await getFileInfo(fileId);
-                if (!fileInfo) {
-                    throw new Error('获取文件信息失败');
-                }
-
-                // 检查文件是否已被删除
-                if (fileInfo.deleted) {
-                    toast({
-                        title: "文件不可用",
-                        description: "该文件已被删除",
-                        variant: "destructive",
-                    });
-                    return;
-                }
-                
-                // 提取后缀
-                const extension = fileInfo.fileName.split('.').pop();
-                filename = `${filename}.${extension}`;
-            } catch (error) {
-                console.error('查询文件信息失败:', error);
-                toast({
-                    title: "文件信息查询失败",
-                    description: "无法验证文件状态，请稍后重试",
+                    title: "下载失败",
+                    description: downloadTokenResponse?.message || "无法获取下载文件，请稍后重试",
                     variant: "destructive",
                 });
                 return;
             }
 
             // 发起下载请求
-            await downloadFile(endpoint, filename);
+            const filename = await downloadFile(downloadTokenResponse.data);
 
             toast({
                 title: "开始下载",
@@ -202,7 +164,7 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
             console.error('下载失败:', error);
             toast({
                 title: "下载失败",
-                description: "文件下载过程中发生错误，请稍后重试",
+                description: error.response?.data?.message || "文件下载过程中发生错误，请稍后重试",
                 variant: "destructive",
             });
         }

@@ -615,8 +615,8 @@ export function StatisticsTab({
                                                 <TableBody>
                                                     {groupItems.map((row) => (
                                                         <TableRow key={row.variable} className="hover:bg-slate-50/50 transition-colors align-top">
-                                                            <TableCell className="px-4 py-3 font-mono text-slate-700 font-medium break-words">{row.variable}</TableCell>
-                                                            <TableCell className="px-4 py-3 text-slate-600 break-words" title={row.label}>{row.label || '-'}</TableCell>
+                                                            <TableCell className="px-4 py-3 font-mono text-slate-700 font-medium break-all">{row.variable}</TableCell>
+                                                            <TableCell className="px-4 py-3 text-slate-600 break-all" title={row.label}>{row.label || '-'}</TableCell>
 
                                                             {/* Valid with Percentage */}
                                                             <TableCell className="px-4 py-3 text-right text-slate-600">

@@ -1,7 +1,7 @@
 import {Calendar, Users, Building, Tag, Eye, Target} from "lucide-react";
 import { Dataset } from "@/integrations/api/datasetApi";
 import { DatasetTypes } from "@/lib/enums";
-import { formatDate } from "@/lib/utils";
+import {cn, formatDate} from "@/lib/utils";
 
 interface DatasetCardProps {
   dataset: Dataset;
@@ -21,7 +21,7 @@ export const DatasetCard = ({ dataset, showRecommendationBadge = false }: Datase
               href={`/datasets?id=${dataset.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-semibold text-lg leading-tight line-clamp-2 flex-1 group-hover:text-blue-600 transition-colors hover:underline"
+              className="font-semibold text-lg leading-tight break-all whitespace-pre-wrap line-clamp-2 flex-1 group-hover:text-blue-600 transition-colors hover:underline"
               title={dataset.titleCn}
           >
             {dataset.titleCn}
@@ -49,11 +49,12 @@ export const DatasetCard = ({ dataset, showRecommendationBadge = false }: Datase
 
         {/* 描述 */}
         {dataset.description && (
-            <p
-                className="text-sm text-gray-600 line-clamp-3 mb-4 flex-1 leading-relaxed  whitespace-pre-line"
-            >
+            <div className={cn("text-sm text-gray-600 ",
+                "flex flex-1 items-start justify-between",
+                "line-clamp-3 whitespace-pre-wrap break-all",
+                "mb-4 leading-relaxed")}>
               {dataset.description}
-            </p>
+            </div>
         )}
 
         {/* 关键词标签 */}

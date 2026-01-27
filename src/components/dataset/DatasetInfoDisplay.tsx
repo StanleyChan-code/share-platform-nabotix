@@ -21,14 +21,14 @@ const DatasetInfoDisplay: React.FC<DatasetInfoDisplayProps> = ({
                 <div className="space-y-3">
                     <div>
                         <span className="text-xs font-medium text-muted-foreground block mb-1">标题</span>
-                        <div className="text-sm font-medium truncate whitespace-normal break-words" title={dataset.titleCn}>
+                        <div className="text-sm font-medium truncate whitespace-pre-wrap break-all" title={dataset.titleCn}>
                             {dataset.titleCn}
                         </div>
                     </div>
                     
                     <div>
                         <span className="text-xs font-medium text-muted-foreground block mb-1">类型</span>
-                        <div className="text-sm truncate" title={DatasetTypes[dataset.type as keyof typeof DatasetTypes] || dataset.type}>
+                        <div className="text-sm truncate">
                             {DatasetTypes[dataset.type as keyof typeof DatasetTypes] || dataset.type}
                         </div>
                     </div>

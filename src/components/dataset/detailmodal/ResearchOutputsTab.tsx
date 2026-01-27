@@ -1,10 +1,5 @@
 import React, { forwardRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ExternalLink } from "lucide-react";
 import { ResearchOutput } from "@/integrations/api/outputApi";
-import {getOutputTypeDisplayName} from "@/lib/outputUtils.ts";
 import { datasetApi } from "@/integrations/api/datasetApi";
 import PaginatedList from "@/components/ui/PaginatedList";
 import {OutputCard} from "@/components/home/OutputCard.tsx";
@@ -12,14 +7,6 @@ import {OutputCard} from "@/components/home/OutputCard.tsx";
 interface ResearchOutputsTabProps {
     datasetId: string;
 }
-
-const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('zh-CN', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-};
 
 // 空状态组件
 const EmptyState = () => (

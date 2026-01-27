@@ -8,12 +8,25 @@ import {
 import {ScrollArea} from "@/components/ui/scroll-area";
 import {Badge} from "@/components/ui/badge";
 import {getJournalPartitionName, getOutputTypeDisplayName, getOutputTypeIconComponent} from "@/lib/outputUtils";
-import {formatDate, formatDateTime, formatFileSize} from "@/lib/utils";
+import {downloadFile, formatDate, formatDateTime, formatFileSize, generateDownloadUrl} from "@/lib/utils";
 import {ResearchOutput, outputApi} from "@/integrations/api/outputApi";
 import {getCurrentUserFromSession} from "@/lib/authUtils";
 import React, {useEffect, useState} from "react";
 import {fileApi, FileInfo} from "@/integrations/api/fileApi";
-import {Download, ExternalLink, User, Calendar, FileText, Award, Share, Eye, BookOpen} from "lucide-react";
+import {
+    Download,
+    ExternalLink,
+    User,
+    Calendar,
+    FileText,
+    Award,
+    Share,
+    Eye,
+    BookOpen,
+    Database,
+    ClipboardCheck,
+    Hash
+} from "lucide-react";
 import {toast} from "@/hooks/use-toast.ts";
 import {DatasetDetailModal} from "@/components/dataset/DatasetDetailModal.tsx";
 import ApprovalActions from "@/components/ui/ApprovalActions.tsx";
@@ -124,32 +137,34 @@ const OutputDetailDialog = ({
         if (!currentOutput?.id || !currentOutput?.fileId) return;
 
         try {
-            let response;
+            let response = null;
             if (isSubmitter) {
-                response = await outputApi.downloadOutputFile(currentOutput.id, currentOutput.fileId);
+                response = await outputApi.getDownloadOutputFileToken(currentOutput.id, currentOutput.fileId);
             } else if (currentOutput.submitter.id !== currentUserId) {
-                response = await outputApi.downloadManagedOutputFile(currentOutput.id, currentOutput.fileId);
+                response = await outputApi.getDownloadManagedOutputFileToken(currentOutput.id, currentOutput.fileId);
             } else {
                 return;
             }
 
-            const url = window.URL.createObjectURL(new Blob([response]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', fileInfo?.fileName || 'file');
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.URL.revokeObjectURL(url);
+            if (!response || !response.success) {
+                toast({
+                    title: "下载失败",
+                    description: response.message || "无法下载文件，请稍后重试",
+                    variant: "destructive"
+                });
+                return;
+            }
+            const filename = await downloadFile(response.data);
+            
             toast({
                 title: "开始下载",
-                description: `文件 "${fileInfo?.fileName}" 已开始下载`
+                description: `文件 "${filename}" 已开始下载`
             });
         } catch (error) {
             console.error("Failed to download file:", error);
             toast({
                 title: "下载失败",
-                description: "文件下载失败，请重试",
+                description: error.response?.data?.message || "文件下载失败，请重试",
                 variant: "destructive"
             });
         }
@@ -168,17 +183,25 @@ const OutputDetailDialog = ({
 
         try {
             setIsPreviewLoading(true);
-            let response;
+            let response = null;
             if (isSubmitter) {
-                response = await outputApi.downloadOutputFile(currentOutput.id, currentOutput.fileId);
+                response = await outputApi.getDownloadOutputFileToken(currentOutput.id, currentOutput.fileId);
             } else if (currentOutput.submitter.id !== currentUserId) {
-                response = await outputApi.downloadManagedOutputFile(currentOutput.id, currentOutput.fileId);
+                response = await outputApi.getDownloadManagedOutputFileToken(currentOutput.id, currentOutput.fileId);
             } else {
                 return;
             }
 
-            const fileUrl = URL.createObjectURL(new Blob([response], { type: 'application/pdf' }));
-            setPdfPreviewUrl(fileUrl);
+            if (!response || !response.success) {
+                toast({
+                    title: "下载失败",
+                    description: response.message || "无法下载文件，请稍后重试",
+                    variant: "destructive"
+                });
+                return;
+            }
+            const downloadUrl = generateDownloadUrl(response.data);
+            setPdfPreviewUrl(downloadUrl);
             setIsPdfPreviewOpen(true);
         } catch (error) {
             console.error('预览失败:', error);
@@ -253,7 +276,7 @@ const OutputDetailDialog = ({
                 {Icon && <Icon className="h-3.5 w-3.5"/>}
                 <span>{title}</span>
             </div>
-            <div className="text-sm font-medium">{value}</div>
+            <div className="text-sm font-medium break-all whitespace-pre-wrap">{value}</div>
         </div>
     );
 
@@ -271,14 +294,15 @@ const OutputDetailDialog = ({
     return (
         <>
             <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogContent className="sm:max-w-[500px] md:max-w-[700px] lg:max-w-[900px] max-h-[90vh] flex flex-col">
+                <DialogContent
+                    className="sm:max-w-[500px] md:max-w-[700px] lg:max-w-[900px] max-h-[90vh] flex flex-col">
                     <DialogHeader className="pb-4 border-b">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-primary/10 rounded-lg">
                                 {getTypeIcon(currentOutput.type)}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <DialogTitle className="text-xl font-bold line-clamp-2">
+                                <DialogTitle className="text-xl font-bold line-clamp-2 break-all whitespace-pre-wrap">
                                     {currentOutput.title}
                                 </DialogTitle>
                                 <div className="flex items-center gap-2 mt-1">
@@ -289,17 +313,54 @@ const OutputDetailDialog = ({
                                     {getStatusBadge(currentOutput.approved)}
                                 </div>
                             </div>
-                            <CopyButton
-                                text={`${window.location.origin}/outputs?id=${currentOutput.id}`}
-                                title="分享研究成果"
-                                description="点击下方文本框复制研究成果链接"
-                                variant="outline"
-                                size="sm"
-                                className="flex items-center gap-2 hover:bg-green-50 hover:text-green-600 border-green-200"
-                            >
-                                <Share className="h-4 w-4" />
-                                复制分享链接
-                            </CopyButton>
+
+                            {/* 审核操作 */}
+                            <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+                                {managementMode && canApprove && currentOutput.approved !== false && (
+                                    <>
+                                        <div></div>
+                                        <ClipboardCheck className={"h-5 w-5"}/>
+                                        <p className="text-lg font-semibold">审核操作</p>
+                                        {currentOutput.approved === null ? (
+                                            // 待审核状态：显示通过和拒绝按钮
+                                            <ApprovalActions
+                                                size={"sm"}
+                                                showCommentDialog={true}
+                                                requireCommentOnApprove={false}
+                                                requireCommentOnReject={true}
+                                                approveDialogTitle="审核通过确认"
+                                                rejectDialogTitle="审核拒绝原因"
+                                                onSuccess={handleApproval}
+                                                approveButtonText="通过"
+                                                rejectButtonText="拒绝"
+                                            />
+                                        ) : currentOutput.approved === true ? (
+                                            // 已通过状态：显示驳回通过按钮
+                                            <ApprovalActions
+                                                showCommentDialog={true}
+                                                requireCommentOnReject={true}
+                                                approveDialogTitle="审核通过确认"
+                                                rejectDialogTitle="驳回通过原因"
+                                                onSuccess={(approved, comment) => handleApproval(approved, comment)}
+                                                approveButtonText="通过"
+                                                rejectButtonText="驳回通过"
+                                                showRevokeApprovalButton={true}
+                                            />
+                                        ) : null}
+                                    </>
+                                )}
+                                <CopyButton
+                                    text={`${window.location.origin}/outputs?id=${currentOutput.id}`}
+                                    title="分享研究成果"
+                                    description="点击下方文本框复制研究成果链接"
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex items-center mx-4 gap-2 hover:bg-green-50 hover:text-green-600 border-green-200"
+                                >
+                                    <Share className="h-4 w-4"/>
+                                    复制分享链接
+                                </CopyButton>
+                            </div>
                         </div>
                     </DialogHeader>
 
@@ -339,6 +400,7 @@ const OutputDetailDialog = ({
 
                                         {currentOutput.outputNumber && (
                                             <InfoCard
+                                                icon={Hash}
                                                 title={
                                                     currentOutput.type === 'PROJECT' ? '项目编号/课题编号' :
                                                         currentOutput.type === 'PUBLICATION' ? '出版物编号' :
@@ -352,14 +414,17 @@ const OutputDetailDialog = ({
                                         {currentOutput.dataset && (
                                             <InfoCard
                                                 title="关联数据集"
+                                                icon={Database}
                                                 value={
-                                                    <span
+                                                    <a
+                                                        href={`/datasets?id=${currentOutput.dataset.id}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
                                                         className="text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
-                                                        onClick={() => setIsDatasetModalOpen(true)}
+                                                        title={currentOutput.dataset.titleCn}
                                                     >
                                                         {currentOutput.dataset.titleCn}
-                                                        <ExternalLink className="h-3 w-3"/>
-                                                    </span>
+                                                    </a>
                                                 }
                                             />
                                         )}
@@ -368,9 +433,10 @@ const OutputDetailDialog = ({
 
                                 {/* 摘要 */}
                                 {currentOutput.abstractText && (
-                                    <DetailSection title={currentOutput.type === 'OTHER_AWARD' ? '成果简介' : '摘要'} icon={FileText}>
+                                    <DetailSection title={currentOutput.type === 'OTHER_AWARD' ? '成果简介' : '摘要'}
+                                                   icon={FileText}>
                                         <div className="bg-muted/30 rounded-lg p-4">
-                                            <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                                            <p className="text-sm leading-relaxed break-all whitespace-pre-wrap">
                                                 {currentOutput.abstractText}
                                             </p>
                                         </div>
@@ -409,15 +475,18 @@ const OutputDetailDialog = ({
                                             )}
 
                                             {(currentOutput.type === 'INVENTION_PATENT' || currentOutput.type === 'UTILITY_PATENT') && currentOutput.otherInfo?.patentCountry && (
-                                                <InfoCard title="专利国别/地区" value={currentOutput.otherInfo.patentCountry}/>
+                                                <InfoCard title="专利国别/地区"
+                                                          value={currentOutput.otherInfo.patentCountry}/>
                                             )}
 
                                             {currentOutput.type === 'SOFTWARE_COPYRIGHT' && currentOutput.otherInfo?.softwareName && (
-                                                <InfoCard title="软件名称(全称)" value={currentOutput.otherInfo.softwareName}/>
+                                                <InfoCard title="软件名称(全称)"
+                                                          value={currentOutput.otherInfo.softwareName}/>
                                             )}
 
                                             {currentOutput.type === 'SOFTWARE_COPYRIGHT' && currentOutput.otherInfo?.copyrightOwner && (
-                                                <InfoCard title="著作权人" value={currentOutput.otherInfo.copyrightOwner}/>
+                                                <InfoCard title="著作权人"
+                                                          value={currentOutput.otherInfo.copyrightOwner}/>
                                             )}
 
                                             {currentOutput.type === 'SOFTWARE_COPYRIGHT' && currentOutput.otherInfo?.registrationDate && (
@@ -426,15 +495,18 @@ const OutputDetailDialog = ({
                                             )}
 
                                             {currentOutput.type === 'OTHER_AWARD' && currentOutput.otherInfo?.awardRecipient && (
-                                                <InfoCard title="获奖人/单位" value={currentOutput.otherInfo.awardRecipient}/>
+                                                <InfoCard title="获奖人/单位"
+                                                          value={currentOutput.otherInfo.awardRecipient}/>
                                             )}
 
                                             {currentOutput.type === 'OTHER_AWARD' && currentOutput.otherInfo?.awardIssuingAuthority && (
-                                                <InfoCard title="颁发单位" value={currentOutput.otherInfo.awardIssuingAuthority}/>
+                                                <InfoCard title="颁发单位"
+                                                          value={currentOutput.otherInfo.awardIssuingAuthority}/>
                                             )}
 
                                             {currentOutput.type === 'OTHER_AWARD' && currentOutput.otherInfo?.awardTime && (
-                                                <InfoCard title="获奖时间" value={formatDate(currentOutput.otherInfo.awardTime)}/>
+                                                <InfoCard title="获奖时间"
+                                                          value={formatDate(currentOutput.otherInfo.awardTime)}/>
                                             )}
 
                                             {currentOutput.type === 'OTHER_AWARD' && currentOutput.otherInfo?.competitionLevel && (
@@ -462,7 +534,7 @@ const OutputDetailDialog = ({
                                                         href={currentOutput.publicationUrl.startsWith('http') ? currentOutput.publicationUrl : `https://${currentOutput.publicationUrl}`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="text-blue-600 hover:underline break-all flex items-center gap-1"
+                                                        className="text-blue-600 hover:underline whitespace-pre-wrap break-all flex items-center gap-1"
                                                     >
                                                         {currentOutput.publicationUrl}
                                                         <ExternalLink className="h-3 w-3"/>
@@ -495,7 +567,7 @@ const OutputDetailDialog = ({
                                 </DetailSection>
 
                                 {/* 文件信息 */}
-                                {managementMode && canViewSensitiveInfo && fileInfo && (
+                                {canViewSensitiveInfo && fileInfo && (
                                     <DetailSection title="说明文件" icon={FileText}>
                                         <div className="bg-muted/30 rounded-lg p-4">
                                             <div className="flex items-center justify-between">
@@ -548,7 +620,8 @@ const OutputDetailDialog = ({
                                             {currentOutput.approved === false && currentOutput.rejectionReason && (
                                                 <InfoCard
                                                     title="拒绝原因"
-                                                    value={<span className="text-destructive">{currentOutput.rejectionReason || "无"}</span>}
+                                                    value={<span
+                                                        className="text-destructive">{currentOutput.rejectionReason || "无"}</span>}
                                                     className="col-span-2"
                                                 />
                                             )}
@@ -559,39 +632,6 @@ const OutputDetailDialog = ({
                                                     value={currentOutput.approver.realName || currentOutput.approver.phone}
                                                 />
                                             )}
-                                        </div>
-                                    </DetailSection>
-                                )}
-
-                                {/* 审核操作 */}
-                                {managementMode && canApprove && currentOutput.approved !== false && (
-                                    <DetailSection title="审核操作" icon={Award}>
-                                        <div className="space-y-4">
-                                            {currentOutput.approved === null ? (
-                                                // 待审核状态：显示通过和拒绝按钮
-                                                <ApprovalActions
-                                                    showCommentDialog={true}
-                                                    requireCommentOnApprove={false}
-                                                    requireCommentOnReject={true}
-                                                    approveDialogTitle="审核通过确认"
-                                                    rejectDialogTitle="审核拒绝原因"
-                                                    onSuccess={handleApproval}
-                                                    approveButtonText="通过"
-                                                    rejectButtonText="拒绝"
-                                                />
-                                            ) : currentOutput.approved === true ? (
-                                                // 已通过状态：显示驳回通过按钮
-                                                <ApprovalActions
-                                                    showCommentDialog={true}
-                                                    requireCommentOnReject={true}
-                                                    approveDialogTitle="审核通过确认"
-                                                    rejectDialogTitle="驳回通过原因"
-                                                    onSuccess={(approved, comment) => handleApproval(approved, comment)}
-                                                    approveButtonText="通过"
-                                                    rejectButtonText="驳回通过"
-                                                    showRevokeApprovalButton={true}
-                                                />
-                                            ) : null}
                                         </div>
                                     </DetailSection>
                                 )}

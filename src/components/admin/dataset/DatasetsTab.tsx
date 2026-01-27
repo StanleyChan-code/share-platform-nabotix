@@ -329,7 +329,7 @@ const DatasetsTab = () => {
                                 </Badge>
                             )}
                         </CardTitle>
-                        <p className="text-sm text-muted-foreground line-clamp-2 whitespace-pre-line">
+                        <p className="text-sm text-muted-foreground line-clamp-2 whitespace-pre-wrap break-all">
                             {dataset.description}
                         </p>
                     </div>

@@ -310,9 +310,9 @@ const Datasets = () => {
                                 <PaginatedList
                                     fetchData={fetchDatasets}
                                     renderItem={viewMode === 'grid' ? renderGridItem : renderTreeItem}
-                                    pageSize={viewMode === 'grid' ? 9 : 5}
+                                    pageSize={viewMode === 'grid' ? 12 : 6}
                                     gridLayout={viewMode === 'grid'}
-                                    gap={viewMode === 'grid' ? 6 : 4}
+                                    gap={viewMode === 'grid' ? 16 : 16}
                                     renderEmptyState={renderEmptyState}
                                     key={filtersChanged ? 'reset' : 'normal'}
                                     autoLoad={true}

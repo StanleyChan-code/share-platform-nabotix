@@ -193,7 +193,7 @@ const ResearchSubjectManagementTab = () => {
                                 <TableRow key={subject.id}>
                                     <TableCell className="font-medium">{subject.name}</TableCell>
                                     <TableCell>{subject.nameEn || "-"}</TableCell>
-                                    <TableCell>{subject.description || "-"}</TableCell>
+                                    <TableCell className="whitespace-pre-wrap break-all">{subject.description || "-"}</TableCell>
                                     <TableCell>
                                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
                                           subject.active

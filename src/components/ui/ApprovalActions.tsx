@@ -69,6 +69,11 @@ interface ApprovalActionsProps {
     | "secondary"
     | "ghost"
     | "link";
+
+  /**
+   * 默认按钮的大小
+   */
+    size?: "default" | "sm" | "lg" | "icon";
   
   /**
    * 拒绝按钮的变体样式
@@ -117,6 +122,7 @@ const ApprovalActions = ({
   rejectButtonVariant = "destructive",
   revokeApprovalButtonVariant = "outline",
   showRevokeApprovalButton = false,
+    size = "default",
   commentMaxLength = 1000, // 默认最大1000字符
 }: ApprovalActionsProps) => {
   const [open, setOpen] = useState(false);
@@ -169,14 +175,16 @@ const ApprovalActions = ({
         {!showRevokeApprovalButton && (
           <>
             <Button 
-              variant={approveButtonVariant} 
+              size={size}
+              variant={approveButtonVariant}
               onClick={handleApproveClick}
               type="button"
             >
               {approveButtonText}
             </Button>
             <Button 
-              variant={rejectButtonVariant} 
+              size={size}
+              variant={rejectButtonVariant}
               onClick={handleRejectClick}
               type="button"
             >
@@ -186,7 +194,8 @@ const ApprovalActions = ({
         )}
         {showRevokeApprovalButton && (
           <Button 
-            variant={revokeApprovalButtonVariant} 
+            size={size}
+            variant={revokeApprovalButtonVariant}
             onClick={handleRevokeApprovalClick}
             type="button"
           >

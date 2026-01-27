@@ -145,20 +145,14 @@ export const outputApi = {
         return response.data.data;
     },
 
-    // 用户下载自己提交的研究成果文件
-    async downloadOutputFile(id: string, fileId: string) {
-        const response = await api.get(`/research-outputs/my-submissions/${id}/files/${fileId}`, {
-            responseType: 'blob'
-        });
-        return response.data;
+    // 用户获取自己提交的研究成果文件下载令牌
+    async getDownloadOutputFileToken(id: string, fileId: string) {
+        return await api.getDownloadToken(`/research-outputs/my-submissions/${id}/files/${fileId}`);
     },
 
-    // 管理员下载研究成果文件
-    async downloadManagedOutputFile(id: string, fileId: string) {
-        const response = await api.get(`/manage/research-outputs/${id}/files/${fileId}`, {
-            responseType: 'blob'
-        });
-        return response.data;
+    // 管理员获取研究成果文件下载令牌
+    async getDownloadManagedOutputFileToken(id: string, fileId: string) {
+        return await api.getDownloadToken(`/manage/research-outputs/${id}/files/${fileId}`);
     },
 
     // 根据ID获取单个公开的研究成果

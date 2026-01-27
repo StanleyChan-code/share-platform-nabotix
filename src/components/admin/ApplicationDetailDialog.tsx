@@ -17,9 +17,12 @@ import {
     Eye,
     AlertCircle
 } from 'lucide-react';
-import { formatDateTime, formatFileSize } from '@/lib/utils.ts';
+import {downloadFile, formatDateTime, formatFileSize, generateDownloadUrl} from '@/lib/utils.ts';
 import { fileApi, FileInfo } from '@/integrations/api/fileApi.ts';
-import {Application, downloadApplicationFile, getApplicationRelatedUsers} from '@/integrations/api/applicationApi.ts';
+import {
+    Application,
+    getDownloadApplicationFileToken
+} from '@/integrations/api/applicationApi.ts';
 import PDFPreview from '@/components/ui/pdf-preview.tsx'
 import DatasetInfoDisplay from "@/components/dataset/DatasetInfoDisplay.tsx";
 
@@ -209,33 +212,25 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
 
         try {
             // 下载文件
-            const response = await downloadApplicationFile(application.id, application.approvalDocumentId);
-
-            // 创建下载链接
-            const url = window.URL.createObjectURL(new Blob([response]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = fileInfo?.fileName || `approval-document-${application.id}`;
-
-            // 触发下载
-            document.body.appendChild(link);
-            link.click();
-
-            // 清理
-            setTimeout(() => {
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(link);
-            }, 100);
-
+            const response = await getDownloadApplicationFileToken(application.id, application.approvalDocumentId);
+            if (!response || !response.success) {
+                toast({
+                    title: "下载失败",
+                    description: response.message || "无法下载文件，请稍后重试",
+                    variant: "destructive"
+                });
+                return;
+            }
+            const fileName = await downloadFile(response.data);
             toast({
                 title: "开始下载",
-                description: `文件 "${fileInfo?.fileName}" 已开始下载`
+                description: `文件 "${fileName}" 已开始下载`
             });
         } catch (error) {
             console.error('下载失败:', error);
             toast({
                 title: "下载失败",
-                description: "无法下载文件，请稍后重试",
+                description: error.response?.data?.message || "无法下载文件，请稍后重试",
                 variant: "destructive"
             });
         }
@@ -255,11 +250,18 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
         try {
             setIsPreviewLoading(true);
             // 获取文件下载响应
-            const response:any = await downloadApplicationFile(application.id, application.approvalDocumentId);
-            // 创建PDF预览URL
-            const fileUrl = URL.createObjectURL(new Blob([response], { type: 'application/pdf' }));
-            setPdfPreviewUrl(fileUrl);
-            setIsPdfPreviewOpen(true);
+            const response = await getDownloadApplicationFileToken(application.id, application.approvalDocumentId);
+            if (!response || !response.success) {
+                toast({
+                    title: "下载失败",
+                    description: response.message || "无法下载文件，请稍后重试",
+                    variant: "destructive"
+                });
+                return;
+            }
+            const downloadUrl = generateDownloadUrl(response.data);
+            setIsPdfPreviewOpen( true)
+            setPdfPreviewUrl(downloadUrl);
         } catch (error) {
             console.error('预览失败:', error);
             toast({
@@ -327,12 +329,12 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
 
                                         <div>
                                             <label className="text-sm font-medium text-muted-foreground">项目描述</label>
-                                            <p className="mt-1 p-3 bg-muted rounded text-sm break-words whitespace-pre-line">{application.projectDescription}</p>
+                                            <p className="mt-1 p-3 bg-muted rounded text-sm break-all whitespace-pre-wrap">{application.projectDescription}</p>
                                         </div>
 
                                         <div>
                                             <label className="text-sm font-medium text-muted-foreground">申请用途:</label>
-                                            <p className="mt-1 p-3 bg-muted rounded text-sm break-words whitespace-pre-line">{application.purpose}</p>
+                                            <p className="mt-1 p-3 bg-muted rounded text-sm break-all whitespace-pre-wrap">{application.purpose}</p>
                                         </div>
 
                                         <div>

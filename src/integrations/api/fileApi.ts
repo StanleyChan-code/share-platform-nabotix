@@ -116,11 +116,4 @@ export const fileApi = {
     const response = await api.get<FileInfo>(`/files/${fileId}/info`);
     return response.data;
   },
-
-  // 下载文件
-  async downloadFile(fileId: string) {
-    const response = await api.downloadFile(`/files/${fileId}/download`);
-    return response.data;
-  },
-
 };

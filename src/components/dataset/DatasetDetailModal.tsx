@@ -265,7 +265,7 @@ export function DatasetDetailModal({
                                     {/*    <BarChart3 className="h-4 w-4"/>*/}
                                     {/*    分析*/}
                                     {/*</TabsTrigger>*/}
-                                    <TabsTrigger value="researchOutputs" className="gap-2">
+                                    <TabsTrigger value="researchoutputs" className="gap-2">
                                         <FileText className="h-4 w-4"/>
                                         研究成果
                                     </TabsTrigger>
@@ -308,7 +308,7 @@ export function DatasetDetailModal({
                                 </TabsContent>
 
                                 {/* Research Outputs Tab */}
-                                <TabsContent value="researchOutputs" className="space-y-4 mt-4">
+                                <TabsContent value="researchoutputs" className="space-y-4 mt-4">
                                     <ResearchOutputsTab datasetId={currentDataset.id}/>
                                 </TabsContent>
 

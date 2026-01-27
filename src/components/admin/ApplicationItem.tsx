@@ -107,11 +107,6 @@ const getStatusText = (status: Application['status']) => {
     }
 };
 
-const truncateText = (text: string, maxLength: number) => {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
-};
-
 const getTimelineItems = (application: Application) => {
     const items = [{
         id: 'submitted', // 添加唯一标识符
@@ -344,7 +339,7 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                         <div className="space-y-1 flex-1 min-w-0">
                             <CardTitle className="text-lg flex items-center gap-2">
                             <span className="truncate text-lg hover:underline hover:cursor-pointer" onClick={() => onViewDetails(application)}>
-                                {truncateText(application.projectTitle, 30)}
+                                {application.projectTitle}
                             </span>
                             </CardTitle>
                             {application.dataset.titleCn && (
@@ -512,14 +507,14 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                 <CardContent>
                     <div className="gap-4 mb-4">
                         {/* 项目描述 */}
-                        <p className="pl-4 line-clamp-3 break-words whitespace-pre-line">
+                        <p className="pl-4 line-clamp-3 break-all whitespace-pre-wrap">
                             {application.projectDescription}
                         </p>
                         <div className="font-medium text-sm mt-4 mb-1 flex items-center gap-2">
                             <Target className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
                             申请用途
                         </div>
-                        <p className="text-sm text-muted-foreground pl-4 line-clamp-3 break-words whitespace-pre-line">
+                        <p className="text-sm text-muted-foreground pl-4 line-clamp-3 break-all whitespace-pre-wrap">
                             {application.purpose}
                         </p>
                     </div>
@@ -591,19 +586,19 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                     {/* 审核意见显示 */}
                     <div className="mt-3 pt-3 border-t">
                         <div className="flex items-start gap-2">
-                            <div className="flex-1 min-w-0">
+                            <div className="flex-1 min-w-0 space-y-2">
                                 <span className="text-sm font-medium text-muted-foreground">审核意见</span>
-                                <div className="text-sm mt-1 space-y-1 ml-4">
-                                    <div className="flex items-center gap-2">
+                                <div className="text-sm mt-1 space-y-2 ml-4">
+                                    <div className="flex items-start gap-2">
                                         <UserCheck className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                                        <p className="break-words gap-2">
+                                        <p className="whitespace-pre-wrap break-all whitespace-pre-wrap gap-2">
                                             <span className="font-medium text-blue-600">数据集提供者意见：</span>
                                             <span>{application.providerReviewResult !== null ? application.providerNotes || "无" : "待审核"}</span>
                                         </p>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-start gap-2">
                                         <Settings className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                                        <p className="break-words gap-2">
+                                        <p className="break-all whitespace-pre-wrap gap-2">
                                             <span className="font-medium text-purple-600">机构审核意见：</span>
                                             <span>{application.institutionReviewResult !== null ? application.adminNotes || "无" : "待审核"}</span>
                                         </p>

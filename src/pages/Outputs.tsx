@@ -146,7 +146,7 @@ const Outputs = () => {
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-start justify-between gap-3 mb-3">
                                         <h3 onClick={() => handleOutputClick(output)}
-                                            className="font-bold text-xl leading-tight text-gray-900 transition-colors line-clamp-2 flex-1 pr-2 cursor-pointer hover:text-blue-600">
+                                            className="font-bold text-xl leading-tight text-gray-900 transition-colors break-all whitespace-pre-wrap line-clamp-2 flex-1 pr-2 cursor-pointer hover:text-blue-600">
                                           {output.title}
                                         </h3>
                                         <div className="flex flex-col items-end gap-2 ml-2 flex-shrink-0">
@@ -229,7 +229,7 @@ const Outputs = () => {
                             {/* 摘要 */}
                             {output.abstractText && (
                                 <div className="bg-gradient-to-r from-gray-50/50 to-blue-50/20 rounded-xl p-4 border border-gray-200/50 shadow-sm">
-                                    <p className="text-sm text-gray-700 leading-relaxed line-clamp-3 font-medium">
+                                    <p className="text-sm text-gray-700 leading-relaxed line-clamp-3 break-all whitespace-pre-wrap font-medium">
                                         {output.abstractText}
                                     </p>
                                 </div>
@@ -240,9 +240,13 @@ const Outputs = () => {
                                 <div className="flex items-center gap-2 min-w-0 flex-1">
                                     <div className="flex items-center gap-2 bg-white/80 rounded-xl px-3 py-1.5 border shadow-sm">
                                         <Database className="h-4 w-4 text-purple-600" />
-                                        <span className="font-semibold text-gray-800 text-sm truncate max-w-[200px] lg:max-w-[300px]">
-                                            基于: {output.dataset?.titleCn || '未知数据集'}
-                                        </span>
+                                        <a
+                                            href={`/datasets?id=${output.dataset.id}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="font-semibold text-gray-800 text-sm truncate hover:text-blue-600 hover:underline max-w-[200px] lg:max-w-[300px]">
+                                            基于数据集: {output.dataset?.titleCn || '未知数据集'}
+                                        </a>
                                     </div>
                                 </div>
 
@@ -347,9 +351,9 @@ const Outputs = () => {
                 {/* Search and Filter */}
                 <Card className="sticky top-16 z-50 bg-white/80 backdrop-blur-sm border-blue-200/50 shadow-xl">
                     <CardContent className="p-6">
-                        <div className="flex flex-col sm:flex-row items-center gap-4">
+                        <div className="flex flex-row items-center gap-4">
                             <div className="flex-1 w-full sm:max-w-md">
-                                <div className="relative">
+                                <div className="relative min-w-48">
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                                     <Input
                                         placeholder="搜索成果标题、摘要或简介..."

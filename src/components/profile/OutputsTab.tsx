@@ -190,7 +190,7 @@ const OutputsTab = () => {
                     open={detailDialogOpen}
                     onOpenChange={setDetailDialogOpen}
                     output={selectedOutput}
-                    managementMode={false}
+                    managementMode={true}
                 />
 
                 <EditOutputDialog

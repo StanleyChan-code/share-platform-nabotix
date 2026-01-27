@@ -87,7 +87,7 @@ const InfoCard = ({ label, value, icon, isMonospace = false, copyable = false, o
               {cardContent}
             </TooltipTrigger>
             <TooltipContent side="top" className="max-w-md p-3">
-              <p className={`${isMonospace ? 'font-mono' : ''} text-sm break-words`}>
+              <p className={`${isMonospace ? 'font-mono' : ''} text-sm whitespace-pre-wrap break-all`}>
                 {value}
               </p>
             </TooltipContent>
@@ -308,7 +308,7 @@ const AuditLogDetailDialog: React.FC<AuditLogDetailDialogProps> = ({
                               </Button>
                             </div>
                             <ScrollArea className="max-h-[300px]">
-                          <pre className="p-4 text-xs whitespace-pre-wrap break-words font-mono truncate">
+                          <pre className="p-4 text-xs whitespace-pre-wrap break-all font-mono truncate">
                             {JSON.stringify(auditLog.additionalParams, null, 2)}
                           </pre>
                             </ScrollArea>

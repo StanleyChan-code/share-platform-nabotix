@@ -41,14 +41,8 @@ const ApplicationsTab = () => {
   };
 
   const handleViewDataset = (application: Application, defaultTab: string = 'overview') => {
-    // 创建一个模拟的数据集对象，包含必要的字段
-    const dataset = {
-      id: application.dataset.id,
-      titleCn: application.dataset.titleCn,
-      // 可以根据需要添加其他字段
-    };
     setDefaultDatasetTab(defaultTab);
-    setSelectedDataset(dataset);
+    setSelectedDataset(application.dataset);
     setIsDatasetModalOpen(true);
   };
 

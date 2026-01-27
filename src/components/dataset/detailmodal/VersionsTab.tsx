@@ -529,7 +529,7 @@ export function VersionsTab({
                                                         <ScrollArea className={`text-sm text-muted-foreground leading-relaxed ${
                                                             isExpanded ? 'max-h-96' : 'max-h-32'
                                                         }`}>
-                                                            <div className="whitespace-pre-wrap break-words">
+                                                            <div className="whitespace-pre-wrap break-all">
                                                                 {description}
                                                             </div>
                                                         </ScrollArea>

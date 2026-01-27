@@ -31,7 +31,7 @@ export const OutputCard = ({ output }: OutputCardProps) => {
               href={`/outputs?id=${output.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-semibold text-base md:text-lg leading-tight line-clamp-2 flex-1 group-hover:text-blue-600 transition-colors break-words hover:underline"
+              className="font-semibold text-base md:text-lg leading-tight line-clamp-2 break-all whitespace-pre-wrap flex-1 group-hover:text-blue-600 transition-colors break-words hover:underline"
               title={output.title}
           >
             {output.title}
@@ -56,8 +56,7 @@ export const OutputCard = ({ output }: OutputCardProps) => {
         {/* 摘要 */}
         {output.abstractText && (
             <p
-                className="text-sm text-gray-600 line-clamp-3 mb-4 flex-1 leading-relaxed break-words"
-                title={output.abstractText}
+                className="text-sm text-gray-600 mb-4 flex-1 leading-relaxed whitespace-pre-wrap break-all line-clamp-3"
             >
               {output.abstractText}
             </p>
@@ -113,15 +112,18 @@ export const OutputCard = ({ output }: OutputCardProps) => {
 
           {/* 数据集信息 */}
           {output.dataset?.titleCn && (
-              <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 rounded-lg p-2.5">
+              <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 rounded-lg p-2.5 font-medium">
                 <Database className="h-3.5 w-3.5 text-purple-500 flex-shrink-0" />
-                <span className="font-medium flex-shrink-0">基于数据集:</span>
-                <span
-                    className="truncate break-words flex-1 min-w-0 max-w-72"
-                    title={`基于数据集: ${output.dataset.titleCn}`}
+                <span>基于数据集:</span>
+                <a
+                    href={`/datasets?id=${output.dataset.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="truncate break-words flex-1 min-w-0 max-w-72 gap-2 hover:underline"
+                    title={output.dataset.titleCn}
                 >
-              {output.dataset.titleCn}
-            </span>
+                  {output.dataset.titleCn}
+                </a>
               </div>
           )}
         </div>
