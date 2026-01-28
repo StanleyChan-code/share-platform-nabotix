@@ -240,12 +240,13 @@ const Outputs = () => {
                                 <div className="flex items-center gap-2 min-w-0 flex-1">
                                     <div className="flex items-center gap-2 bg-white/80 rounded-xl px-3 py-1.5 border shadow-sm">
                                         <Database className="h-4 w-4 text-purple-600" />
+                                        <span className="font-semibold text-gray-800 text-sm whitespace-nowrap">基于数据集:</span>
                                         <a
                                             href={`/datasets?id=${output.dataset.id}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="font-semibold text-gray-800 text-sm truncate hover:text-blue-600 hover:underline max-w-[200px] lg:max-w-[300px]">
-                                            基于数据集: {output.dataset?.titleCn || '未知数据集'}
+                                            {output.dataset?.titleCn || '-'}
                                         </a>
                                     </div>
                                 </div>

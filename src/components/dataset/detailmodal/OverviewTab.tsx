@@ -105,8 +105,8 @@ export function OverviewTab({
         contactInfo: editableFields.contactInfo,
         applicationInstitutionIds: editableFields.applicationInstitutionIds,
         keywords: dataset.keywords || [],
-        published: dataset.published,
-        shareAllData: dataset.shareAllData,
+        published: true,
+        shareAllData: true,
         samplingMethod: dataset.samplingMethod || ""
       };
 

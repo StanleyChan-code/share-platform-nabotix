@@ -3,7 +3,7 @@ import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/compo
 import {Badge} from '@/components/ui/badge.tsx';
 import {Skeleton} from '@/components/ui/skeleton.tsx';
 import {datasetApi, Dataset, ResearchSubject} from '@/integrations/api/datasetApi.ts';
-import {formatDateTime} from '@/lib/utils.ts';
+import {cn, formatDateTime} from '@/lib/utils.ts';
 import {
     Database,
     Calendar,
@@ -35,18 +35,17 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog.tsx";
-import {getCurrentUserInfoFromSession, getCurrentUserRolesFromSession, getOrFetchUserInfo} from '@/lib/authUtils';
+import {getCurrentUserInfoFromSession, getCurrentUserRolesFromSession} from '@/lib/authUtils';
 import {canUploadDataset, hasPermissionRole, PermissionRoles} from '@/lib/permissionUtils.ts';
 import {DatasetTypes} from "@/lib/enums.ts";
 import {DatasetUploadForm} from "@/components/admin/dataset/DatasetUploadForm.tsx";
-import ReactPaginate from "react-paginate";
+import ReactPaginatedList, {ReactPaginatedListRef} from "@/components/ui/ReactPaginatedList.tsx";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
 import {InstitutionSelector} from "@/components/admin/institution/InstitutionSelector.tsx";
 import {useDebounce} from "@/hooks/useDebounce";
 import {Input} from "@/components/ui/FormValidator.tsx";
 import {Switch} from "@/components/ui/switch.tsx";
 import {refreshDatasetPendingCount} from "@/lib/pendingCountsController";
-import { ApiResponse, Page } from '@/integrations/api/client';
 
 const DatasetsTab = () => {
     const [filterByCurrentUser, setFilterByCurrentUser] = useState(false);
@@ -84,11 +83,8 @@ const DatasetsTab = () => {
     // 添加防抖处理，延迟550ms
     const debouncedSearchTerm = useDebounce(searchTerm, 550);
 
-    // 添加分页相关状态
-    const [datasets, setDatasets] = useState<Dataset[]>([]);
-    const [currentPage, setCurrentPage] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
-    const [totalElements, setTotalElements] = useState(0);
+    // 创建ReactPaginatedList的ref
+    const paginatedListRef = useRef<ReactPaginatedListRef>(null);
     const [loading, setLoading] = useState(false);
 
     // 获取学科领域选项
@@ -119,18 +115,16 @@ const DatasetsTab = () => {
     // 使用 useRef 来跟踪加载状态，避免依赖循环
     const loadingRef = useRef(false);
 
-    // 获取数据集列表（用于react-paginate分页）
+    // 获取数据集列表（用于ReactPaginatedList分页）
     const fetchDatasetList = useCallback(async (page: number, size: number = 10) => {
-        if (loadingRef.current) return;
+        if (loadingRef.current) return {content: [], page: {number: page, totalPages: 0, totalElements: 0}};
 
         loadingRef.current = true;
         setLoading(true);
-        let response: ApiResponse;
         try {
-            response = await datasetApi.advancedSearchDatasets({
+            const response = await datasetApi.advancedSearchDatasets({
                 page,
                 size,
-                sortBy: 'updatedAt',
                 sortDir: 'desc',
                 titleCnOrKey: debouncedSearchTerm || undefined,
                 subjectAreaId: selectedSubject !== "all" ? selectedSubject : undefined,
@@ -141,13 +135,10 @@ const DatasetsTab = () => {
                 reviewStatus: reviewStatus !== "ALL" ? reviewStatus as any : undefined
             });
 
-            setDatasets(response.data.content);
-            setTotalPages(response.data.page.totalPages);
-            setTotalElements(response.data.page.totalElements || 0);
-            setCurrentPage(page);
-
             // 刷新待审核数量
             refreshDatasetPendingCount();
+
+            return response.data;
         } catch (error) {
             console.error("获取数据集列表失败:", error);
             toast({
@@ -155,18 +146,20 @@ const DatasetsTab = () => {
                 description: "获取数据集列表失败",
                 variant: "destructive"
             });
+            throw error;
         } finally {
             loadingRef.current = false;
             setLoading(false);
         }
-
-        return response?.data;
     }, [currentUser?.user?.id, filterByCurrentUser, toast, debouncedSearchTerm, selectedSubject, selectedType, isTopLevel, institutionId, reviewStatus]); // 添加 selectedType 到依赖数组
 
     // 当筛选条件变化时重新获取数据
     useEffect(() => {
-            fetchDatasetList(0);
-    }, [debouncedSearchTerm, selectedSubject, isTopLevel, institutionId, reviewStatus, filterByCurrentUser, fetchDatasetList]);
+        // 使用ref调用刷新方法
+        if (paginatedListRef.current) {
+            paginatedListRef.current.reset();
+        }
+    }, [debouncedSearchTerm, selectedSubject, selectedType, isTopLevel, institutionId, reviewStatus, filterByCurrentUser]);
 
     const hasDeletionPermission = (dataset: Dataset) => {
         // 只有数据集创建者或平台管理员可以删除数据集
@@ -286,7 +279,7 @@ const DatasetsTab = () => {
             setDeleteDialogOpen(false);
             setDatasetToDelete(null);
             // 触发重新加载数据
-            fetchDatasetList(currentPage);
+            handleRefresh();
         } catch (error) {
             toast({
                 title: "删除失败",
@@ -296,11 +289,6 @@ const DatasetsTab = () => {
         }
     };
 
-    // 处理页面更改
-    const handlePageClick = (event: { selected: number }) => {
-        const page = event.selected;
-        fetchDatasetList(page);
-    };
 
     // 重置筛选条件
     const resetFilters = () => {
@@ -310,6 +298,13 @@ const DatasetsTab = () => {
         setIsTopLevel("all");
         setInstitutionId(null);
         setReviewStatus("ALL");
+    };
+
+    // 手动刷新列表
+    const handleRefresh = () => {
+        if (paginatedListRef.current) {
+            paginatedListRef.current.refresh();
+        }
     };
 
     const renderDatasetItem = (dataset: Dataset) => (
@@ -345,12 +340,14 @@ const DatasetsTab = () => {
                             {getPendingVersionCount(dataset) > 0 && (
                                 <>
                                     {getPendingInstitutionReviewCount(dataset) > 0 && (
-                                        <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800 border-yellow-200 mr-1">
+                                        <Badge variant="secondary"
+                                               className="text-xs bg-yellow-100 text-yellow-800 border-yellow-200 mr-1">
                                             版本待机构审核
                                         </Badge>
                                     )}
                                     {getPendingPlatformReviewCount(dataset) > 0 && (
-                                        <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800 border-blue-200">
+                                        <Badge variant="secondary"
+                                               className="text-xs bg-blue-100 text-blue-800 border-blue-200">
                                             版本待平台审核
                                         </Badge>
                                     )}
@@ -449,7 +446,7 @@ const DatasetsTab = () => {
                         <div className="flex items-center gap-2">
                             <BookOpen className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
                             <span className="font-medium">数据集类型:</span>
-                            <span >{DatasetTypes[dataset.type as keyof typeof DatasetTypes] || dataset.type}</span>
+                            <span>{DatasetTypes[dataset.type as keyof typeof DatasetTypes] || dataset.type}</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
@@ -547,210 +544,163 @@ const DatasetsTab = () => {
     return (
         <TooltipProvider>
             <>
-                        {/* 平台管理员机构选择器 */}
-                        {hasPermissionRole(PermissionRoles.PLATFORM_ADMIN) && (
-                            <div className="mb-6 p-4 border rounded-lg bg-muted/50">
-                                <InstitutionSelector
-                                    value={institutionId}
-                                    onChange={setInstitutionId}
-                                    placeholder="选择要管理的机构（可选）"
-                                    allowMultiple={false}
+                {/* 平台管理员机构选择器 */}
+                {hasPermissionRole(PermissionRoles.PLATFORM_ADMIN) && (
+                    <div className="mb-6 p-4 border rounded-lg bg-muted/50">
+                        <InstitutionSelector
+                            value={institutionId}
+                            onChange={setInstitutionId}
+                            placeholder="选择要管理的机构（可选）"
+                            allowMultiple={false}
+                        />
+                    </div>
+                )}
+
+                {/* 筛选区域 */}
+                {showFilters && (
+                    <div className="mb-6 p-4 border rounded-lg bg-muted/50">
+                        {/* 第一行：搜索和操作按钮 */}
+                        <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                            {/* 左侧搜索框 */}
+                            <div className="flex-1 min-w-[200px]">
+                                <Input
+                                    placeholder="搜索标题或关键词..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    maxLength={100}
+                                    className="w-full"
                                 />
                             </div>
-                        )}
 
-                        {/* 筛选区域 */}
-                        {showFilters && (
-                            <div className="mb-6 p-4 border rounded-lg bg-muted/50">
-                                {/* 第一行：搜索和操作按钮 */}
-                                <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                                    {/* 左侧搜索框 */}
-                                    <div className="flex-1 min-w-[200px]">
-                                        <Input
-                                            placeholder="搜索标题或关键词..."
-                                            value={searchTerm}
-                                            onChange={(e) => setSearchTerm(e.target.value)}
-                                            maxLength={100}
-                                            className="w-full"
-                                        />
-                                    </div>
-
-                                    {/* 右侧按钮组 */}
-                                    <div className="flex flex-wrap gap-2 justify-end">
-                                        {/* 只看自己开关 */}
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm">只看自己</span>
-                                            <Switch
-                                                checked={filterByCurrentUser}
-                                                onCheckedChange={(checked) => {
-                                                    setFilterByCurrentUser(checked);
-                                                }}
-                                            />
-                                        </div>
-                                        
-                                        {/* 刷新按钮 */}
-                                        <Button variant="outline" onClick={() => fetchDatasetList(currentPage)} className="gap-2">
-                                            <RefreshCw className="h-4 w-4"/>
-                                            刷新
-                                        </Button>
-
-                                        {/* 重置按钮 */}
-                                        <Button variant="outline" onClick={resetFilters}>
-                                            重置筛选条件
-                                        </Button>
-
-                                        {canUploadDataset() && (
-                                            <Button
-                                                onClick={() => showUpload ? handleCancelUploadClick() : setShowUpload(true)}
-                                                className="gap-2"
-                                            >
-                                                <Upload className="h-4 w-4"/>
-                                                {showUpload ? '取消上传' : '上传数据集'}
-                                            </Button>
-                                        )}
-                                    </div>
+                            {/* 右侧按钮组 */}
+                            <div className="flex flex-wrap gap-2 justify-end">
+                                {/* 只看自己开关 */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm">只看自己</span>
+                                    <Switch
+                                        checked={filterByCurrentUser}
+                                        onCheckedChange={(checked) => {
+                                            setFilterByCurrentUser(checked);
+                                        }}
+                                    />
                                 </div>
 
-                                {/* 第二行：筛选器 */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                    {/* 学科领域筛选 */}
-                                    <div>
-                                        <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="学科领域"/>
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">全部学科</SelectItem>
-                                                {subjects.map((subject) => (
-                                                    <SelectItem key={subject.id} value={subject.id}>
-                                                        {subject.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
+                                {/* 刷新按钮 */}
+                                <Button variant="outline"
+                                        disabled={loading}
+                                        onClick={() => {
+                                            handleRefresh();
+                                        }} className="gap-2">
+                                    <RefreshCw className={cn("h-4 w-4", loading ? "animate-spin" : "")}/>
+                                    刷新
+                                </Button>
 
-                                    {/* 数据集类型筛选 */}
-                                    <div>
-                                        <Select value={selectedType} onValueChange={setSelectedType}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="数据集类型"/>
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">全部类型</SelectItem>
-                                                {Object.entries(DatasetTypes).map(([key, value]) => (
-                                                    <SelectItem key={key} value={key}>
-                                                        {value}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
+                                {/* 重置按钮 */}
+                                <Button variant="outline" onClick={resetFilters}>
+                                    重置筛选
+                                </Button>
 
-                                    {/* 审核状态筛选 */}
-                                    <div>
-                                        <Select value={reviewStatus} onValueChange={setReviewStatus}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="审核状态" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="ALL">全部审核状态</SelectItem>
-                                                <SelectItem value="PUBLISHED">已发布</SelectItem>
-                                                <SelectItem value="PENDING_INSTITUTION_REVIEW">待机构审核</SelectItem>
-                                                <SelectItem value="PENDING_PLATFORM_REVIEW">待平台审核</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    {/* 是否基线数据集 */}
-                                    <div>
-                                        <Select
-                                            value={isTopLevel === "all" ? "all" : isTopLevel ? "true" : "false"}
-                                            onValueChange={(value) =>
-                                                setIsTopLevel(value === "all" ? "all" : value === "true")
-                                            }
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="基线数据集"/>
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">全部数据集</SelectItem>
-                                                <SelectItem value="true">基线数据集</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {showUpload && (
-                            <div className="mb-6">
-                                <DatasetUploadForm onSuccess={() => {
-                                    setShowUpload(false);
-                                    fetchDatasetList(currentPage);
-                                }}/>
-                            </div>
-                        )}
-
-                            <div>
-                                {loading ? (
-                                    <div className="space-y-4">
-                                        {[...Array(totalElements || 1)].map((_, index) => (
-                                            <div key={index}>{renderDatasetSkeleton()}</div>
-                                        ))}
-                                    </div>
-                                ) : datasets.length > 0 ? (
-                                    <div className="space-y-4">
-                                        {datasets.map(renderDatasetItem)}
-
-                                        {/* 分页控件 */}
-                                        <div
-                                            className="mt-4 text-sm text-muted-foreground flex justify-between items-center">
-                                            <div>
-                                                共 {totalElements} 条记录
-                                            </div>
-                                            {totalPages > 1 && (
-                                                <div className="flex justify-center">
-                                                    <ReactPaginate
-                                                        breakLabel="..."
-                                                        nextLabel={
-                                                            <span className="flex items-center gap-1">
-                                                                下一页 <ChevronRightIcon className="h-4 w-4"/>
-                                                            </span>
-                                                        }
-                                                        onPageChange={handlePageClick}
-                                                        pageRangeDisplayed={3}
-                                                        marginPagesDisplayed={1}
-                                                        pageCount={totalPages}
-                                                        previousLabel={
-                                                            <span className="flex items-center gap-1">
-                                                                <ChevronLeftIcon className="h-4 w-4"/> 上一页
-                                                            </span>
-                                                        }
-                                                        renderOnZeroPageCount={null}
-                                                        containerClassName="flex items-center justify-center gap-2"
-                                                        pageClassName=""
-                                                        pageLinkClassName="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
-                                                        previousClassName=""
-                                                        previousLinkClassName="flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:hover:border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
-                                                        nextClassName=""
-                                                        nextLinkClassName="flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:hover:border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
-                                                        breakClassName=""
-                                                        breakLinkClassName="flex h-10 w-10 items-center justify-center text-gray-500 dark:text-gray-400"
-                                                        activeClassName=""
-                                                        activeLinkClassName="!border-blue-500 !bg-blue-500 !text-white hover:!bg-blue-600 hover:!border-blue-600 dark:!border-blue-500 dark:!bg-blue-500"
-                                                        disabledClassName="opacity-40 cursor-not-allowed"
-                                                        disabledLinkClassName="hover:border-gray-200 hover:bg-white hover:text-gray-700 dark:hover:border-gray-700 dark:hover:bg-gray-800"
-                                                        forcePage={currentPage}
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    renderEmptyState()
+                                {canUploadDataset() && (
+                                    <Button
+                                        onClick={() => showUpload ? handleCancelUploadClick() : setShowUpload(true)}
+                                        className="gap-2"
+                                    >
+                                        <Upload className="h-4 w-4"/>
+                                        {showUpload ? '取消上传' : '上传数据集'}
+                                    </Button>
                                 )}
                             </div>
+                        </div>
+
+                        {/* 第二行：筛选器 */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {/* 学科领域筛选 */}
+                            <div>
+                                <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="学科领域"/>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">全部学科</SelectItem>
+                                        {subjects.map((subject) => (
+                                            <SelectItem key={subject.id} value={subject.id}>
+                                                {subject.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* 数据集类型筛选 */}
+                            <div>
+                                <Select value={selectedType} onValueChange={setSelectedType}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="数据集类型"/>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">全部类型</SelectItem>
+                                        {Object.entries(DatasetTypes).map(([key, value]) => (
+                                            <SelectItem key={key} value={key}>
+                                                {value}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* 审核状态筛选 */}
+                            <div>
+                                <Select value={reviewStatus} onValueChange={setReviewStatus}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="审核状态"/>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ALL">全部审核状态</SelectItem>
+                                        <SelectItem value="PUBLISHED">已发布</SelectItem>
+                                        <SelectItem value="PENDING_INSTITUTION_REVIEW">待机构审核</SelectItem>
+                                        <SelectItem value="PENDING_PLATFORM_REVIEW">待平台审核</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* 是否基线数据集 */}
+                            <div>
+                                <Select
+                                    value={isTopLevel === "all" ? "all" : isTopLevel ? "true" : "false"}
+                                    onValueChange={(value) =>
+                                        setIsTopLevel(value === "all" ? "all" : value === "true")
+                                    }
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="基线数据集"/>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">全部数据集</SelectItem>
+                                        <SelectItem value="true">基线数据集</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {showUpload && (
+                    <div className="mb-6">
+                        <DatasetUploadForm onSuccess={() => {
+                            setShowUpload(false);
+                            handleRefresh();
+                        }}/>
+                    </div>
+                )}
+
+                <ReactPaginatedList
+                    ref={paginatedListRef}
+                    fetchData={fetchDatasetList}
+                    renderItem={renderDatasetItem}
+                    renderEmptyState={renderEmptyState}
+                    renderSkeletonItem={renderDatasetSkeleton}
+                    pageSize={10}
+                />
 
                 {selectedDataset && (
                     <DatasetDetailModal
@@ -760,7 +710,7 @@ const DatasetsTab = () => {
                         useAdvancedQuery={true}
                         onDatasetUpdated={() => {
                             // 关闭模态框后刷新列表
-                            fetchDatasetList(currentPage);
+                            handleRefresh();
                         }}
                     />
                 )}

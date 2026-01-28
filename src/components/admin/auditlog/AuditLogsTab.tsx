@@ -7,7 +7,7 @@ import { CustomDatePicker } from '@/components/ui/date-picker.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import { toast } from '@/hooks/use-toast.ts';
 import {cn, formatDateTime, formatISOString} from '@/lib/utils.ts';
-import { Search, Filter, X, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import {Search, Filter, X, Eye, ChevronLeft, ChevronRight, RefreshCw} from 'lucide-react';
 import { auditLogApi, AuditLog, AuditLogParams } from '@/integrations/api/auditLogApi.ts';
 import ReactPaginate from 'react-paginate';
 import { Skeleton } from '@/components/ui/skeleton.tsx';
@@ -37,6 +37,16 @@ export default function AuditLogsTab() {
     totalPages: 0,
     totalElements: 0,
   });
+
+  // 处理页面大小变化
+  const handlePageSizeChange = (size: number) => {
+    setPagination(prev => ({
+      ...prev,
+      size,
+      page: 0, // 重置到第一页
+    }));
+    loadAuditLogs(true, 0);
+  };
   
   // 用户详情对话框相关状态
   const [userInfoDialogOpen, setUserInfoDialogOpen] = useState(false);
@@ -307,7 +317,8 @@ export default function AuditLogsTab() {
                       disabled={loading}
                       className="flex-1 min-w-[80px]"
                   >
-                    {loading ? '加载中...' : '刷新'}
+                    <RefreshCw className={cn("h-4 w-4", loading ? "animate-spin" : "")} />
+                    刷新
                   </Button>
                   <Button
                       type="button"
@@ -373,11 +384,14 @@ export default function AuditLogsTab() {
                       <TableCell>
                         <Skeleton className="h-8 w-16 rounded-md" />
                       </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-8 w-16 rounded-md" />
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : auditLogs.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-10">
+                    <TableCell colSpan={8} className="text-center py-10">
                       没有找到审计日志
                     </TableCell>
                   </TableRow>
@@ -435,9 +449,26 @@ export default function AuditLogsTab() {
           </div>
 
           {/* 分页控件 */}
-          <div className="mt-4 text-sm text-muted-foreground flex justify-between items-center">
-            <div>
-              共 {pagination.totalElements} 条记录
+          <div className="mt-4 text-sm text-muted-foreground flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div>
+                共 {pagination.totalElements} 条记录
+              </div>
+              <div className="flex items-center gap-2">
+                每页显示：
+                <Select value={pagination.size.toString()} onValueChange={(value) => handlePageSizeChange(parseInt(value, 10))}>
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue placeholder="显示条数" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5条</SelectItem>
+                    <SelectItem value="10">10条</SelectItem>
+                    <SelectItem value="20">20条</SelectItem>
+                    <SelectItem value="50">50条</SelectItem>
+                    <SelectItem value="100">100条</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             {/* 只有在总页数大于1时才显示分页 */}
             {pagination.totalPages > 1 && (

@@ -83,46 +83,4 @@ export const institutionApi = {
     const response = await api.delete<void>(`/manage/institutions/${id}`);
     return response.data;
   },
-
-  // 获取机构下的用户列表（管理接口）
-  async getInstitutionUsers(institutionId: string, page: number = 0, size: number = 10) {
-    const response = await api.get<Page<any>>(`/manage/institutions/${institutionId}/users`, {
-      params: { page, size }
-    });
-    return response.data;
-  },
-
-  // 添加用户到机构（机构管理员专用）
-  async addUserToInstitution(institutionId: string, userId: string) {
-    const response = await api.post<void>(`/manage/institutions/${institutionId}/users/${userId}`);
-    return response.data;
-  },
-
-  // 从机构移除用户（机构管理员专用）
-  async removeUserFromInstitution(institutionId: string, userId: string) {
-    const response = await api.delete<void>(`/manage/institutions/${institutionId}/users/${userId}`);
-    return response.data;
-  },
-
-  // 获取机构下的数据集列表（管理接口）
-  async getInstitutionDatasets(institutionId: string, page: number = 0, size: number = 10) {
-    const response = await api.get<Page<any>>(`/manage/institutions/${institutionId}/datasets`, {
-      params: { page, size }
-    });
-    return response.data;
-  },
-
-  // 获取机构下的申请列表（管理接口）
-  async getInstitutionApplications(institutionId: string, page: number = 0, size: number = 10) {
-    const response = await api.get<Page<any>>(`/manage/institutions/${institutionId}/applications`, {
-      params: { page, size }
-    });
-    return response.data;
-  },
-
-  // 获取机构统计信息（管理接口）
-  async getInstitutionStatistics(institutionId: string) {
-    const response = await api.get<any>(`/manage/institutions/${institutionId}/statistics`);
-    return response.data;
-  }
 };

@@ -21,7 +21,6 @@ interface DatasetFiltersProps {
     dateTo: Date | undefined;
     onDateToChange: (value: Date | undefined) => void;
     researchSubjects: ResearchSubject[];
-    onResetFilters: () => void;
 }
 
 export function DatasetFilters({
@@ -38,7 +37,6 @@ export function DatasetFilters({
                                    dateTo,
                                    onDateToChange,
                                    researchSubjects,
-                                   onResetFilters,
                                }: DatasetFiltersProps) {
 
     return (

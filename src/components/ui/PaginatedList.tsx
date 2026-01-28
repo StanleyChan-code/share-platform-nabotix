@@ -121,7 +121,18 @@ const PaginatedList = forwardRef(<T,>({
   // Initial load
   useEffect(() => {
     fetchInitialData();
-  }, [fetchInitialData]);
+  }, []); // 只在组件首次加载时执行
+  
+  // 当fetchData函数变化时重新获取数据
+  // 使用useRef来跟踪上一次的fetchData函数，避免不必要的重复调用
+  const fetchDataRef = useRef(fetchData);
+  useEffect(() => {
+    // 只有当fetchData函数真正变化时才重新获取数据
+    if (fetchData !== fetchDataRef.current) {
+      fetchDataRef.current = fetchData;
+      fetchInitialData();
+    }
+  }, [fetchData, fetchInitialData]);
 
   // Setup intersection observer for auto-loading
   useEffect(() => {

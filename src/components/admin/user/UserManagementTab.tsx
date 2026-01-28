@@ -8,7 +8,8 @@ import {
     hasPermissionRole,
     PermissionRoles
 } from "@/lib/permissionUtils";
-import {formatDateTime} from "@/lib/utils.ts";
+import {formatDateTime, cn} from "@/lib/utils.ts";
+import { Skeleton } from "@/components/ui/skeleton";
 import {userApi} from "@/integrations/api/userApi.ts";
 import {Button} from "@/components/ui/button.tsx";
 import {
@@ -22,7 +23,8 @@ import {
     Asterisk,
     AlertCircle,
     User,
-    Eye
+    Eye,
+    RefreshCw
 } from "lucide-react";
 import UserInfoDialog from "./UserInfoDialog.tsx";
 import {Switch} from "@/components/ui/switch.tsx";
@@ -37,7 +39,6 @@ import {
 } from "@/components/ui/dialog.tsx";
 import AddUserToInstitutionForm from "@/components/admin/user/AddUserToInstitutionForm.tsx";
 
-import {EducationLevels, ID_TYPES} from "@/lib/enums";
 import ReactPaginate from "react-paginate";
 import EditUserDialog from "@/components/admin/user/EditUserDialog.tsx";
 import EditPhoneDialog from "@/components/admin/user/EditPhoneDialog.tsx";
@@ -58,6 +59,7 @@ const UserManagementTab = () => {
     const [selectedUser, setSelectedUser] = useState<any>(null);
     const [showUserInfoDialog, setShowUserInfoDialog] = useState(false);
     const [currentPage, setCurrentPage] = useState(0);
+    const [pageSize, setPageSize] = useState(5); // 每页显示的记录数
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0); // 新增总元素数状态
     const [showEditUserDialog, setShowEditUserDialog] = useState(false);
@@ -135,12 +137,11 @@ const UserManagementTab = () => {
         setLoading(true);
         try {
             // 获取用户列表
-            const size = 5;
             let response;
 
             // 使用统一的getUsers方法获取用户列表
             // 平台管理员未选择机构时，institutionId为undefined，将获取所有用户
-            response = await userApi.getUsers(page, size, selectedInstitutionId?.[0], realName);
+            response = await userApi.getUsers(page, pageSize, selectedInstitutionId?.[0], realName);
 
             const userList = response.data.content;
             setUsers(userList);
@@ -254,61 +255,56 @@ const UserManagementTab = () => {
         }
     };
 
-    // 修改清空搜索的逻辑
-    const handleClearSearch = () => {
-        setSearchValue("");
-        setCurrentPage(0);
-        fetchUsers(0);
+    // 统一的搜索和刷新函数
+    const performSearch = (page: number = 0) => {
+        
+        // 根据搜索类型和搜索值执行不同的搜索逻辑
+        if (searchType === "phone" && debouncedSearchValue.trim().length === 11) {
+            handleSearchByPhone(debouncedSearchValue.trim());
+        } else if (searchType === "realName") {
+            // 姓名搜索或无搜索条件时，使用fetchUsers
+            fetchUsers(page, searchType === "realName" && debouncedSearchValue.trim() ? debouncedSearchValue.trim() : undefined);
+        }
     };
 
-    // 监听刷新事件
-        useEffect(() => {
-        const handleRefreshUsers = () => {
-            if (debouncedSearchValue.trim() && searchType === "phone") {
-                // 如果正在搜索但还没有结果，执行搜索
-                handleSearchByPhone();
-            } else {
-                // 否则正常刷新用户列表
-                fetchUsers(currentPage, searchType === "realName" ? debouncedSearchValue : undefined);
-            }
-        };
-
-        window.addEventListener('refresh-users', handleRefreshUsers);
-
-        return () => {
-            window.removeEventListener('refresh-users', handleRefreshUsers);
-        };
-    }, [selectedInstitutionId, currentPage, debouncedSearchValue, searchType]);
-
-    // 监听防抖后的搜索值变化，执行搜索
-    useEffect(() => {
-        // 只有当搜索值不为空时才执行搜索
-        if (debouncedSearchValue.trim()) {
-            if (searchType === "phone" && debouncedSearchValue.trim().length === 11) {
-                handleSearchByPhone();
-            } else if (searchType === "realName") {
-                // 姓名搜索，重置当前页并重新获取用户列表
-                setCurrentPage(0);
-                fetchUsers(0, debouncedSearchValue);
-            }
+    // 优化的清空搜索逻辑
+    const handleClearSearch = () => {
+        if (debouncedSearchValue.trim() === '') {
+            performSearch(0);
+        } else {
+            setSearchValue("");
         }
-    }, [debouncedSearchValue]);
+        // 不需要立即设置currentPage，让debounce自然触发刷新
+    };
 
-    // 监听切换的搜索类型变化，执行清空搜索
+    // 监听切换的搜索类型变化
     useEffect(() => {
-        // 只有当搜索值不为空时才执行清空搜索
         if (debouncedSearchValue.trim()) {
             handleClearSearch();
         }
     }, [searchType]);
 
+    // 监听搜索条件变化，统一触发搜索
+    useEffect(() => {
+        performSearch(0); // 搜索条件变化时回到第一页
+        setCurrentPage(0);
+    }, [debouncedSearchValue, selectedInstitutionId]);
+
+    // 全局刷新事件监听
+    useEffect(() => {
+        const handleGlobalRefresh = () => {
+            performSearch(currentPage);
+        };
+        
+        window.addEventListener('refresh-users', handleGlobalRefresh);
+
+        return () => {
+            window.removeEventListener('refresh-users', handleGlobalRefresh);
+        };
+    }, [currentPage, debouncedSearchValue, selectedInstitutionId]);
+
     const handleUserAdded = () => {
-        // 根据是否有搜索条件决定刷新方式
-        if (searchType === "phone" && searchValue.trim()) {
-            handleSearchByPhone();
-        } else {
-            fetchUsers(currentPage, searchType === "realName" ? debouncedSearchValue : undefined);
-        }
+        performSearch(currentPage);
         setShowAddUserDialog(false);
     };
 
@@ -319,12 +315,7 @@ const UserManagementTab = () => {
     };
 
     const handleUserUpdated = () => {
-        // 根据是否有搜索条件决定刷新方式
-        if (searchType === "phone" && searchValue.trim()) {
-            handleSearchByPhone();
-        } else {
-            fetchUsers(currentPage, searchType === "realName" ? debouncedSearchValue : undefined);
-        }
+        performSearch(currentPage);
         // 如果修改了自己的信息，刷新当前cookie中的用户信息
         if (selectedUser?.id === getCurrentUserInfoFromSession()?.user?.id) {
             refreshUserInfo();
@@ -334,13 +325,11 @@ const UserManagementTab = () => {
     };
 
     const handlePhoneUpdated = (newPhone: string) => {
-        // 根据是否有搜索条件决定刷新方式
-        if (searchType === "phone" && searchValue.trim()) {
+        // 更新搜索值（如果是手机号搜索且当前搜索值是被修改的手机号）
+        if (searchType === "phone" && searchValue.trim() === selectedUser?.phone) {
             setSearchValue(newPhone);
-            handleSearchByPhone(newPhone);
-        } else {
-            fetchUsers(currentPage, searchType === "realName" ? debouncedSearchValue : undefined);
         }
+        performSearch(currentPage);
         // 如果修改了自己的信息，刷新当前cookie中的用户信息
         if (selectedUser?.id === getCurrentUserInfoFromSession()?.user?.id) {
             refreshUserInfo();
@@ -350,12 +339,7 @@ const UserManagementTab = () => {
     };
 
     const handleAuthoritiesUpdated = () => {
-        // 根据是否有搜索条件决定刷新方式
-        if (searchType === "phone" && searchValue.trim()) {
-            handleSearchByPhone();
-        } else {
-            fetchUsers(currentPage, searchType === "realName" ? debouncedSearchValue : undefined);
-        }
+        performSearch(currentPage);
         setShowEditAuthoritiesDialog(false);
     };
 
@@ -409,8 +393,44 @@ const UserManagementTab = () => {
     const handlePageClick = (event: { selected: number }) => {
         const newPage = event.selected;
         setCurrentPage(newPage);
-        fetchUsers(newPage, searchType === "realName" ? debouncedSearchValue : undefined);
+        performSearch(newPage);
     };
+
+    {/* 用户列表骨架屏组件 */}
+    const UserRowSkeleton = () => (
+        <TableRow>
+            <TableCell className="font-medium">
+                <Skeleton className="h-5 w-20 rounded"/>
+            </TableCell>
+            <TableCell>
+                <div className="flex items-center gap-2">
+                    <Skeleton className="h-5 w-28 rounded"/>
+                    <Skeleton className="h-8 w-8 rounded-full"/>
+                </div>
+            </TableCell>
+            <TableCell>
+                <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap gap-1">
+                        <Skeleton className="h-5 w-20 rounded"/>
+                        <Skeleton className="h-5 w-20 rounded"/>
+                    </div>
+                    <Skeleton className="h-8 w-8 rounded-full"/>
+                </div>
+            </TableCell>
+            <TableCell>
+                <Skeleton className="h-4 w-8 rounded"/>
+            </TableCell>
+            <TableCell>
+                <Skeleton className="h-4 w-32 rounded"/>
+            </TableCell>
+            <TableCell>
+                <div className="flex gap-2">
+                    <Skeleton className="h-8 w-8 rounded-full"/>
+                    <Skeleton className="h-8 w-8 rounded-full"/>
+                </div>
+            </TableCell>
+        </TableRow>
+    );
 
     return (
         <div className="space-y-6">
@@ -444,46 +464,28 @@ const UserManagementTab = () => {
                                 <User className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground"/>
                             )}
                             <Input
-                                placeholder={searchType === "phone" ? "输入手机号搜索用户" : "输入姓名模糊搜索用户"}
+                                placeholder={searchType === "phone" ? "请输入11位手机号搜索用户" : "请输入姓名模糊搜索用户"}
                                 value={searchValue}
                                 onChange={(e) => setSearchValue(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter" && searchValue.trim()) {
-                                        if (searchType === "phone") {
-                                            handleSearchByPhone();
-                                        } else {
-                                            setCurrentPage(0);
-                                            fetchUsers(0, searchValue);
-                                        }
-                                    }
-                                }}
                                 className="pl-8 w-72"
-                                maxLength={searchType === "phone" ? 11 : undefined}
+                                maxLength={searchType === "phone" ? 11 : 20}
                             />
                         </div>
                         <Button
                             variant={'outline'}
-                            onClick={() => {
-                                if (searchType === "phone") {
-                                    handleSearchByPhone();
-                                } else {
-                                    setCurrentPage(0);
-                                    fetchUsers(0, searchValue);
-                                }
-                            }}
+                            onClick={() => performSearch(currentPage)}
+                            disabled={loading}
+                        >
+                            <RefreshCw className={cn("h-4 w-4", loading ? "animate-spin" : "")} />
+                            刷新
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={handleClearSearch}
                             disabled={loading || !searchValue.trim()}
                         >
-                            {loading ? "刷新中..." : "刷新"}
+                            重置
                         </Button>
-                        {searchValue && (
-                            <Button
-                                variant="outline"
-                                onClick={handleClearSearch}
-                                disabled={loading}
-                            >
-                                清空
-                            </Button>
-                        )}
                     </div>
                 </div>
                 <div className="flex gap-2">
@@ -524,10 +526,25 @@ const UserManagementTab = () => {
                     </Dialog>
                 </div>
             </div>
+
             {loading ? (
-                <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
+                <Table className="border rounded-md">
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>姓名</TableHead>
+                            <TableHead>手机号</TableHead>
+                            <TableHead>角色</TableHead>
+                            <TableHead>启用状态</TableHead>
+                            <TableHead>注册时间</TableHead>
+                            <TableHead>个人信息</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {Array.from({ length: pageSize }).map((_, index) => (
+                            <UserRowSkeleton key={index} />
+                        ))}
+                    </TableBody>
+                </Table>
             ) : ((selectedInstitutionId && selectedInstitutionId.length > 0) || isPlatformAdmin) ? (
                 <>
 
@@ -645,49 +662,6 @@ const UserManagementTab = () => {
                         </TableBody>
                     </Table>
 
-                    {/* 显示总数信息 */}
-                        <div className="mt-4 text-sm text-muted-foreground flex justify-between items-center">
-                            <div>
-                                共 {totalElements} 条记录
-                            </div>
-                            {/* 只有在没有搜索结果且总页数大于1时才显示分页 */}
-                            {totalPages > 1 && (
-                                <div className="flex justify-center">
-                                    <ReactPaginate
-                                        breakLabel="..."
-                                        nextLabel={
-                                            <span className="flex items-center gap-1">
-                                                        下一页 <ChevronRightIcon className="h-4 w-4"/>
-                                                    </span>
-                                        }
-                                        onPageChange={handlePageClick}
-                                        pageRangeDisplayed={3}
-                                        marginPagesDisplayed={1}
-                                        pageCount={totalPages}
-                                        previousLabel={
-                                            <span className="flex items-center gap-1">
-                                                        <ChevronLeftIcon className="h-4 w-4"/> 上一页
-                                                    </span>
-                                        }
-                                        renderOnZeroPageCount={null}
-                                        containerClassName="flex items-center justify-center gap-2"
-                                        pageClassName=""
-                                        pageLinkClassName="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
-                                        previousClassName=""
-                                        previousLinkClassName="flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:hover:border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
-                                        nextClassName=""
-                                        nextLinkClassName="flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:hover:border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
-                                        breakClassName=""
-                                        breakLinkClassName="flex h-10 w-10 items-center justify-center text-gray-500 dark:text-gray-400"
-                                        activeClassName=""
-                                        activeLinkClassName="!border-blue-500 !bg-blue-500 !text-white hover:!bg-blue-600 hover:!border-blue-600 dark:!border-blue-500 dark:!bg-blue-500"
-                                        disabledClassName="opacity-40 cursor-not-allowed"
-                                        disabledLinkClassName="hover:border-gray-200 hover:bg-white hover:text-gray-700 dark:hover:border-gray-700 dark:hover:bg-gray-800"
-                                        forcePage={currentPage}
-                                    />
-                                </div>
-                            )}
-                        </div>
                 </>
             ) : (
                 <div className="text-center py-8 text-muted-foreground">
@@ -696,6 +670,71 @@ const UserManagementTab = () => {
                         : "请选择一个机构以查看其用户列表"}
                 </div>
             )}
+
+            {/* 显示总数信息 */}
+            <div className="mt-4 text-sm text-muted-foreground flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <div>
+                        共 {totalElements} 条记录
+                    </div>
+                    <div className="flex items-center gap-2">
+                        每页显示：
+                        <Select value={pageSize.toString()} onValueChange={(value) => {
+                            setPageSize(parseInt(value));
+                            setCurrentPage(0);
+                        }}>
+                            <SelectTrigger className="w-[100px]">
+                                <SelectValue placeholder="显示条数" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="5">5条</SelectItem>
+                                <SelectItem value="10">10条</SelectItem>
+                                <SelectItem value="20">20条</SelectItem>
+                                <SelectItem value="50">50条</SelectItem>
+                                <SelectItem value="100">100条</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                {/* 只有在没有搜索结果且总页数大于1时才显示分页 */}
+                {totalPages > 1 && (
+                    <div className="flex justify-center">
+                        <ReactPaginate
+                            breakLabel="..."
+                            nextLabel={
+                                <span className="flex items-center gap-1">
+                                                        下一页 <ChevronRightIcon className="h-4 w-4"/>
+                                                    </span>
+                            }
+                            onPageChange={handlePageClick}
+                            pageRangeDisplayed={3}
+                            marginPagesDisplayed={1}
+                            pageCount={totalPages}
+                            previousLabel={
+                                <span className="flex items-center gap-1">
+                                                        <ChevronLeftIcon className="h-4 w-4"/> 上一页
+                                                    </span>
+                            }
+                            renderOnZeroPageCount={null}
+                            containerClassName="flex items-center justify-center gap-2"
+                            pageClassName=""
+                            pageLinkClassName="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
+                            previousClassName=""
+                            previousLinkClassName="flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:hover:border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
+                            nextClassName=""
+                            nextLinkClassName="flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:hover:border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
+                            breakClassName=""
+                            breakLinkClassName="flex h-10 w-10 items-center justify-center text-gray-500 dark:text-gray-400"
+                            activeClassName=""
+                            activeLinkClassName="!border-blue-500 !bg-blue-500 !text-white hover:!bg-blue-600 hover:!border-blue-600 dark:!border-blue-500 dark:!bg-blue-500"
+                            disabledClassName="opacity-40 cursor-not-allowed"
+                            disabledLinkClassName="hover:border-gray-200 hover:bg-white hover:text-gray-700 dark:hover:border-gray-700 dark:hover:bg-gray-800"
+                            forcePage={currentPage}
+                        />
+                    </div>
+                )}
+            </div>
+
             {selectedUser && (
                 <>
                     <UserInfoDialog

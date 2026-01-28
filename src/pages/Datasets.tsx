@@ -32,7 +32,6 @@ const Datasets = () => {
     const [researchSubjects, setResearchSubjects] = useState([]);
     const [annualData, setAnnualData] = useState<{ year: number, count: number }[]>([]);
     const [annualLoading, setAnnualLoading] = useState(true);
-    const [filtersChanged, setFiltersChanged] = useState(false);
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const debouncedSearchTerm = useDebounce(searchTerm, 550);
@@ -148,7 +147,6 @@ const Datasets = () => {
         setSelectedInstitution(null);
         setDateFrom(undefined);
         setDateTo(undefined);
-        setFiltersChanged(!filtersChanged);
     };
 
     // Render grid item for paginated list
@@ -264,7 +262,6 @@ const Datasets = () => {
                                 dateTo={dateTo}
                                 onDateToChange={setDateTo}
                                 researchSubjects={researchSubjects}
-                                onResetFilters={resetFilters}
                             />
                     </CardContent>
 
@@ -314,7 +311,6 @@ const Datasets = () => {
                                     gridLayout={viewMode === 'grid'}
                                     gap={viewMode === 'grid' ? 16 : 16}
                                     renderEmptyState={renderEmptyState}
-                                    key={filtersChanged ? 'reset' : 'normal'}
                                     autoLoad={true}
                                 />
                             </div>

@@ -213,11 +213,11 @@ const EditUserAuthoritiesDialog = ({ open, onOpenChange, user, onAuthoritiesUpda
                 ) : (
                     <div className="flex-grow overflow-hidden flex flex-col">
                         <Card className="mb-4">
-                            <CardHeader className="p-4">
+                            <CardHeader className="px-4 pt-2 pb-0">
                                 <CardTitle className="text-lg">用户信息</CardTitle>
                             </CardHeader>
-                            <CardContent className="p-4 pt-0">
-                                <div className="text-sm">
+                            <CardContent className="px-4 py-2">
+                                <div className="text-sm space-y-1">
                                     <div>姓名：{user?.realName}</div>
                                     <div>手机号：{user?.phone}</div>
                                 </div>

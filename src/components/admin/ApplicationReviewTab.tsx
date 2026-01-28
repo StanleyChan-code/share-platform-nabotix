@@ -1,5 +1,4 @@
-import React, {useState, useCallback, useEffect} from 'react';
-import ReactPaginate from "react-paginate";
+import React, {useState, useCallback, useEffect, useRef} from 'react';
 import {
     Application, getAllApplications
 } from '@/integrations/api/applicationApi';
@@ -13,12 +12,14 @@ import {DatasetDetailModal} from '@/components/dataset/DatasetDetailModal';
 import {hasPermissionRole, PermissionRoles} from "@/lib/permissionUtils.ts";
 import {InstitutionSelector} from "@/components/admin/institution/InstitutionSelector.tsx";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
-import {ChevronLeftIcon, ChevronRightIcon} from "lucide-react";
 import ApplicationItem from "./ApplicationItem";
 import {useDebounce} from "@/hooks/useDebounce";
 import {Input} from "@/components/ui/FormValidator.tsx";
 import {refreshApplicationPendingCount} from "@/lib/pendingCountsController";
 import {Button} from "@/components/ui/button.tsx";
+import ReactPaginatedList from "@/components/ui/ReactPaginatedList";
+import {ReactPaginatedListRef} from "@/components/ui/ReactPaginatedList";
+import {cn} from "@/lib/utils.ts";
 
 const ApplicationReviewTab: React.FC = () => {
     const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
@@ -26,17 +27,12 @@ const ApplicationReviewTab: React.FC = () => {
     const [selectedDataset, setSelectedDataset] = useState<any>(null);
     const [isDatasetModalOpen, setIsDatasetModalOpen] = useState(false);
     const {toast} = useToast();
-
-    // 添加分页相关状态
-    const [applications, setApplications] = useState<Application[]>([]);
-    const [currentPage, setCurrentPage] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
-    const [totalElements, setTotalElements] = useState(0);
-    const [loading, setLoading] = useState(false);
+    const paginatedListRef = useRef<ReactPaginatedListRef>(null);
 
     // 添加筛选相关状态
     const [searchTerm, setSearchTerm] = useState("");
     const [institutionId, setInstitutionId] = useState<string[] | null>(null);
+    const [loading, setLoading] = useState(false);
 
     // 添加防抖处理，延迟550ms
     const debouncedSearchTerm = useDebounce(searchTerm, 550);
@@ -54,13 +50,10 @@ const ApplicationReviewTab: React.FC = () => {
 
     const [selectedStatus, setSelectedStatus] = useState<string>(initialStatus);
 
-    // 管理端获取申请列表的API
-    const fetchApplications = useCallback(async (page: number = 0) => {
-        // 使用管理API获取申请列表，包括待审核和已处理的申请
+    // 管理端获取申请列表的API（适配ReactPaginatedList的接口）
+    const fetchData = useCallback(async (page: number, size: number) => {
         setLoading(true);
-
         try {
-            const size = 10; // 每页大小固定为10
             const data = await getAllApplications(
                 page,
                 size,
@@ -71,13 +64,10 @@ const ApplicationReviewTab: React.FC = () => {
                 selectedStatus === 'all' ? undefined : selectedStatus
             );
 
-            setApplications(data.data.content);
-            setTotalPages(data.data.page.totalPages);
-            setTotalElements(data.data.page.totalElements || 0);
-            setCurrentPage(page);
-
             // 刷新待审核数量
             refreshApplicationPendingCount();
+            
+            return data.data;
         } catch (error) {
             console.error('获取申请列表失败:', error);
             toast({
@@ -85,40 +75,25 @@ const ApplicationReviewTab: React.FC = () => {
                 description: "获取申请列表失败：" + (error instanceof Error ? error.message : "未知错误"),
                 variant: "destructive",
             });
-            // 设置空数据
-            setApplications([]);
-            setTotalPages(0);
-            setTotalElements(0);
+            throw error;
         } finally {
             setLoading(false);
         }
     }, [institutionId, debouncedSearchTerm, selectedStatus, toast]);
 
-    // 监听防抖后的搜索值变化和状态变化，执行搜索
-    useEffect(() => {
-        fetchApplications(0);
-    }, [debouncedSearchTerm, selectedStatus, fetchApplications]);
+    const handleResetFilters = () => {
+        setSearchTerm("");
+        setSelectedStatus(initialStatus);
+    };
 
     const handleViewDataset = (application: Application) => {
-        // 创建一个模拟的数据集对象，包含必要的字段
-        const dataset = {
-            id: application.dataset.id,
-            titleCn: application.dataset.titleCn,
-            // 可以根据需要添加其他字段
-        };
-        setSelectedDataset(dataset);
+        setSelectedDataset(application.dataset);
         setIsDatasetModalOpen(true);
     };
 
     const handleViewDetails = (application: Application) => {
         setSelectedApplication(application);
         setViewDialogOpen(true);
-    };
-
-    // 处理分页更改
-    const handlePageClick = (event: { selected: number }) => {
-        const page = event.selected;
-        fetchApplications(page);
     };
 
     const renderApplicationItem = (application: Application) => (
@@ -129,13 +104,19 @@ const ApplicationReviewTab: React.FC = () => {
             onViewDataset={handleViewDataset}
             onApprove={() => {
                 // 重新加载当前页
-                fetchApplications(currentPage);
+                if (paginatedListRef.current) {
+                    paginatedListRef.current.refresh();
+                }
             }}
             onReject={() => {
-                fetchApplications(currentPage);
+                if (paginatedListRef.current) {
+                    paginatedListRef.current.refresh();
+                }
             }}
             onDelete={() => {
-                fetchApplications(currentPage);
+                if (paginatedListRef.current) {
+                    paginatedListRef.current.refresh();
+                }
             }}
             variant="review"
         />
@@ -274,75 +255,28 @@ const ApplicationReviewTab: React.FC = () => {
                         </Select>
 
                         {/* 刷新按钮 */}
-                        <Button variant="outline" onClick={() => fetchApplications(currentPage)} className="gap-2 whitespace-nowrap">
-                            <RefreshCw className="h-4 w-4"/>
+                        <Button variant="outline"
+                                disabled={loading}
+                                onClick={() => paginatedListRef.current?.refresh()} className="gap-2 whitespace-nowrap">
+                            <RefreshCw className={cn("h-4 w-4", loading ? "animate-spin" : "")} />
                             刷新
+                        </Button>
+                        <Button variant="outline"
+                                onClick={handleResetFilters} className="gap-2 whitespace-nowrap">
+                            重置筛选
                         </Button>
                     </div>
 
-                {loading ? (
-                    <div className="space-y-4">
-                        {[...Array(totalElements || 1)].map((_, index) => (
-                            <ApplicationItemSkeleton key={index} />
-                        ))}
-                    </div>
-                ) : (
-                    <>
-                        <div className="space-y-4">
-                            {applications && applications.length > 0 ? (
-                                applications.map(renderApplicationItem)
-                            ) : (
-                                renderEmptyState()
-                            )}
-                        </div>
-
-                        {/* 显示总数信息和分页 */}
-                        <div className="mt-4 text-sm text-muted-foreground flex justify-between items-center">
-                            {totalElements > 0 && (
-                                <div>
-                                    共 {totalElements} 条记录
-                                </div>
-                            )}
-                            {/* 只有在总页数大于1时才显示分页 */}
-                            {totalPages > 1 && (
-                                <div className="flex justify-center">
-                                    <ReactPaginate
-                                        breakLabel="..."
-                                        nextLabel={
-                                            <span className="flex items-center gap-1">
-                            下一页 <ChevronRightIcon className="h-4 w-4"/>
-                          </span>
-                                        }
-                                        onPageChange={handlePageClick}
-                                        pageRangeDisplayed={3}
-                                        marginPagesDisplayed={1}
-                                        pageCount={totalPages}
-                                        previousLabel={
-                                            <span className="flex items-center gap-1">
-                            <ChevronLeftIcon className="h-4 w-4"/> 上一页
-                          </span>
-                                        }
-                                        renderOnZeroPageCount={null}
-                                        containerClassName="flex items-center justify-center gap-2"
-                                        pageClassName=""
-                                        pageLinkClassName="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
-                                        previousClassName=""
-                                        previousLinkClassName="flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:hover:border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
-                                        nextClassName=""
-                                        nextLinkClassName="flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:hover:border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
-                                        breakClassName=""
-                                        breakLinkClassName="flex h-10 w-10 items-center justify-center text-gray-500 dark:text-gray-400"
-                                        activeClassName=""
-                                        activeLinkClassName="!border-blue-500 !bg-blue-500 !text-white hover:!bg-blue-600 hover:!border-blue-600 dark:!border-blue-500 dark:!bg-blue-500"
-                                        disabledClassName="opacity-40 cursor-not-allowed"
-                                        disabledLinkClassName="hover:border-gray-200 hover:bg-white hover:text-gray-700 dark:hover:border-gray-700 dark:hover:bg-gray-800"
-                                        forcePage={currentPage}
-                                    />
-                                </div>
-                            )}
-                        </div>
-                    </>
-                )}
+                {/* 使用ReactPaginatedList组件 */}
+                <ReactPaginatedList
+                    ref={paginatedListRef}
+                    fetchData={fetchData}
+                    renderItem={renderApplicationItem}
+                    renderEmptyState={renderEmptyState}
+                    renderSkeletonItem={ApplicationItemSkeleton}
+                    pageSize={10}
+                    gap={16}
+                />
 
                 <ApplicationDetailDialog
                     open={viewDialogOpen}

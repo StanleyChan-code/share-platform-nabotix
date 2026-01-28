@@ -7,18 +7,11 @@ import { InstitutionSelector } from "@/components/admin/institution/InstitutionS
 import { api } from "@/integrations/api/client.ts";
 import { useNavigate } from "react-router-dom";
 import {
-  CheckCircle,
-  XCircle,
-  Clock,
-  Eye,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   Search,
   RefreshCw,
   FileText
 } from "lucide-react";
-import { getOutputTypeDisplayName, getOutputTypeIconComponent, getAllOutputTypes } from "@/lib/outputUtils.ts";
-import ReactPaginate from "react-paginate";
+import { getAllOutputTypes } from "@/lib/outputUtils.ts";
 import { getCurrentUserInfoFromSession } from "@/lib/authUtils";
 import { hasPermissionRole, PermissionRoles } from "@/lib/permissionUtils.ts";
 import {
@@ -33,22 +26,20 @@ import {Input} from "@/components/ui/FormValidator.tsx";
 import OutputItem from "@/components/profile/OutputItem.tsx";
 import {refreshOutputPendingCount} from "@/lib/pendingCountsController";
 import {Card, CardContent} from "@/components/ui/card";
+import ReactPaginatedList from "@/components/ui/ReactPaginatedList";
+import {cn} from "@/lib/utils.ts";
 
 const ResearchOutputsManagementTab = () => {
   const [selectedInstitution, setSelectedInstitution] = useState<string[] | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedOutput, setSelectedOutput] = useState<ResearchOutput | null>(null);
-  const [outputs, setOutputs] = useState<ResearchOutput[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalElements, setTotalElements] = useState(0);
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [searchTitle, setSearchTitle] = useState(""); // 搜索标题
   const [selectedStatus, setSelectedStatus] = useState<string>("pending"); // 状态筛选
   const [selectedType, setSelectedType] = useState<string>("all"); // 类型筛选
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   
   // 添加防抖处理，延迟550ms
   const debouncedSearchTitle = useDebounce(searchTitle, 550);
@@ -84,21 +75,32 @@ const ResearchOutputsManagementTab = () => {
     }
   }, [toast, navigate]);
 
-  // 获取研究成果数据的方法
-  const fetchResearchOutputs = useCallback(async (page: number) => {
+  // 获取研究成果数据的方法，适配ReactPaginatedList的接口
+  const fetchResearchOutputs = useCallback(async (page: number, size: number): Promise<{
+    content: ResearchOutput[];
+    page: {
+      number: number;
+      totalElements: number;
+      totalPages: number;
+    };
+  }> => {
     if ((!selectedInstitution || selectedInstitution.length === 0) && !isPlatformAdmin) {
-      // 如果没有选择机构且不是平台管理员，则不加载数据
-      setOutputs([]);
-      setTotalPages(0);
-      setTotalElements(0);
-      return;
+      // 如果没有选择机构且不是平台管理员，则返回空数据
+      return {
+        content: [],
+        page: {
+          number: page,
+          totalElements: 0,
+          totalPages: 0
+        }
+      };
     }
 
-    setLoading(true);
     try {
+      setLoading(true);
       const params: any = {
-        page,
-        size: 10,
+        page: page,
+        size: size,
         sortBy: 'createdAt',
         sortDir: 'desc',
         status: selectedStatus !== "all" ? selectedStatus : undefined,
@@ -118,13 +120,10 @@ const ResearchOutputsManagementTab = () => {
         params
       });
 
-      setOutputs(response.data.data.content);
-      setTotalPages(response.data.data.page.totalPages);
-      setTotalElements(response.data.data.page.totalElements || 0);
-      setCurrentPage(page);
-
       // 刷新待审核数量
       refreshOutputPendingCount();
+
+      return response.data.data;
     } catch (err) {
       console.error('Error fetching research outputs:', err);
       toast({
@@ -132,54 +131,21 @@ const ResearchOutputsManagementTab = () => {
         description: "获取研究成果时发生错误",
         variant: "destructive"
       });
+      throw err;
     } finally {
       setLoading(false);
     }
   }, [selectedInstitution, isPlatformAdmin, selectedStatus, debouncedSearchTitle, selectedType, toast]);
-
-  // 页面更改处理
-  const handlePageClick = (event: { selected: number }) => {
-    const page = event.selected;
-    fetchResearchOutputs(page);
-  };
-
-  // 搜索处理
-  const handleSearch = () => {
-    fetchResearchOutputs(0);
-  };
 
   // 重置搜索
   const handleResetSearch = () => {
     setSearchTitle("");
     setSelectedStatus("all");
     setSelectedType("all");
-    // 重置后立即搜索，而不是等待 useEffect
-    setTimeout(() => fetchResearchOutputs(0), 0);
   };
 
-  // 使用 ref 来跟踪搜索条件变化，避免无限重渲染
-  useEffect(() => {
-    const currentParams = {
-      selectedInstitution,
-      isPlatformAdmin,
-      selectedStatus,
-      selectedType,
-      searchTitle
-    };
-
-    // 只有当搜索条件真正发生变化时才执行搜索
-    const paramsChanged = JSON.stringify(currentParams) !== JSON.stringify(searchParamsRef.current);
-
-    if (paramsChanged) {
-      searchParamsRef.current = currentParams;
-      fetchResearchOutputs(0);
-    }
-  }, [selectedInstitution, isPlatformAdmin, selectedStatus, selectedType, debouncedSearchTitle, fetchResearchOutputs]);
-
-  // 初始加载数据
-  useEffect(() => {
-    fetchResearchOutputs(0);
-  }, []); // 空依赖数组，只在组件挂载时执行一次
+  // 为ReactPaginatedList创建ref
+  const paginatedListRef = useRef<any>(null);
 
   const handleOutputClick = (output: ResearchOutput) => {
     setSelectedOutput(output);
@@ -253,7 +219,7 @@ const ResearchOutputsManagementTab = () => {
         output={output}
         onDetail={handleOutputClick}
         onDelete={()  => {
-            fetchResearchOutputs(currentPage);
+             paginatedListRef.current?.refresh();
         }}
         managementMode={true}
       />
@@ -328,75 +294,24 @@ const ResearchOutputsManagementTab = () => {
               </div>
 
               <div className="flex gap-2">
-                <Button onClick={handleSearch}>搜索</Button>
-                <Button variant="outline" onClick={handleResetSearch}>重置筛选</Button>
-                <Button variant="outline" onClick={() => fetchResearchOutputs(currentPage)} className="gap-2">
-                  <RefreshCw className="h-4 w-4"/>
+                <Button variant="outline" disabled={loading} onClick={() => paginatedListRef.current?.refresh()} className="gap-2">
+                  <RefreshCw className={cn("h-4 w-4", loading ? "animate-spin" : "")} />
                   刷新
                 </Button>
+                <Button variant="outline" onClick={handleResetSearch}>重置筛选</Button>
               </div>
             </div>
           </div>
 
-          {/* 加载状态显示骨架屏 */}
-          {loading ? (
-              <div className="grid grid-cols-1 gap-4">
-                {/* 显示10个骨架屏，与分页大小一致 */}
-                {Array.from({ length: totalElements || 1 }).map((_, index) => (
-                  <OutputItemSkeleton key={`skeleton-${index}`} />
-                ))}
-              </div>
-          ) : outputs.length > 0 ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-4">
-                  {outputs.map(renderOutputItem)}
-                </div>
-
-                {/* 分页控件和总数显示 */}
-                <div className="flex justify-between items-center mt-6">
-                  <div className="text-sm text-muted-foreground">
-                    共 {totalElements} 条记录
-                  </div>
-
-                  {totalPages > 1 && (
-                      <ReactPaginate
-                          breakLabel="..."
-                          nextLabel={
-                            <span className="flex items-center gap-1">
-                    下一页 <ChevronRightIcon className="h-4 w-4"/>
-                  </span>
-                          }
-                          onPageChange={handlePageClick}
-                          pageRangeDisplayed={3}
-                          marginPagesDisplayed={1}
-                          pageCount={totalPages}
-                          previousLabel={
-                            <span className="flex items-center gap-1">
-                    <ChevronLeftIcon className="h-4 w-4"/> 上一页
-                  </span>
-                          }
-                          renderOnZeroPageCount={null}
-                          containerClassName="flex items-center justify-center gap-2"
-                          pageClassName=""
-                          pageLinkClassName="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
-                          previousClassName=""
-                          previousLinkClassName="flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:hover:border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
-                          nextClassName=""
-                          nextLinkClassName="flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:hover:border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
-                          breakClassName=""
-                          breakLinkClassName="flex h-10 w-10 items-center justify-center text-gray-500 dark:text-gray-400"
-                          activeClassName=""
-                          activeLinkClassName="!border-blue-500 !bg-blue-500 !text-white hover:!bg-blue-600 hover:!border-blue-600 dark:!border-blue-500 dark:!bg-blue-500"
-                          disabledClassName="opacity-40 cursor-not-allowed"
-                          disabledLinkClassName="hover:border-gray-200 hover:bg-white hover:text-gray-700 dark:hover:border-gray-700 dark:hover:bg-gray-800"
-                          forcePage={currentPage}
-                      />
-                  )}
-                </div>
-              </div>
-          ) : (
-              renderEmptyState()
-          )}
+          {/* 使用ReactPaginatedList组件显示成果列表 */}
+          <ReactPaginatedList
+            ref={paginatedListRef}
+            fetchData={fetchResearchOutputs}
+            renderItem={renderOutputItem}
+            renderEmptyState={renderEmptyState}
+            renderSkeletonItem={OutputItemSkeleton}
+            pageSize={10}
+          />
 
           <OutputDetailDialog
               open={detailDialogOpen}
@@ -404,7 +319,8 @@ const ResearchOutputsManagementTab = () => {
               output={selectedOutput}
               canApprove={true}
               onApprovalChange={() => {
-                  fetchResearchOutputs(currentPage);
+                  // 审核状态变化后刷新列表
+                  paginatedListRef.current?.refresh();
                   // 刷新待审核数量
                   refreshOutputPendingCount();
               }}
