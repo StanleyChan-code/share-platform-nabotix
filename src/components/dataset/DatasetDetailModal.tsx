@@ -10,7 +10,7 @@ import {ResearchOutputsTab} from "./detailmodal/ResearchOutputsTab.tsx";
 import {useEffect, useState} from "react";
 import {api, ApiResponse} from "@/integrations/api/client";
 import {ScrollArea} from "@radix-ui/react-scroll-area";
-import {Dataset, datasetApi, DatasetVersion} from "@/integrations/api/datasetApi.ts";
+import {Dataset, datasetApi} from "@/integrations/api/datasetApi.ts";
 import {getLatestApprovedVersion} from "@/lib/datasetUtils.ts";
 
 interface DatasetDetailModalProps {
@@ -38,6 +38,11 @@ export function DatasetDetailModal({
     const [parentDataset, setParentDataset] = useState<Dataset>(null);
     const [followUpModals, setFollowUpModals] = useState<{ [key: string]: boolean }>({}); // 管理随访数据集对话框
     const [defaultTab, setDefaultTab] = useState<string>(propDefaultTab);
+
+    // 更新默认标签页当外部属性变化时
+    useEffect(() => {
+        setDefaultTab(propDefaultTab);
+    }, [propDefaultTab]);
 
     // Fetch detailed dataset with timeline when modal opens
     useEffect(() => {

@@ -21,7 +21,7 @@ import InstitutionManagementTab from "@/components/admin/institution/Institution
 import InstitutionProfileTab from "@/components/admin/institution/InstitutionProfileTab.tsx";
 import ResearchSubjectManagementTab from "@/components/admin/researchsubject/ResearchSubjectManagementTab.tsx";
 import {institutionApi} from "@/integrations/api/institutionApi";
-import {getCurrentUserInfoFromSession, refreshUserInfo} from "@/lib/authUtils";
+import {refreshUserInfo, isAuthenticated, redirectToAuth} from "@/lib/authUtils";
 import {getPermissionRoleDisplayName, hasPermissionRole, PermissionRoles} from "@/lib/permissionUtils";
 import DatasetsTab from "@/components/admin/dataset/DatasetsTab.tsx";
 import ResearchOutputsManagementTab from "@/components/admin/researchoutput/ResearchOutputsManagementTab.tsx";
@@ -158,6 +158,11 @@ const UnifiedDashboard = () => {
         const checkAuthorization = async () => {
             try {
                 setIsCheckingAuth(true);
+                // 先检查用户是否登录，如果没有登录，立即重定向到认证页面
+                if (!isAuthenticated()) {
+                    if (mountedRef.current) redirectToAuth();
+                    return;
+                }
                 const userInfo = await refreshUserInfo();
                 setCurrentUserInfo(userInfo);
 

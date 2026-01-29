@@ -57,3 +57,8 @@ export const getAnnualDatasetStatistics = async () => {
 export const getDatasetStatisticsByVersionId = async (datasetVersionId: string) => {
   return api.get<DatasetStatistics>(`/datasets/statistics/dataset-statistics/by-dataset-version/${datasetVersionId}`);
 };
+
+// 提交数据集分析请求
+export const submitDatasetAnalysisRequest = async (data: { dataFileId: string; dictionaryFileId: string }) => {
+  return api.post<DatasetStatistics>('/datasets/statistics/dataset-statistics/analyze', data);
+};

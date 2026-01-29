@@ -31,6 +31,7 @@ import PaginatedList from "@/components/ui/PaginatedList";
 import { useNavigate } from "react-router-dom";
 import { useDebounce } from "@/hooks/useDebounce";
 import {Input} from "@/components/ui/FormValidator.tsx";
+import { isAuthenticated, redirectToAuth } from "@/lib/authUtils";
 
 const Outputs = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -296,7 +297,13 @@ const Outputs = () => {
                     <div className="flex gap-3">
                         <Button
                             className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-                            onClick={() => navigate('/profile?tab=outputs')}
+                            onClick={() => {
+                                if (isAuthenticated()) {
+                                    navigate('/profile?tab=outputs');
+                                } else {
+                                    redirectToAuth('/profile?tab=outputs');
+                                }
+                            }}
                         >
                             <FileText className="h-4 w-4"/>
                             我的成果

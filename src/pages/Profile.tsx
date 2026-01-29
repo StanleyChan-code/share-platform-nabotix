@@ -10,7 +10,7 @@ import OutputsTab from "@/components/profile/OutputsTab";
 import SettingsTab from "@/components/profile/SettingsTab";
 import {User, FileText, Settings, Award, Calendar, Building, Star} from "lucide-react";
 import {formatDate} from "@/lib/utils";
-import {refreshUserInfo, UserInfo, clearTokens} from "@/lib/authUtils";
+import {refreshUserInfo, UserInfo, clearTokens, isAuthenticated, redirectToAuth} from "@/lib/authUtils";
 import {toast} from "@/components/ui/use-toast.ts";
 
 const Profile = () => {
@@ -120,7 +120,12 @@ const Profile = () => {
         }
     }
 
+    // 在组件挂载时先检查用户是否登录，如果没有登录，立即重定向到认证页面
     useEffect(() => {
+        if (!isAuthenticated()) {
+            redirectToAuth()
+            return;
+        }
         fetchUser();
     }, []);
 

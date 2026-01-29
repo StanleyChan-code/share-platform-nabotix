@@ -15,6 +15,7 @@ import { datasetApi } from "@/integrations/api/datasetApi";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
 import PaginatedList from "@/components/ui/PaginatedList";
 import { useDebounce } from "@/hooks/useDebounce";
+import { isAuthenticated, redirectToAuth } from "@/lib/authUtils";
 
 // Type mappings for database enum values
 const typeLabels = DatasetTypes;
@@ -49,7 +50,7 @@ const Datasets = () => {
         };
     }, []);
 
-    // Handle dataset ID from URL parameters
+    // Handle dataset ID and default tab from URL parameters
     useEffect(() => {
         const datasetId = searchParams.get('id');
         if (datasetId) {
@@ -192,7 +193,13 @@ const Datasets = () => {
                     <div className="flex gap-3">
                         <Button
                             className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-                            onClick={() => navigate('/profile?tab=applications')}
+                            onClick={() => {
+                                if (isAuthenticated()) {
+                                    navigate('/profile?tab=applications');
+                                } else {
+                                    redirectToAuth('/profile?tab=applications');
+                                }
+                            }}
                         >
                             <FileText className="h-4 w-4"/>
                             我的申请
@@ -323,6 +330,7 @@ const Datasets = () => {
                     open={showDetail}
                     onOpenChange={setShowDetail}
                     useAdvancedQuery={false}
+                    defaultTab={searchParams.get('dstab') || 'overview'}
                 />
             </main>
         </div>

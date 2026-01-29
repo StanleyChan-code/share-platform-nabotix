@@ -296,7 +296,7 @@ export const datasetApi = {
         // 分页参数
         queryParams.append('page', (params.page ?? 0).toString());
         queryParams.append('size', (params.size ?? 10).toString());
-        queryParams.append('sortBy', params.sortBy ?? 'firstPublishedDate');
+        queryParams.append('sortBy', params.sortBy ?? 'createdAt');
         queryParams.append('sortDir', params.sortDir ?? 'desc');
 
         const response = await api.get<Page<Dataset>>(`/manage/datasets/advanced?${queryParams.toString()}`);

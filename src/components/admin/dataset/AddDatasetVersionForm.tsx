@@ -1,14 +1,14 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button.tsx';
 import { Label } from '@/components/ui/label.tsx';
-import { File, Loader2, Asterisk, CheckCircle, AlertCircle, Download } from 'lucide-react';
+import {File, Loader2, Asterisk, CheckCircle, AlertCircle, Download, User} from 'lucide-react';
 import { toast } from 'sonner';
 import { datasetApi, AddDatasetVersionRequest } from '@/integrations/api/datasetApi.ts';
 import { FileInfo } from '@/integrations/api/fileApi.ts';
+import { submitDatasetAnalysisRequest } from '@/integrations/api/statisticsApi.ts';
 import FileUploader from '../../fileuploader/FileUploader.tsx';
 import { FileUploaderHandles } from "@/components/fileuploader/types.ts";
 import { FormValidator, Input, Textarea } from '@/components/ui/FormValidator.tsx';
-import { formatFileSize } from '@/lib/utils.ts';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,6 +19,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog.tsx";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog.tsx";
+import {ColumnStats, StatisticsContent} from '@/components/dataset/detailmodal/StatisticsContent.tsx';
+import pako from 'pako';
+import { ScrollArea } from '@radix-ui/react-scroll-area';
 
 interface AddDatasetVersionFormProps {
   datasetId: string;
@@ -28,6 +39,16 @@ interface AddDatasetVersionFormProps {
 export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersionFormProps) {
   const [uploading, setUploading] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showStatisticsModal, setShowStatisticsModal] = useState(false);
+  const [statisticsData, setStatisticsData] = useState<ColumnStats[]>([]);
+  const [totalRows, setTotalRows] = useState<number>(0);
+  // 分析结果缓存，存储之前成功分析的文件ID和对应的分析结果
+  const [analysisCache, setAnalysisCache] = useState<{
+    dataFileId: string;
+    dictFileId: string;
+    statisticsData: ColumnStats[];
+    totalRows: number;
+  } | null>(null);
   const [formData, setFormData] = useState({
     versionNumber: '',
     versionDescription: '',
@@ -150,6 +171,12 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
 
       if (response.success) {
         toast.success('数据集新版本添加成功');
+        // 重置文件上传
+        dataFileRef.current?.acceptedAndReset();
+        dictFileRef.current?.acceptedAndReset();
+        termsFileRef.current?.acceptedAndReset();
+        sharingFileRef.current?.acceptedAndReset();
+
 
         // 重置表单
         resetForm();
@@ -170,18 +197,21 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
       versionNumber: '',
       versionDescription: '',
     });
-
     // 重置文件上传
-    dataFileRef.current?.acceptedAndReset();
-    dictFileRef.current?.acceptedAndReset();
-    termsFileRef.current?.acceptedAndReset();
-    sharingFileRef.current?.acceptedAndReset();
+    dataFileRef.current?.reset();
+    dictFileRef.current?.reset();
+    termsFileRef.current?.reset();
+    sharingFileRef.current?.reset();
+
 
     setDataFileInfo(null);
     setDictFileInfo(null);
     setTermsFileInfo(null);
     setSharingFileInfo(null);
 
+    // 清除分析结果缓存
+    setAnalysisCache(null);
+    
     // 关闭确认对话框
     setShowResetConfirm(false);
   };
@@ -201,10 +231,77 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  // 处理分析数据请求
+  const handleAnalyzeData = async () => {
+    if (!dataFileInfo || !dictFileInfo) {
+      toast.error('请先上传数据集文件和数据字典');
+      return;
+    }
+
+    // 检查缓存中是否有相同文件ID的分析结果
+    if (analysisCache && 
+        analysisCache.dataFileId === dataFileInfo.id && 
+        analysisCache.dictFileId === dictFileInfo.id) {
+      // 使用缓存的分析结果
+      setStatisticsData(analysisCache.statisticsData);
+      setTotalRows(analysisCache.totalRows);
+      setShowStatisticsModal(true);
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const response = await submitDatasetAnalysisRequest({
+        dataFileId: dataFileInfo.id,
+        dictionaryFileId: dictFileInfo.id
+      });
+
+      if (response.data.success && response.data.data) {
+        const analysisResult = response.data.data;
+        
+        // 解码并解压缩统计数据
+        if (analysisResult.statisticalFile) {
+          const binaryString = atob(analysisResult.statisticalFile);
+          const compressedData = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            compressedData[i] = binaryString.charCodeAt(i);
+          }
+
+          const decompressedData = pako.inflate(compressedData, {to: 'string'});
+          const decodedStats = JSON.parse(decompressedData);
+          
+          // 设置统计数据
+          setStatisticsData(decodedStats);
+          setTotalRows(analysisResult.recordCount || 0);
+          
+          // 更新缓存
+          setAnalysisCache({
+            dataFileId: dataFileInfo.id,
+            dictFileId: dictFileInfo.id,
+            statisticsData: decodedStats,
+            totalRows: analysisResult.recordCount || 0
+          });
+          
+          // 打开统计数据模态框
+          setShowStatisticsModal(true);
+        }
+
+      } else {
+        throw new Error(response.data.message || '数据分析请求提交失败');
+      }
+    } catch (error: any) {
+      console.error('数据分析请求失败:', error);
+      toast.error('数据分析请求失败: ' + (error.response?.data?.message || error.message || '未知错误'));
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
       <>
         <div className="space-y-6">
-          <FormValidator onSubmit={handleSubmit} className="space-y-6">
+          <FormValidator onSubmit={handleSubmit} className="space-y-6 ml-2">
             {/* 版本信息 */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -278,6 +375,26 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                     />
                   </div>
 
+                  <div className="space-y-4 border-t pt-4">
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-1">
+                        数据字典文件 <Asterisk className="h-3 w-3 text-red-500" />
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        支持 CSV、Excel 格式，最大 100MB。描述数据字段含义和结构的文件。
+                      </p>
+                      <FileUploader
+                          ref={dictFileRef}
+                          onUploadComplete={handleDictFileUpload}
+                          onResetComplete={handleDictFileReset}
+                          maxSize={100 * 1024 * 1024}
+                          acceptedFileTypes={['.csv', '.xlsx', '.xls']}
+                          templateFile="data_dictionary.xlsx"
+                          templateLabel="数据字典模板"
+                          required
+                      />
+                    </div>
+
                   <div className="space-y-2 border-t pt-4">
                     <Label className="flex items-center gap-1">
                       数据分享文件 <Asterisk className="h-3 w-3 text-red-500" />
@@ -295,26 +412,6 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                     />
                   </div>
                 </div>
-
-                <div className="space-y-4 border-t pt-4">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      数据字典文件 <Asterisk className="h-3 w-3 text-red-500" />
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      支持 CSV、Excel 格式，最大 100MB。描述数据字段含义和结构的文件。
-                    </p>
-                    <FileUploader
-                        ref={dictFileRef}
-                        onUploadComplete={handleDictFileUpload}
-                        onResetComplete={handleDictFileReset}
-                        maxSize={100 * 1024 * 1024}
-                        acceptedFileTypes={['.csv', '.xlsx', '.xls']}
-                        templateFile="data_dictionary.xlsx"
-                        templateLabel="数据字典模板"
-                        required
-                    />
-                  </div>
 
                   <div className="space-y-2 border-t pt-4">
                     <Label className="flex items-center gap-1">
@@ -339,6 +436,23 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
             </div>
 
             <div className="flex justify-end gap-4 pt-6 border-t">
+              {dataFileInfo && dictFileInfo && (
+                  <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={handleAnalyzeData}
+                      disabled={uploading}
+                  >
+                    {uploading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          分析中...
+                        </>
+                    ) : (
+                        '分析数据'
+                    )}
+                  </Button>
+              )}
               <Button
                   type="button"
                   variant="outline"
@@ -385,6 +499,38 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        
+        {/* 统计数据显示对话框 */}
+        <Dialog open={showStatisticsModal} onOpenChange={setShowStatisticsModal}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle>分析结果</DialogTitle>
+              <DialogDescription>
+                以下是您上传的数据集的统计信息。
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex-1 overflow-hidden overflow-y-auto">
+              <ScrollArea className="h-full w-full pr-4">
+                <StatisticsContent
+                    stats={statisticsData}
+                    totalRows={totalRows}
+                    versionNumber={''}
+                />
+              </ScrollArea>
+            </div>
+
+            <DialogFooter className="pt-4">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowStatisticsModal(false)}
+              >
+                关闭
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </>
   );
 }

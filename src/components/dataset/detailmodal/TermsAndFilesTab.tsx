@@ -1,10 +1,9 @@
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import {FileText, Download, Shield, AlertTriangle, CheckCircle, ClockIcon, XCircle, AlertCircle} from "lucide-react";
-import { getFileInfo, downloadFile } from "@/lib/utils";
+import { downloadFile } from "@/lib/utils";
 import {api} from "@/integrations/api/client.ts";
 import {useToast} from "@/hooks/use-toast.ts";
-import {useNavigate} from "react-router-dom";
 import {redirectToAuth} from "@/lib/authUtils.ts";
 import {useEffect, useState} from "react";
 import ApplyDialog from "@/components/application/ApplyDialog.tsx";
@@ -22,7 +21,6 @@ interface TermsAndFilesTabProps {
 
 export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFilesTabProps) {
     const {toast} = useToast();
-    const navigate = useNavigate();
     const [applicationStatus, setApplicationStatus] = useState<Application | null>(null);
     const [loadingApplication, setLoadingApplication] = useState(true);
     const [applyDialogOpen, setApplyDialogOpen] = useState(false);
@@ -280,7 +278,7 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
                                 <Button
                                 onClick={() => {
                                     // 构建包含数据集ID的URL，用于登录后返回
-                                    const currentUrl = '/datasets?id=' + dataset.id;
+                                    const currentUrl = '/datasets?id=' + dataset.id + '&dstab=termsandfiles';
                                     redirectToAuth(currentUrl);
                                 }}
                                 className="mt-3"
