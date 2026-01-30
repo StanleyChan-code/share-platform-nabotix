@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {useState} from "react";
 import {api} from "@/integrations/api/client.ts";
-import RelatedUsersDialog from "./RelatedUsersDialog";
+import RelatedUsersDialog from "@/components/profile/RelatedUsersDialog";
 import {RelatedUsersDto} from "@/integrations/api/userApi.ts";
 import {outputApi} from "@/integrations/api/outputApi.ts";
 import {DatasetDetailModal} from "@/components/dataset/DatasetDetailModal.tsx";

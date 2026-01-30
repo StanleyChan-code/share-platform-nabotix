@@ -20,6 +20,7 @@ export interface AuditLogParams {
   userId?: string;
   action?: string;
   instanceType?: string;
+  instanceId?: string;
   page: number;
   size: number;
   sortBy: string;

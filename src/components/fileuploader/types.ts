@@ -17,6 +17,10 @@ export interface FileUploaderProps {
     validateOnSubmit?: boolean;
 }
 
+export interface TusFileUploaderProps extends FileUploaderProps {
+    tusEndpoint?: string;
+}
+
 export interface FileUploaderHandles {
     handleReset: (cleanTmpFile?: boolean) => void;
     validate: () => boolean;

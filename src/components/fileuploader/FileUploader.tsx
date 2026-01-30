@@ -8,7 +8,7 @@ import {Clock, Download, Info, Pause, Play, RotateCcw, X} from 'lucide-react';
 import {toast} from "@/hooks/use-toast";
 
 import {ChunkTask, FileUploaderHandles, FileUploaderProps, UploadState} from './types';
-import {ErrorClassifier, FileValidator, ProgressCalculator, SpeedCalculator, UploadQueue} from './uploadUtils';
+import {ErrorClassifier, FileValidator, ProgressCalculator, UploadQueue} from './uploadUtils';
 import {formatFileSize, downloadTemplateFile, downloadFile} from "@/lib/utils.ts";
 import {api} from "@/integrations/api/client.ts";
 
@@ -27,7 +27,7 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
                                                                              chunkSize = 20 * 1024 * 1024,
                                                                              acceptedFileTypes = [],
                                                                              allowAllFileTypes = false,
-                                                                             maxConcurrentUploads = 3,
+                                                                             maxConcurrentUploads = 5,
                                                                              templateFile,
                                                                              templateLabel,
                                                                              templateFileName,
@@ -45,8 +45,7 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
     const [errorMessage, setErrorMessage] = useState('');
     const [isRetryNeeded, setIsRetryNeeded] = useState(false);
     const [activeUploads, setActiveUploads] = useState(0);
-    const [uploadSpeed, setUploadSpeed] = useState('0 KB/s');
-    const [estimatedTime, setEstimatedTime] = useState('--:--');
+
     const [totalUploadedBytes, setTotalUploadedBytes] = useState(0);
 
     const [validationError, setValidationError] = useState<string | null>(null);
@@ -55,8 +54,7 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
     const uploadQueueRef = useRef<UploadQueue>(new UploadQueue(maxConcurrentUploads));
-    const speedCalculatorRef = useRef<SpeedCalculator>(new SpeedCalculator());
-    const speedUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
 
     const uploadStateRef = useRef<UploadState>({
         uploadedChunks: [],
@@ -155,9 +153,6 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
     // 组件卸载时的清理
     useEffect(() => {
         return () => {
-            // 停止所有定时器
-            stopSpeedUpdateInterval();
-
             // 取消进行中的上传
             if (abortControllerRef.current) {
                 abortControllerRef.current.abort();
@@ -225,10 +220,7 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
         isCancelledRef.current = false;
         isPausedRef.current = false;
         shouldStopOnFailureRef.current = false;
-        speedCalculatorRef.current.reset();
-        setUploadSpeed('0 KB/s');
-        setEstimatedTime('--:--');
-        setUploadedBytes(0);
+        setTotalUploadedBytes(0);
 
         setValidationError(null);
         onValidityChange?.(true);
@@ -324,11 +316,6 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
         }
     }, [file, isTouched]);
 
-    // 检查是否需要显示速度信息
-    const shouldShowSpeedInfo = () => {
-        return uploadSpeed !== '0 B/s' && uploadSpeed !== '0 KB/s' && uploadSpeed !== '0 MB/s';
-    };
-
     const getFileRequirementsText = (): string => {
         const requirements = [];
 
@@ -347,51 +334,14 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
         return requirements.join(' | ');
     };
 
-    // 启动速度更新定时器
-    const startSpeedUpdateInterval = () => {
-        if (speedUpdateIntervalRef.current) {
-            clearInterval(speedUpdateIntervalRef.current);
-        }
-
-        speedUpdateIntervalRef.current = setInterval(() => {
-            if (isUploading && !isPausedRef.current && !isCancelledRef.current) {
-                updateSpeedDisplay();
-            }
-        }, 500);
-    };
-
-    // 停止速度更新定时器
-    const stopSpeedUpdateInterval = () => {
-        if (speedUpdateIntervalRef.current) {
-            clearInterval(speedUpdateIntervalRef.current);
-            speedUpdateIntervalRef.current = null;
-        }
-    };
-
-    // 更新速度显示
-    const updateSpeedDisplay = () => {
-        const speed = speedCalculatorRef.current.calculateSpeed(totalUploadedBytes);
-        setUploadSpeed(speed);
-
-        if (file) {
-            const timeRemaining = speedCalculatorRef.current.getEstimatedTime(
-                file.size,
-                totalUploadedBytes
-            );
-            setEstimatedTime(timeRemaining);
-        }
-    };
-
     // 安全添加上传字节数
     const addUploadedBytes = (bytes: number) => {
         setTotalUploadedBytes(prev => {
             const newTotal = prev + bytes;
             if (newTotal > Number.MAX_SAFE_INTEGER || newTotal < 0) {
                 console.warn('Upload bytes counter overflow, resetting');
-                speedCalculatorRef.current.setTotalUploadedBytes(bytes);
                 return bytes;
             }
-            speedCalculatorRef.current.addUploadedBytes(bytes);
             return newTotal;
         });
     };
@@ -400,7 +350,6 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
     const setUploadedBytes = (bytes: number) => {
         const safeBytes = Math.max(0, Math.min(bytes, Number.MAX_SAFE_INTEGER));
         setTotalUploadedBytes(safeBytes);
-        speedCalculatorRef.current.setTotalUploadedBytes(safeBytes);
     };
 
     // 上传成功后的清理处理
@@ -408,9 +357,6 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
         setUploadStatus('success');
         setIsUploading(false);
         setUploadProgress(100);
-        stopSpeedUpdateInterval();
-        setUploadSpeed('0 KB/s');
-        setEstimatedTime('完成');
 
         // 上传成功后清理旧的临时文件（如果还有的话）
         if (uploadStateRef.current.uploadedFileId) {
@@ -425,8 +371,6 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
         setIsUploading(true);
         setUploadStatus('uploading');
         abortControllerRef.current = new AbortController();
-
-        startSpeedUpdateInterval();
 
         try {
             const isChunked = fileToUpload.size > chunkSize;
@@ -466,7 +410,7 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
                 const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total!);
                 setUploadProgress(Math.min(progress, 100));
                 setUploadedBytes(progressEvent.loaded);
-                updateSpeedDisplay();
+
             }
         );
 
@@ -621,23 +565,25 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
                     processTask(task, uploadId, fileName, totalChunks, totalFileSize)
                         .then(() => {
                             consecutiveFailures = 0;
-                            completedCount++;
                             activeTaskCount--;
                             uploadQueueRef.current.removeActiveTask(task.chunkIndex);
+                            
+                            // 更新完成状态
+                            completedCount++;
                             uploadQueueRef.current.addCompletedTask(task.chunkIndex);
                             setActiveUploads(uploadQueueRef.current.getActiveCount());
 
                             const chunkSizeBytes = Math.min(chunkSize, totalFileSize - task.chunkIndex * chunkSize);
                             addUploadedBytes(chunkSizeBytes);
 
-                            // 关键修复：分片完成后清除该分片的进度记录
+                            // 分片完成后清除该分片的进度记录
                             delete uploadStateRef.current.chunkProgress[task.chunkIndex];
-
-                            // 使用更准确的进度计算
+                            
+                            // 只基于已完成分片计算进度
                             const progress = ProgressCalculator.calculateProgressSafe(
                                 totalChunks,
                                 completedCount,
-                                uploadStateRef.current.chunkProgress // 现在chunkProgress只包含进行中的分片
+                                uploadStateRef.current.chunkProgress
                             );
                             setUploadProgress(Math.min(progress, 100));
 
@@ -809,25 +755,8 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
                 uploadId,
                 chunkIndex + 1,
                 totalChunks,
-                fileName,
-                (progressEvent) => {
-                    if (isCancelledRef.current || isPausedRef.current || shouldStopOnFailureRef.current) return;
-
-                    const chunkProgress = (progressEvent.loaded * 100) / progressEvent.total!;
-                    uploadStateRef.current.chunkProgress = {
-                        ...uploadStateRef.current.chunkProgress,
-                        [chunkIndex]: Math.min(chunkProgress, 100)
-                    };
-
-                    // 只计算未完成分片的进度
-                    const currentCompletedCount = uploadQueueRef.current.getCompletedCount();
-                    const overallProgress = ProgressCalculator.calculateProgressSafe(
-                        totalChunks,
-                        currentCompletedCount,
-                        uploadStateRef.current.chunkProgress
-                    );
-                    setUploadProgress(Math.min(overallProgress, 100));
-                }
+                fileName
+                // 移除实时进度更新回调，只在分片完成时更新进度
             );
         } catch (error: any) {
             if (ErrorClassifier.isNetworkError(error)) {
@@ -878,18 +807,16 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
             setUploadStatus('error');
             setIsRetryNeeded(true);
             setIsUploading(false);
-            stopSpeedUpdateInterval();
+
         } else if (error.message?.includes('连续上传失败过多')) {
             setErrorMessage('上传失败过多，已自动停止');
             setUploadStatus('error');
             setIsRetryNeeded(true);
             setIsUploading(false);
-            stopSpeedUpdateInterval();
         } else {
             setUploadStatus('error');
             setErrorMessage(error.message || '上传失败');
             setIsUploading(false);
-            stopSpeedUpdateInterval();
         }
     };
 
@@ -899,13 +826,11 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
         if (isPausedRef.current) {
             isPausedRef.current = false;
             setIsPaused(false);
-            startSpeedUpdateInterval();
+
         } else {
             isPausedRef.current = true;
             setIsPaused(true);
-            stopSpeedUpdateInterval();
-            setUploadSpeed('0 KB/s');
-            setEstimatedTime('已暂停');
+
         }
     };
 
@@ -920,10 +845,7 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
         shouldStopOnFailureRef.current = false;
         setIsPaused(false);
         setIsUploading(true);
-        speedCalculatorRef.current.reset();
-        setUploadSpeed('0 KB/s');
-        setEstimatedTime('--:--');
-        setUploadedBytes(0);
+        setTotalUploadedBytes(0);
 
         uploadQueueRef.current.clear();
         uploadStateRef.current.failedChunks = [];
@@ -941,7 +863,6 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
         shouldStopOnFailureRef.current = false;
         setIsPaused(false);
         setIsRetryNeeded(false);
-        stopSpeedUpdateInterval();
 
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
@@ -956,8 +877,6 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
 
         setIsUploading(false);
         setUploadStatus('idle');
-        setUploadSpeed('0 KB/s');
-        setEstimatedTime('--:--');
 
         setFile(null);
         if (fileInputRef.current) {
@@ -973,13 +892,10 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
         setIsRetryNeeded(false);
         setIsPaused(false);
         setActiveUploads(0);
-        setUploadSpeed('0 KB/s');
-        setEstimatedTime('--:--');
-        setUploadedBytes(0);
+        setTotalUploadedBytes(0);
         isCancelledRef.current = false;
         isPausedRef.current = false;
         shouldStopOnFailureRef.current = false;
-        speedCalculatorRef.current.reset();
         uploadQueueRef.current.clear();
 
         // 保留uploadId用于后续清理，但清空其他状态
@@ -991,7 +907,6 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
             uploadId: null,
             uploadedFileId: currentUploadId,
         };
-        stopSpeedUpdateInterval();
     };
 
     const resetFileInput = () => {
@@ -1157,20 +1072,6 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
                 <div className="space-y-2">
                     <Progress value={Math.min(uploadProgress, 100)} className="w-full"/>
                     <p className="text-center text-sm text-gray-500">{Math.min(uploadProgress, 100)}%</p>
-
-                    {shouldShowSpeedInfo() && (
-                        <div className="grid grid-cols-2 gap-4 text-xs text-gray-500">
-                            <div className="flex items-center space-x-1">
-                                <span className="font-medium">上传速度:</span>
-                                <span>{uploadSpeed}</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                                <Clock className="h-3 w-3"/>
-                                <span className="font-medium">剩余时间:</span>
-                                <span>{estimatedTime}</span>
-                            </div>
-                        </div>
-                    )}
 
                     <div className="flex justify-between text-xs text-gray-500">
                         <span>状态: {isPaused ? '已暂停' : isMerging ? '正在合并' : '上传中'}</span>

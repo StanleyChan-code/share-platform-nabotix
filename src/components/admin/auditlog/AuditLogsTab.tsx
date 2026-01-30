@@ -11,13 +11,13 @@ import {Search, Filter, X, Eye, ChevronLeft, ChevronRight, RefreshCw} from 'luci
 import { auditLogApi, AuditLog, AuditLogParams } from '@/integrations/api/auditLogApi.ts';
 import ReactPaginate from 'react-paginate';
 import { Skeleton } from '@/components/ui/skeleton.tsx';
-import AuditLogDetailDialog from './AuditLogDetailDialog.tsx';
 import { AuditLogConstants, ACTION_DISPLAY_NAMES } from '@/lib/auditLogConstants.ts';
-import UserInfoDialog from '../user/UserInfoDialog.tsx';
 import { userApi } from '@/integrations/api/userApi.ts';
 import { institutionApi } from '@/integrations/api/institutionApi.ts';
 import { User } from '@/integrations/api/userApi.ts';
 import {useDebounce} from "@/hooks/useDebounce.ts";
+import AuditLogDetailDialog from "@/components/admin/auditlog/AuditLogDetailDialog.tsx";
+import UserInfoDialog from "@/components/admin/user/UserInfoDialog.tsx";
 
 export default function AuditLogsTab() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
@@ -59,6 +59,9 @@ export default function AuditLogsTab() {
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 550);
 
+  const [instanceIdSearchTerm, setInstanceIdSearchTerm] = useState('');
+  const debouncedInstanceIdSearchTerm = useDebounce(instanceIdSearchTerm, 550);
+
   // 加载审计日志
   const loadAuditLogs = async (resetPage = false, page?: number) => {
     setLoading(true);
@@ -72,6 +75,7 @@ export default function AuditLogsTab() {
         userId: debouncedSearchTerm || undefined,
         action: action === 'ALL' ? undefined : action,
         instanceType: instanceType === 'ALL' ? undefined : instanceType,
+        instanceId: debouncedInstanceIdSearchTerm || undefined,
         page: targetPage,
         size: pagination.size,
         sortBy: pagination.sortBy,
@@ -120,7 +124,7 @@ export default function AuditLogsTab() {
   // 筛选变更时重新加载（重置到第一页）
   useEffect(() => {
     loadAuditLogs(true, 0);
-  }, [startTime, endTime, action, instanceType, debouncedSearchTerm]);
+  }, [startTime, endTime, action, instanceType, debouncedSearchTerm, debouncedInstanceIdSearchTerm]);
 
   // 分页、排序或每页大小变更时重新加载
   useEffect(() => {
@@ -133,6 +137,7 @@ export default function AuditLogsTab() {
   const resetFilters = async () => {
     // 重置所有筛选条件
     setSearchTerm('');
+    setInstanceIdSearchTerm('');
     setStartTime(null);
     setEndTime(null);
     setAction('ALL');
@@ -215,7 +220,7 @@ export default function AuditLogsTab() {
 
   return (
     <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6 items-end">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4 mb-6 items-end">
                 {/* 开始时间 */}
                 <div className="sm:col-span-1">
                   <Label htmlFor="startTime" className="mb-2 block text-sm font-medium text-gray-700">
@@ -308,25 +313,38 @@ export default function AuditLogsTab() {
                   </Select>
                 </div>
 
+                {/* 实例 ID */}
+                <div className="sm:col-span-1">
+                  <Label htmlFor="instanceId" className="mb-2 block text-sm font-medium text-gray-700">
+                    实例 ID
+                  </Label>
+                  <Input
+                      id="instanceId"
+                      placeholder="输入实例 ID"
+                      value={instanceIdSearchTerm}
+                      onChange={(e) => setInstanceIdSearchTerm(e.target.value)}
+                      className="w-full"
+                  />
+                </div>
+
                 {/* 操作按钮 */}
-                <div className="sm:col-span-2 lg:col-span-1 xl:col-span-1 flex flex-wrap gap-2 pt-2">
+                <div className="col-span-1 flex flex-wrap gap-2 pt-2">
                   <Button
                       type="button"
                       variant="outline"
                       onClick={() => loadAuditLogs(true)}
                       disabled={loading}
-                      className="flex-1 min-w-[80px]"
+                      className="flex-1 px-0"
                   >
                     <RefreshCw className={cn("h-4 w-4", loading ? "animate-spin" : "")} />
-                    刷新
                   </Button>
                   <Button
                       type="button"
                       variant="outline"
                       onClick={resetFilters}
-                      className="flex-1 min-w-[80px]"
+                      className="flex-1 px-0"
                   >
-                    重置
+                    <X className="h-4 w-4" />
                   </Button>
                 </div>
               </div>

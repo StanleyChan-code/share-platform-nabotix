@@ -2,11 +2,11 @@ import {Dialog, DialogContent, DialogHeader, DialogTitle} from "@/components/ui/
 import {Button} from "@/components/ui/button";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import {Info, TrendingUp, FileText, Shield, Clock, Link2, ArrowRight} from "lucide-react";
-import {OverviewTab} from "./detailmodal/OverviewTab.tsx";
-import {StatisticsTab} from "./detailmodal/StatisticsTab.tsx";
-import {VersionsTab} from "./detailmodal/VersionsTab.tsx";
-import {TermsAndFilesTab} from "./detailmodal/TermsAndFilesTab.tsx";
-import {ResearchOutputsTab} from "./detailmodal/ResearchOutputsTab.tsx";
+import {OverviewTab} from "@/components/dataset/detailmodal/OverviewTab.tsx";
+import {StatisticsTab} from "@/components/dataset/detailmodal/StatisticsTab.tsx";
+import {VersionsTab} from "@/components/dataset/detailmodal/VersionsTab.tsx";
+import {TermsAndFilesTab} from "@/components/dataset/detailmodal/TermsAndFilesTab.tsx";
+import {ResearchOutputsTab} from "@/components/dataset/detailmodal/ResearchOutputsTab.tsx";
 import {useEffect, useState} from "react";
 import {api, ApiResponse} from "@/integrations/api/client";
 import {ScrollArea} from "@radix-ui/react-scroll-area";

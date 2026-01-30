@@ -26,7 +26,7 @@ import {
     Eye,
     RefreshCw
 } from "lucide-react";
-import UserInfoDialog from "./UserInfoDialog.tsx";
+import UserInfoDialog from "@/components/admin/user/UserInfoDialog.tsx";
 import {Switch} from "@/components/ui/switch.tsx";
 import {InstitutionSelector} from "@/components/admin/institution/InstitutionSelector.tsx";
 import {getCurrentUserInfoFromSession, refreshUserInfo} from "@/lib/authUtils";

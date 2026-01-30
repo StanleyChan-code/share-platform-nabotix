@@ -13,7 +13,7 @@ import {outputApi} from "@/integrations/api/outputApi";
 import {Dataset} from "@/integrations/api/datasetApi";
 import {FileInfo} from "@/integrations/api/fileApi";
 import ResearchOutputForm from "@/components/outputs/ResearchOutputForm";
-import {ApprovedDatasetSelector} from "./ApprovedDatasetSelector.tsx";
+import {ApprovedDatasetSelector} from "@/components/outputs/ApprovedDatasetSelector.tsx";
 import FileUploader from "@/components/fileuploader/FileUploader.tsx";
 import {getJournalPartitionValue} from "@/lib/outputUtils.ts";
 

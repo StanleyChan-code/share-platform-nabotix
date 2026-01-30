@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils.ts";
 import {Institution, institutionApi} from "@/integrations/api/institutionApi.ts";
 import { toast } from "sonner";
 import { useDebounce } from "@/hooks/useDebounce";
+import {InstitutionTypes} from "@/lib/enums.ts";
 
 interface AdminInstitutionSelectorProps {
   value: string[] | null;
@@ -173,15 +174,22 @@ export function InstitutionSelector({
                     className="flex items-center space-x-2"
                     disabled={disableUnverified && !institution.verified}
                   >
-                    <Check
-                      className={cn(
-                        "h-4 w-4",
-                        isInstitutionSelected(institution.id) ? "opacity-100" : "opacity-0"
-                      )}
-                    />
+                    {value && value.length > 0 && (
+                        <Check
+                            className={cn(
+                                "h-4 w-4",
+                                isInstitutionSelected(institution.id) ? "opacity-100" : "opacity-0"
+                            )}
+                        />
+                    )}
                     <div className="flex flex-col flex-1">
                       <div className="flex items-center justify-between">
                         <span className={`font-medium ${disableUnverified && !institution.verified ? 'text-muted-foreground' : ''}`}>
+                          {institution.type && (
+                              <span className="text-xs text-green-600 bg-green-50 px-2 mr-2 py-0.5 rounded-full">
+                            {InstitutionTypes[institution.type]}
+                          </span>
+                          )}
                           {institution.fullName}
                         </span>
                         {!institution.verified && disableUnverified && (
@@ -190,10 +198,13 @@ export function InstitutionSelector({
                           </Badge>
                         )}
                       </div>
-                      {institution.shortName && (
-                        <span className={`text-xs ${disableUnverified && !institution.verified ? 'text-muted-foreground' : 'text-muted-foreground'}`}>
-                          {institution.shortName}
-                        </span>
+                      {institution.contactPerson && (
+                        <div className="flex items-center mt-2 text-xs text-gray-600">
+                          <span className="mr-4">联系人: {institution.contactPerson}</span>
+                          {institution.contactPhone && (
+                            <span>联系方式: {institution.contactPhone}</span>
+                          )}
+                        </div>
                       )}
                     </div>
                   </CommandItem>

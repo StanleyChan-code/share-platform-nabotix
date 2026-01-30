@@ -159,7 +159,7 @@ export class UploadQueue {
 }
 
 export class ProgressCalculator {
-    // 新增方法：专门处理分片上传的进度计算
+    // 只计算已完成分片的进度
     static calculateChunkedProgress(
         totalChunks: number,
         completedChunksCount: number,
@@ -167,19 +167,12 @@ export class ProgressCalculator {
     ): number {
         if (totalChunks === 0) return 0;
 
-        // 已完成的分片贡献100%
-        const completedProgress = completedChunksCount * 100;
-
-        // 进行中的分片贡献当前进度
-        const activeProgress = Object.values(activeChunksProgress)
-            .filter(progress => progress > 0 && progress < 100) // 只计算0-100之间的进度
-            .reduce((sum, progress) => sum + progress, 0);
-
-        const totalProgress = completedProgress + activeProgress;
-        return Math.min(Math.round(totalProgress / totalChunks), 100);
+        // 只计算已完成分片的进度，不考虑进行中分片的部分进度
+        const progress = Math.round((completedChunksCount / totalChunks) * 100);
+        return Math.min(progress, 100);
     }
 
-    // 原有的方法保持不变
+    // 原有的方法保持不变，确保向后兼容
     static calculateProgressSafe(
         totalChunks: number,
         completedChunksCount: number,
@@ -214,144 +207,5 @@ export class ErrorClassifier {
             message.includes('refused') ||
             error.code === 'NETWORK_ERROR' ||
             error.code === 'ECONNREFUSED';
-    }
-}
-
-export class SpeedCalculator {
-    private lastLoaded: number = 0;
-    private lastTime: number = 0;
-    private speeds: number[] = [];
-    private maxSamples: number = 5;
-    private totalUploadedBytes: number = 0;
-    private speedHistory: { time: number; bytes: number }[] = [];
-
-    calculateSpeed(currentTotalBytes: number): string {
-        const now = Date.now();
-
-        // 添加当前数据点到历史记录
-        this.speedHistory.push({
-            time: now,
-            bytes: currentTotalBytes
-        });
-
-        // 只保留最近2秒的数据
-        const twoSecondsAgo = now - 2000;
-        this.speedHistory = this.speedHistory.filter(point => point.time >= twoSecondsAgo);
-
-        if (this.speedHistory.length < 2) {
-            return '0 KB/s';
-        }
-
-        // 计算最近1秒的平均速度
-        const oneSecondAgo = now - 1000;
-        const recentPoints = this.speedHistory.filter(point => point.time >= oneSecondAgo);
-
-        if (recentPoints.length < 2) {
-            return '0 KB/s';
-        }
-
-        const oldestPoint = recentPoints[0];
-        const newestPoint = recentPoints[recentPoints.length - 1];
-        const timeDiff = (newestPoint.time - oldestPoint.time) / 1000; // 转换为秒
-        const bytesDiff = newestPoint.bytes - oldestPoint.bytes;
-
-        // 防止除零和负数
-        if (timeDiff <= 0 || bytesDiff < 0) {
-            return '0 KB/s';
-        }
-
-        const currentSpeed = bytesDiff / timeDiff;
-
-        // 添加到速度数组进行平滑处理
-        this.speeds.push(currentSpeed);
-        if (this.speeds.length > this.maxSamples) {
-            this.speeds.shift();
-        }
-
-        // 计算平均速度
-        const avgSpeed = this.speeds.length > 0
-            ? this.speeds.reduce((sum, speed) => sum + speed, 0) / this.speeds.length
-            : 0;
-
-        return this.formatSpeed(avgSpeed);
-    }
-
-    addUploadedBytes(bytes: number): void {
-        this.totalUploadedBytes = this.safeAdd(this.totalUploadedBytes, bytes);
-    }
-
-    getTotalUploadedBytes(): number {
-        return this.totalUploadedBytes;
-    }
-
-    setTotalUploadedBytes(bytes: number): void {
-        this.totalUploadedBytes = Math.max(0, Math.min(bytes, Number.MAX_SAFE_INTEGER));
-        this.lastLoaded = this.totalUploadedBytes;
-    }
-
-    private safeAdd(a: number, b: number): number {
-        const result = a + b;
-        if (result > Number.MAX_SAFE_INTEGER) {
-            console.warn('Number overflow detected, resetting counter');
-            return b;
-        }
-        if (result < 0) {
-            console.warn('Negative number detected, resetting to 0');
-            return 0;
-        }
-        return result;
-    }
-
-    private formatSpeed(speed: number): string {
-        if (speed < 1024) {
-            return `${Math.round(speed)} B/s`;
-        } else if (speed < 1024 * 1024) {
-            return `${(speed / 1024).toFixed(1)} KB/s`;
-        } else if (speed < 1024 * 1024 * 1024) {
-            return `${(speed / (1024 * 1024)).toFixed(1)} MB/s`;
-        } else {
-            return `${(speed / (1024 * 1024 * 1024)).toFixed(2)} GB/s`;
-        }
-    }
-
-    reset(): void {
-        this.lastLoaded = 0;
-        this.lastTime = 0;
-        this.speeds = [];
-        this.totalUploadedBytes = 0;
-        this.speedHistory = [];
-    }
-
-    getCurrentSpeed(): number {
-        if (this.speeds.length === 0) return 0;
-        return this.speeds.reduce((sum, speed) => sum + speed, 0) / this.speeds.length;
-    }
-
-    getEstimatedTime(totalBytes: number, uploadedBytes: number): string {
-        const speed = this.getCurrentSpeed();
-        if (speed === 0 || speed < 1) return '--:--';
-
-        if (totalBytes <= uploadedBytes) return '完成';
-        if (totalBytes <= 0 || uploadedBytes < 0) return '--:--';
-
-        const remainingBytes = this.safeSubtract(totalBytes, uploadedBytes);
-        const remainingSeconds = Math.round(remainingBytes / speed);
-
-        if (remainingSeconds < 0) return '--:--';
-        if (remainingSeconds < 60) {
-            return `${remainingSeconds}秒`;
-        } else if (remainingSeconds < 3600) {
-            const minutes = Math.floor(remainingSeconds / 60);
-            const seconds = remainingSeconds % 60;
-            return `${minutes}分${seconds.toString().padStart(2, '0')}秒`;
-        } else {
-            const hours = Math.floor(remainingSeconds / 3600);
-            const minutes = Math.floor((remainingSeconds % 3600) / 60);
-            return `${hours}时${minutes.toString().padStart(2, '0')}分`;
-        }
-    }
-
-    private safeSubtract(a: number, b: number): number {
-        return Math.max(0, a - b);
     }
 }

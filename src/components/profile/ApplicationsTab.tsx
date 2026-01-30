@@ -14,9 +14,9 @@ import {Button} from "@/components/ui/button";
 import {TooltipProvider} from "@/components/ui/tooltip";
 import ApplyDialog from '@/components/application/ApplyDialog';
 import {DatasetDetailModal} from '@/components/dataset/DatasetDetailModal';
-import ApplicationDetailDialog from '../admin/ApplicationDetailDialog';
 import ApplicationItem from "@/components/admin/ApplicationItem.tsx";
 import { QADialog, QAItem, QATip } from '@/components/ui/QADialog';
+import ApplicationDetailDialog from "@/components/admin/ApplicationDetailDialog.tsx";
 const ApplicationsTab = () => {
   const [isApplyDialogOpen, setIsApplyDialogOpen] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);

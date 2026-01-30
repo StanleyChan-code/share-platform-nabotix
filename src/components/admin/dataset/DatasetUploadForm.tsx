@@ -75,6 +75,7 @@ interface Institution {
 
 export function DatasetUploadForm({onSuccess}: DatasetUploadFormProps) {
     const [uploading, setUploading] = useState(false);
+    const [analyzing, setAnalyzing] = useState(false);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [formData, setFormData] = useState({
         titleCn: '',
@@ -334,7 +335,7 @@ export function DatasetUploadForm({onSuccess}: DatasetUploadFormProps) {
             return;
         }
 
-        setUploading(true);
+        setAnalyzing(true);
 
         try {
             const response = await submitDatasetAnalysisRequest({
@@ -379,7 +380,7 @@ export function DatasetUploadForm({onSuccess}: DatasetUploadFormProps) {
             console.error('数据分析请求失败:', error);
             toast.error('数据分析请求失败: ' + (error.response?.data?.message || error.message || '未知错误'));
         } finally {
-            setUploading(false);
+            setAnalyzing(false);
         }
     };
 
@@ -1349,9 +1350,9 @@ export function DatasetUploadForm({onSuccess}: DatasetUploadFormProps) {
                                     type="button"
                                     variant="secondary"
                                     onClick={handleAnalyzeData}
-                                    disabled={uploading}
+                                    disabled={uploading || analyzing}
                                 >
-                                    {uploading ? (
+                                    {analyzing ? (
                                         <>
                                             <Loader2 className="mr-2 h-4 w-4 animate-spin"/>
                                             分析中...
@@ -1365,13 +1366,13 @@ export function DatasetUploadForm({onSuccess}: DatasetUploadFormProps) {
                                 type="button"
                                 variant="outline"
                                 onClick={handleResetClick}
-                                disabled={uploading}
+                                disabled={uploading || analyzing}
                             >
                                 重置
                             </Button>
                             <Button
                                 type="submit"
-                                disabled={uploading || !areAllAgreementsSelected}
+                                disabled={uploading || analyzing || !areAllAgreementsSelected}
                                 className="min-w-32"
                             >
                                 {uploading ? (

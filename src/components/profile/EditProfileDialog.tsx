@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { updateUserProfile } from "@/integrations/api/authApi.ts";
 import { toast } from "sonner";
-import RelatedUsersDialog from "./RelatedUsersDialog";
+import RelatedUsersDialog from "@/components/profile/RelatedUsersDialog";
 import { userApi } from "@/integrations/api/userApi";
 import { RelatedUsersDto } from "@/integrations/api/userApi";
 

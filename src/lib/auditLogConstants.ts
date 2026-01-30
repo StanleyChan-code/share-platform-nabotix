@@ -69,7 +69,7 @@ export const ACTION_DISPLAY_NAMES: Record<string, string> = {
     [AuditLogConstants.ACTION_PLATFORM_APPROVE]: "平台审核通过",
     [AuditLogConstants.ACTION_PLATFORM_REJECT]: "平台审核拒绝",
 
-    // [AuditLogConstants.ACTION_ANALYZE]: "分析",
+    [AuditLogConstants.ACTION_ANALYZE]: "临时数据分析",
 
     [AuditLogConstants.ACTION_UPLOAD]: "上传小文件",
     [AuditLogConstants.ACTION_INIT_CHUNKED_UPLOAD]: "初始化分片上传",

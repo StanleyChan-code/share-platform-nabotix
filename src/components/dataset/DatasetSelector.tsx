@@ -2,11 +2,9 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { Dataset, datasetApi } from "@/integrations/api/datasetApi.ts";
-import { DatasetCommand } from "./DatasetCommand.tsx";
+import { DatasetCommand } from "@/components/dataset/DatasetCommand.tsx";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover.tsx";
 import {Asterisk, Check, ChevronsUpDown, Loader2} from "lucide-react";
-import {cn, formatDate} from "@/lib/utils.ts";
-import { DatasetTypes } from "@/lib/enums.ts";
 import { useDebounce } from "@/hooks/useDebounce.ts";
 
 interface DatasetSelectorProps {

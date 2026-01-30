@@ -6,13 +6,12 @@ import {FileText, RefreshCw, Search} from "lucide-react";
 import {TooltipProvider} from "@/components/ui/tooltip";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Skeleton} from "@/components/ui/skeleton";
-import ApplicationDetailDialog from './ApplicationDetailDialog';
+import ApplicationDetailDialog from "@/components/admin/ApplicationDetailDialog.tsx";
 import {useToast} from '@/components/ui/use-toast';
 import {DatasetDetailModal} from '@/components/dataset/DatasetDetailModal';
 import {hasPermissionRole, PermissionRoles} from "@/lib/permissionUtils.ts";
 import {InstitutionSelector} from "@/components/admin/institution/InstitutionSelector.tsx";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
-import ApplicationItem from "./ApplicationItem";
 import {useDebounce} from "@/hooks/useDebounce";
 import {Input} from "@/components/ui/FormValidator.tsx";
 import {refreshApplicationPendingCount} from "@/lib/pendingCountsController";
@@ -20,6 +19,7 @@ import {Button} from "@/components/ui/button.tsx";
 import ReactPaginatedList from "@/components/ui/ReactPaginatedList";
 import {ReactPaginatedListRef} from "@/components/ui/ReactPaginatedList";
 import {cn} from "@/lib/utils.ts";
+import ApplicationItem from "@/components/admin/ApplicationItem.tsx";
 
 const ApplicationReviewTab: React.FC = () => {
     const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);

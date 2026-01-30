@@ -41,6 +41,7 @@
     "@types/pako": "^2.0.4",
     "@types/qs": "^6.14.0",
     "@types/react-infinite-scroller": "^1.2.5",
+    "@uppy/react": "^5.1.1",
     "axios": "^1.13.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -68,11 +69,13 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
+    "tus-js-client": "^4.3.1",
+    "uppy": "^5.2.1",
     "use-clipboard-copy": "^0.2.0",
     "vaul": "^0.9.9",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "^3.25.76",
-    "zustand": "^5.0.9",
-    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+    "zustand": "^5.0.9"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.16",

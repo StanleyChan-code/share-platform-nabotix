@@ -17,10 +17,8 @@ import {
 import { useState, useEffect } from "react";
 import { EducationLevels, ID_TYPES, InstitutionTypes } from "@/lib/enums";
 import { formatDate } from "@/lib/utils.ts";
-import { toast } from "sonner";
 import {UserInfo} from "@/lib/authUtils.ts";
-import EditProfileDialog from "./EditProfileDialog";
-import { userApi } from "@/integrations/api/userApi";
+import EditProfileDialog from "@/components/profile/EditProfileDialog";
 
 interface ProfileInfoProps {
   userProfile: UserInfo;

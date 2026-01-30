@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 import { datasetApi, AddDatasetVersionRequest } from '@/integrations/api/datasetApi.ts';
 import { FileInfo } from '@/integrations/api/fileApi.ts';
 import { submitDatasetAnalysisRequest } from '@/integrations/api/statisticsApi.ts';
-import FileUploader from '../../fileuploader/FileUploader.tsx';
 import { FileUploaderHandles } from "@/components/fileuploader/types.ts";
 import { FormValidator, Input, Textarea } from '@/components/ui/FormValidator.tsx';
 import {
@@ -30,6 +29,7 @@ import {
 import {ColumnStats, StatisticsContent} from '@/components/dataset/detailmodal/StatisticsContent.tsx';
 import pako from 'pako';
 import { ScrollArea } from '@radix-ui/react-scroll-area';
+import {FileUploader} from "@/components/fileuploader";
 
 interface AddDatasetVersionFormProps {
   datasetId: string;
@@ -38,6 +38,7 @@ interface AddDatasetVersionFormProps {
 
 export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersionFormProps) {
   const [uploading, setUploading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showStatisticsModal, setShowStatisticsModal] = useState(false);
   const [statisticsData, setStatisticsData] = useState<ColumnStats[]>([]);
@@ -249,7 +250,7 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
       return;
     }
 
-    setUploading(true);
+    setAnalyzing(true);
 
     try {
       const response = await submitDatasetAnalysisRequest({
@@ -291,10 +292,10 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
         throw new Error(response.data.message || '数据分析请求提交失败');
       }
     } catch (error: any) {
-      console.error('数据分析请求失败:', error);
-      toast.error('数据分析请求失败: ' + (error.response?.data?.message || error.message || '未知错误'));
+      console.error('数据分析失败:', error);
+      toast.error('数据分析失败');
     } finally {
-      setUploading(false);
+      setAnalyzing(false);
     }
   };
 
@@ -441,9 +442,9 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                       type="button"
                       variant="secondary"
                       onClick={handleAnalyzeData}
-                      disabled={uploading}
+                      disabled={uploading || analyzing}
                   >
-                    {uploading ? (
+                    {analyzing ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           分析中...
@@ -457,13 +458,13 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                   type="button"
                   variant="outline"
                   onClick={handleResetClick}
-                  disabled={uploading}
+                  disabled={uploading || analyzing}
               >
                 重置
               </Button>
               <Button
                   type="submit"
-                  disabled={uploading}
+                  disabled={uploading || analyzing}
                   className="min-w-32"
               >
                 {uploading ? (

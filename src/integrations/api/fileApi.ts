@@ -38,7 +38,7 @@ export interface ChunkedUploadStatusResponse {
   missingChunks: number[];
 }
 
-// 创建文件API客户端
+// 文件API客户端
 export const fileApi = {
   // 普通文件上传
   async uploadFile(file: File, onUploadProgress?: (progressEvent: AxiosProgressEvent) => void) {
@@ -52,6 +52,17 @@ export const fileApi = {
       onUploadProgress,
     });
 
+    return response.data;
+  },
+
+  // 完成TUS文件上传
+  async completeTusUpload(uploadId: string, fileName: string) {
+    const response = await api.client.post("/files/tus/complete", undefined, {
+      params: {
+        uploadId,
+        fileName,
+      },
+    });
     return response.data;
   },
 

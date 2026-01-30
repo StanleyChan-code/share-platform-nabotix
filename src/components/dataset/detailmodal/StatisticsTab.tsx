@@ -12,6 +12,7 @@ import {useNavigate} from "react-router-dom";
 import {Button} from "@/components/ui/button.tsx";
 import {AlertTriangle} from "lucide-react";
 import {redirectToAuth} from "@/lib/authUtils.ts";
+import {ColumnStats, StatisticsContent} from "@/components/dataset/detailmodal/StatisticsContent.tsx";
 
 interface StatisticsTabProps {
     versions?: DatasetVersion[],
@@ -19,8 +20,6 @@ interface StatisticsTabProps {
     useAdvancedQuery?: boolean,
     dataset: any
 }
-
-import {ColumnStats, StatisticsContent} from './StatisticsContent.tsx';
 
 export function StatisticsTab({
                                   versions,
