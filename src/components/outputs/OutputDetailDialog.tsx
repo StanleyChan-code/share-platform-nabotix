@@ -295,7 +295,7 @@ const OutputDetailDialog = ({
         <>
             <Dialog open={open} onOpenChange={onOpenChange}>
                 <DialogContent
-                    className="sm:max-w-[500px] md:max-w-[700px] lg:max-w-[900px] max-h-[90vh] flex flex-col">
+                    className="max-w-4xl max-h-[90vh] flex flex-col">
                     <DialogHeader className="pb-4 border-b">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-primary/10 rounded-lg">
@@ -315,40 +315,7 @@ const OutputDetailDialog = ({
                             </div>
 
                             {/* 审核操作 */}
-                            <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
-                                {managementMode && canApprove && currentOutput.approved !== false && (
-                                    <>
-                                        <div></div>
-                                        <ClipboardCheck className={"h-5 w-5"}/>
-                                        <p className="text-lg font-semibold">审核操作</p>
-                                        {currentOutput.approved === null ? (
-                                            // 待审核状态：显示通过和拒绝按钮
-                                            <ApprovalActions
-                                                size={"sm"}
-                                                showCommentDialog={true}
-                                                requireCommentOnApprove={false}
-                                                requireCommentOnReject={true}
-                                                approveDialogTitle="审核通过确认"
-                                                rejectDialogTitle="审核拒绝原因"
-                                                onSuccess={handleApproval}
-                                                approveButtonText="通过"
-                                                rejectButtonText="拒绝"
-                                            />
-                                        ) : currentOutput.approved === true ? (
-                                            // 已通过状态：显示驳回通过按钮
-                                            <ApprovalActions
-                                                showCommentDialog={true}
-                                                requireCommentOnReject={true}
-                                                approveDialogTitle="审核通过确认"
-                                                rejectDialogTitle="驳回通过原因"
-                                                onSuccess={(approved, comment) => handleApproval(approved, comment)}
-                                                approveButtonText="通过"
-                                                rejectButtonText="驳回通过"
-                                                showRevokeApprovalButton={true}
-                                            />
-                                        ) : null}
-                                    </>
-                                )}
+                            <div className="flex flex-col sm:flex-row items-center justify-center gap-2 mr-2">
                                 <CopyButton
                                     text={`${window.location.origin}/outputs?id=${currentOutput.id}`}
                                     title="分享研究成果"
@@ -364,9 +331,41 @@ const OutputDetailDialog = ({
                         </div>
                     </DialogHeader>
 
+                    {managementMode && canApprove && currentOutput.approved !== false && (
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+                            <ClipboardCheck className={"h-5 w-5"}/>
+                            <p className="text-lg font-semibold">审核操作</p>
+                            {currentOutput.approved === null ? (
+                                // 待审核状态：显示通过和拒绝按钮
+                                <ApprovalActions
+                                    size={"sm"}
+                                    showCommentDialog={true}
+                                    requireCommentOnApprove={false}
+                                    requireCommentOnReject={true}
+                                    approveDialogTitle="审核通过确认"
+                                    rejectDialogTitle="审核拒绝原因"
+                                    onSuccess={handleApproval}
+                                    approveButtonText="通过"
+                                    rejectButtonText="拒绝"
+                                />
+                            ) : currentOutput.approved === true ? (
+                                // 已通过状态：显示驳回通过按钮
+                                <ApprovalActions
+                                    showCommentDialog={true}
+                                    requireCommentOnReject={true}
+                                    approveDialogTitle="审核通过确认"
+                                    rejectDialogTitle="驳回通过原因"
+                                    onSuccess={(approved, comment) => handleApproval(approved, comment)}
+                                    approveButtonText="通过"
+                                    rejectButtonText="驳回通过"
+                                    showRevokeApprovalButton={true}
+                                />
+                            ) : null}
+                        </div>
+                    )}
                     <div className="flex-1 overflow-hidden overflow-y-auto">
                         <ScrollArea className="h-full w-full pr-4">
-                            <div className="space-y-6 py-4">
+                            <div className="space-y-6 py-2">
                                 {/* 基本信息网格 */}
                                 <DetailSection title="基本信息" icon={BookOpen}>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -376,43 +375,9 @@ const OutputDetailDialog = ({
                                             value={currentOutput.title}
                                             icon={getOutputTypeIconComponent(currentOutput.type)}
                                         />
-                                        <InfoCard
-                                            title="提交时间"
-                                            value={formatDateTime(currentOutput.createdAt)}
-                                            icon={Calendar}
-                                        />
-
-                                        {currentOutput.approvedAt && (
-                                            <InfoCard
-                                                title="审核时间"
-                                                value={formatDateTime(currentOutput.approvedAt)}
-                                                icon={Calendar}
-                                            />
-                                        )}
-
-                                        {currentOutput.submitter && (
-                                            <InfoCard
-                                                title="提交人"
-                                                value={currentOutput.submitter.realName || currentOutput.submitter.phone}
-                                                icon={User}
-                                            />
-                                        )}
-
-                                        {currentOutput.outputNumber && (
-                                            <InfoCard
-                                                icon={Hash}
-                                                title={
-                                                    currentOutput.type === 'PROJECT' ? '项目编号/课题编号' :
-                                                        currentOutput.type === 'PUBLICATION' ? '出版物编号' :
-                                                            (currentOutput.type === 'INVENTION_PATENT' || currentOutput.type === 'UTILITY_PATENT') ? '专利识别号' :
-                                                                currentOutput.type === 'SOFTWARE_COPYRIGHT' ? '登记号' : '编号'
-                                                }
-                                                value={currentOutput.outputNumber}
-                                            />
-                                        )}
-
                                         {currentOutput.dataset && (
                                             <InfoCard
+                                                className={"col-span-1 md:col-span-2"}
                                                 title="关联数据集"
                                                 icon={Database}
                                                 value={
@@ -428,6 +393,41 @@ const OutputDetailDialog = ({
                                                 }
                                             />
                                         )}
+
+                                        {currentOutput.outputNumber && (
+                                            <InfoCard
+                                                icon={Hash}
+                                                title={
+                                                    currentOutput.type === 'PROJECT' ? '项目编号/课题编号' :
+                                                        currentOutput.type === 'PUBLICATION' ? '出版物编号' :
+                                                            (currentOutput.type === 'INVENTION_PATENT' || currentOutput.type === 'UTILITY_PATENT') ? '专利识别号' :
+                                                                currentOutput.type === 'SOFTWARE_COPYRIGHT' ? '登记号' : '编号'
+                                                }
+                                                value={currentOutput.outputNumber}
+                                            />
+                                        )}
+                                        {currentOutput.submitter && (
+                                            <InfoCard
+                                                title="提交人"
+                                                value={currentOutput.submitter.realName || currentOutput.submitter.phone}
+                                                icon={User}
+                                            />
+                                        )}
+                                        <InfoCard
+                                            title="提交时间"
+                                            value={formatDateTime(currentOutput.createdAt)}
+                                            icon={Calendar}
+                                        />
+
+                                        {currentOutput.approvedAt && (
+                                            <InfoCard
+                                                title="审核时间"
+                                                value={formatDateTime(currentOutput.approvedAt)}
+                                                icon={Calendar}
+                                            />
+                                        )}
+
+
                                     </div>
                                 </DetailSection>
 
@@ -637,15 +637,6 @@ const OutputDetailDialog = ({
                                 )}
                             </div>
                         </ScrollArea>
-                    </div>
-
-                    <div className="flex justify-end gap-3 pt-4 border-t mt-4">
-                        <Button
-                            onClick={() => onOpenChange(false)}
-                            variant="outline"
-                        >
-                            关闭
-                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>

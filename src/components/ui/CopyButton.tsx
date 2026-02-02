@@ -11,7 +11,7 @@ interface CopyButtonProps {
   title?: string;
   description?: string;
   variant?: "default" | "outline" | "ghost" | "secondary";
-  size?: "default" | "sm" | "lg" | "icon";
+  size?: "default" | "xs" | "sm" | "lg" | "icon";
   className?: string;
   children?: React.ReactNode;
 }
@@ -21,11 +21,11 @@ export function CopyButton({
   title = "复制内容", 
   description = "点击下方文本框复制内容", 
   variant = "outline", 
-  size = "sm",
+  size = "default",
   className,
   children
 }: CopyButtonProps) {
-  const { copy, isSupported, copied } = useClipboard({ copiedTimeout: 1000 });
+  const { copy, isSupported, copied } = useClipboard({ copiedTimeout: 3000 });
   const [showFallback, setShowFallback] = useState(false);
 
   const handleCopy = () => {
@@ -59,16 +59,13 @@ export function CopyButton({
       >
         {copied ? (
           <>
-            <Check className="h-4 w-4 mr-2" />
+            <Check className="h-4 w-4" />
             已复制
           </>
         ) : (
           <>
             {children || (
-              <>
-                <Copy className="h-4 w-4 mr-2" />
-                复制
-              </>
+                <Copy className="h-4 w-4" />
             )}
           </>
         )}

@@ -315,7 +315,7 @@ const ApplyDialog = ({ open, onOpenChange, datasetId, onSubmitted }: ApplyDialog
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent 
-                className="sm:max-w-[425px] md:max-w-[500px] lg:max-w-[700px] max-h-[85vh] min-h-[20vh] overflow-hidden flex flex-col"
+                className="max-w-3xl max-h-[85vh] min-h-[20vh] overflow-hidden flex flex-col"
                 onInteractOutside={(e) => e.preventDefault()}
             >
                 <DialogHeader>

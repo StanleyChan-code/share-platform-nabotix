@@ -24,7 +24,7 @@ const FileUploader = forwardRef<FileUploaderHandles, FileUploaderProps>(({
                                                                              onUploadComplete,
                                                                              onResetComplete,
                                                                              maxSize = 10 * 1024 * 1024 * 1024,
-                                                                             chunkSize = 20 * 1024 * 1024,
+                                                                             chunkSize = 5 * 1024 * 1024,
                                                                              acceptedFileTypes = [],
                                                                              allowAllFileTypes = false,
                                                                              maxConcurrentUploads = 5,

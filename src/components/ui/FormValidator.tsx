@@ -335,7 +335,7 @@ export const FormValidator: React.FC<FormValidatorProps> = ({
                 if (!isValid) {
                     allValid = false;
                     const errorMessage = ref.current.getValidationError ?
-                        ref.current.getValidationError() : '此字段为必填项';
+                        ref.current.getValidationError() : '此内容为必填项';
                     newErrors.push({
                         fieldName: ref.current.name || ref.current.id || 'unknown',
                         message: errorMessage,
@@ -829,7 +829,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         // 默认错误消息
         const getDefaultErrorMessage = (): string => {
             if (errorMessage) return errorMessage;
-            return required ? '此字段为必填项' : '请填写正确的信息';
+            return required ? '此内容为必填项' : '请填写正确的信息';
         };
 
         // 简化验证函数

@@ -130,11 +130,13 @@ export function InstitutionSelector({
             className="w-full justify-between"
             disabled={disabled}
           >
-            <div className="flex items-center gap-2">
-                <Building className="h-4 w-4 text-gray-500" />
-                {value && value.length > 0 
-                  ? (allowMultiple ? `${value.length} 个机构已选择` : selectedInstitutions[0]?.fullName)
-                  : placeholder}
+            <div className="flex items-center gap-2 overflow-hidden">
+                <Building className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                <span className="truncate">
+                  {value && value.length > 0 
+                    ? (allowMultiple ? `${value.length} 个机构已选择` : selectedInstitutions[0]?.fullName)
+                    : placeholder}
+                </span>
               </div>
             <div className="flex items-center gap-2">
               {value && value.length > 0 && !disabled && (
@@ -198,7 +200,7 @@ export function InstitutionSelector({
                           </Badge>
                         )}
                       </div>
-                      {institution.contactPerson && (
+                      {disableUnverified && institution.contactPerson && (
                         <div className="flex items-center mt-2 text-xs text-gray-600">
                           <span className="mr-4">联系人: {institution.contactPerson}</span>
                           {institution.contactPhone && (
@@ -219,11 +221,11 @@ export function InstitutionSelector({
       {value && value.length > 0 && allowMultiple && (
         <div className="flex flex-wrap gap-2">
           {selectedInstitutions.map((institution) => (
-            <Badge key={institution.id} variant="secondary" className="gap-1 text-sm">
-              {institution.fullName}
+            <Badge key={institution.id} variant="secondary" className="gap-1 text-sm whitespace-nowrap overflow-hidden">
+              <span className="truncate">{institution.fullName}</span>
               {!disabled && (
                 <X
-                  className="h-3 w-3 cursor-pointer"
+                  className="h-3 w-3 cursor-pointer flex-shrink-0"
                   onClick={() => removeInstitution(institution.id)}
                 />
               )}

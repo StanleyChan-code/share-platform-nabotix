@@ -13,18 +13,18 @@ const DatasetInfoDisplay: React.FC<DatasetInfoDisplayProps> = ({
     title = "数据集信息"
 }) => {
     return (
-        <div className="border rounded-lg p-4 bg-muted/50">
-            <h3 className="font-semibold text-lg mb-4">{title}</h3>
-            
+        <div className="border rounded-lg p-4 bg-muted/50 my-2">
+            <h3 className="font-semibold text-lg mb-3">{title}</h3>
+
+            <div className={"mb-3"}>
+                <span className="text-xs font-medium text-muted-foreground block mb-1">标题</span>
+                <div className="text-sm font-medium truncate whitespace-pre-wrap break-all" title={dataset.titleCn}>
+                    {dataset.titleCn}
+                </div>
+            </div>
             {/* 基本信息网格 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-3">
-                    <div>
-                        <span className="text-xs font-medium text-muted-foreground block mb-1">标题</span>
-                        <div className="text-sm font-medium truncate whitespace-pre-wrap break-all" title={dataset.titleCn}>
-                            {dataset.titleCn}
-                        </div>
-                    </div>
                     
                     <div>
                         <span className="text-xs font-medium text-muted-foreground block mb-1">类型</span>
@@ -50,6 +50,19 @@ const DatasetInfoDisplay: React.FC<DatasetInfoDisplayProps> = ({
                     <div>
                         <span className="text-xs font-medium text-muted-foreground block mb-1">发布时间</span>
                         <div className="text-sm">{formatDate(dataset.firstPublishedDate)}</div>
+                    </div>
+
+                    <div>
+                        <span className="text-xs font-medium text-muted-foreground block mb-1">关键词</span>
+                        {/* 关键词标签 */}
+                        {dataset.keywords && dataset.keywords.length > 0 && (
+                            <div className="flex flex-wrap gap-1 ml-1">
+                                {dataset.keywords.map((keyword, index) => (
+                                    <span key={index} className="px-1.5 py-1.25 bg-gray-200 text-gray-700 rounded-full text-xs"
+                                    >{keyword}</span>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
                 
@@ -92,19 +105,6 @@ const DatasetInfoDisplay: React.FC<DatasetInfoDisplayProps> = ({
                 </div>
             </div>
 
-            {/* 关键词 */}
-            <div>
-                <span className="text-xs font-medium text-muted-foreground block mb-1">关键词</span>
-                {/* 关键词标签 */}
-                {dataset.keywords && dataset.keywords.length > 0 && (
-                    <div className="flex flex-wrap gap-1 ml-1">
-                        {dataset.keywords.map((keyword, index) => (
-                            <span key={index} className="px-1.5 py-1.25 bg-gray-200 text-gray-700 rounded-full text-xs"
-                            >{keyword}</span>
-                        ))}
-                    </div>
-                )}
-            </div>
         </div>
     );
 };

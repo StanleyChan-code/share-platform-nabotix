@@ -11,6 +11,7 @@ import UserInfoDialog from '@/components/admin/user/UserInfoDialog.tsx';
 import { userApi } from '@/integrations/api/userApi.ts';
 import { toast } from '@/components/ui/use-toast.ts';
 import { institutionApi } from '@/integrations/api/institutionApi.ts';
+import {CopyButton} from "@/components/ui/CopyButton.tsx";
 
 interface AuditLogDetailDialogProps {
   open: boolean;
@@ -49,18 +50,10 @@ const InfoCard = ({ label, value, icon, isMonospace = false, copyable = false, o
             {label}
           </label>
           <div className="flex items-center gap-1">
-            {copyable && typeof value === 'string' && (
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCopy();
-                    }}
-                >
-                  {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
-                </Button>
+            {copyable && (
+                <CopyButton
+                    size={"xs"} variant={"ghost"}
+                    text={value.toLocaleString()} className="absolute right-2 top-2" />
             )}
           </div>
         </div>
@@ -294,24 +287,12 @@ const AuditLogDetailDialog: React.FC<AuditLogDetailDialogProps> = ({
                           <div className="bg-slate-50 dark:bg-slate-900/50 border rounded-lg overflow-hidden cursor-help">
                             <div className="flex items-center justify-between px-4 py-2 bg-muted/50 border-b">
                               <label className="text-sm font-medium">JSON 参数数据</label>
-                              <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 text-xs"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigator.clipboard.writeText(JSON.stringify(auditLog.additionalParams, null, 2));
-                                  }}
-                              >
-                                <Copy className="h-3 w-3 mr-1" />
-                                复制
-                              </Button>
+                              <CopyButton variant={"ghost"} size={"xs"}
+                                  text={JSON.stringify(auditLog.additionalParams, null, 2)} />
                             </div>
-                            <ScrollArea className="max-h-[300px]">
-                          <pre className="p-4 text-xs whitespace-pre-wrap break-all font-mono truncate">
-                            {JSON.stringify(auditLog.additionalParams, null, 2)}
-                          </pre>
-                            </ScrollArea>
+                              <pre className="p-4 text-xs whitespace-pre-wrap break-all font-mono truncate">
+                                {JSON.stringify(auditLog.additionalParams, null, 2)}
+                              </pre>
                           </div>
                         </TooltipTrigger>
                       </Tooltip>
@@ -327,12 +308,6 @@ const AuditLogDetailDialog: React.FC<AuditLogDetailDialogProps> = ({
           </ScrollArea>
           </div>
 
-          {/* 底部按钮 */}
-          <div className="p-6 pt-4 border-t bg-muted/10 flex justify-end">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              关闭
-            </Button>
-          </div>
         </DialogContent>
 
         {/* 用户信息对话框 */}

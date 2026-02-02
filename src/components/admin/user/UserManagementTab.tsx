@@ -37,6 +37,16 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog.tsx";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog.tsx";
 import AddUserToInstitutionForm from "@/components/admin/user/AddUserToInstitutionForm.tsx";
 
 import ReactPaginate from "react-paginate";
@@ -69,6 +79,15 @@ const UserManagementTab = () => {
     const [searchValue, setSearchValue] = useState(""); // 搜索值
     // 存储机构信息的状态
     const [institutionMap, setInstitutionMap] = useState<Record<string, { fullName: string }>>({});
+    // 确认对话框状态
+    const [confirmDialog, setConfirmDialog] = useState({
+        open: false,
+        title: "",
+        description: "",
+        actionText: "",
+        onConfirm: () => {},
+        variant: "default" as "default" | "destructive"
+    });
     const {toast} = useToast();
 
 
@@ -288,7 +307,7 @@ const UserManagementTab = () => {
     useEffect(() => {
         performSearch(0); // 搜索条件变化时回到第一页
         setCurrentPage(0);
-    }, [debouncedSearchValue, selectedInstitutionId]);
+    }, [debouncedSearchValue, selectedInstitutionId, pageSize]);
 
     // 全局刷新事件监听
     useEffect(() => {
@@ -387,6 +406,18 @@ const UserManagementTab = () => {
                 variant: "destructive"
             });
         }
+    };
+
+    // 打开确认对话框以切换用户启用状态
+    const openToggleUserStatusDialog = (userId: string, userName: string, currentStatus: boolean, newStatus: boolean) => {
+        setConfirmDialog({
+            open: true,
+            title: "确认修改用户状态",
+            description: `确定要将用户 "<strong>${userName}</strong>" 的状态从 "${currentStatus ? '启用' : '禁用'}" 修改为 "${newStatus ? '启用' : '禁用'}" 吗？`,
+            actionText: "确认修改",
+            onConfirm: () => handleUpdateUserDisabled(userId, !newStatus),
+            variant: "default"
+        });
     };
 
     // 处理页面更改
@@ -500,14 +531,14 @@ const UserManagementTab = () => {
                                 新增用户
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-5xl" onInteractOutside={(e) => e.preventDefault()}>
+                        <DialogContent className="max-w-3xl" onInteractOutside={(e) => e.preventDefault()}>
                             <DialogHeader>
                                 <DialogTitle>新增用户到机构</DialogTitle>
                             </DialogHeader>
                             <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
                                 <div className="flex items-center gap-1">
                                     <Asterisk className="h-3 w-3 text-red-500"/>
-                                    <span>标记的字段为必填项</span>
+                                    <span>标记的内容为必填项</span>
                                 </div>
                             </div>
                             <div className="flex-1 overflow-hidden overflow-y-auto">
@@ -625,7 +656,7 @@ const UserManagementTab = () => {
                                                 <div className="flex items-center gap-2">
                                                     <Switch
                                                         checked={!user.disabled}
-                                                        onCheckedChange={(checked) => handleUpdateUserDisabled(user.id, !checked)}
+                                                        onCheckedChange={(checked) => openToggleUserStatusDialog(user.id, user.realName, !user.disabled, checked)}
                                                         disabled={!canManageUser}
                                                     />
                                                 </div>
@@ -763,6 +794,28 @@ const UserManagementTab = () => {
                     />
                 </>
             )}
+
+            {/* 确认对话框 */}
+            <AlertDialog open={confirmDialog.open} onOpenChange={(open) => !open && setConfirmDialog(prev => ({...prev, open}))}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle dangerouslySetInnerHTML={{ __html: confirmDialog.title }} />
+                        <AlertDialogDescription dangerouslySetInnerHTML={{ __html: confirmDialog.description }} />
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>取消</AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={() => {
+                                confirmDialog.onConfirm();
+                                setConfirmDialog(prev => ({...prev, open: false}));
+                            }}
+                            className={confirmDialog.variant === "destructive" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+                        >
+                            {confirmDialog.actionText}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };

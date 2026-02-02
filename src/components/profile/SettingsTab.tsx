@@ -112,7 +112,7 @@ const SettingsTab = ({ user }: SettingsTabProps) => {
 
       toast({
         title: "密码修改成功",
-        description: "您的密码已成功修改，请使用新密码登录",
+        description: "您的密码已成功修改。",
       });
 
       setIsResetPasswordDialogOpen(false);
@@ -164,7 +164,7 @@ const SettingsTab = ({ user }: SettingsTabProps) => {
                     修改密码
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]" onInteractOutside={(e) => e.preventDefault()}>
+                <DialogContent className="max-w-xl" onInteractOutside={(e) => e.preventDefault()}>
                   <DialogHeader>
                     <DialogTitle>修改密码</DialogTitle>
                     <DialogDescription>
@@ -211,7 +211,7 @@ const SettingsTab = ({ user }: SettingsTabProps) => {
 
                       {/* 验证码 */}
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="code" className="text-right flex items-center gap-1">
+                        <Label htmlFor="code" className="flex justify-end gap-1">
                           验证码 <Asterisk className="h-3 w-3 text-red-500" />
                         </Label>
                         <Input
@@ -229,7 +229,7 @@ const SettingsTab = ({ user }: SettingsTabProps) => {
 
                       {/* 新密码 */}
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="new-password" className="text-right flex items-center gap-1">
+                        <Label htmlFor="new-password" className="justify-end flex gap-1">
                           新密码 <Asterisk className="h-3 w-3 text-red-500" />
                         </Label>
                         <Input
@@ -249,7 +249,7 @@ const SettingsTab = ({ user }: SettingsTabProps) => {
 
                       {/* 确认密码 */}
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="confirm-password" className="text-right flex items-center gap-1">
+                        <Label htmlFor="confirm-password" className="justify-end flex gap-1">
                           确认密码 <Asterisk className="h-3 w-3 text-red-500" />
                         </Label>
                         <Input

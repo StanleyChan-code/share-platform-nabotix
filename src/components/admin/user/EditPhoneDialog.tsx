@@ -123,7 +123,11 @@ const EditPhoneDialog = ({
                 <FormItem>
                   <FormLabel>新手机号</FormLabel>
                   <FormControl>
-                    <Input {...field} type="tel" placeholder="请输入新手机号" validationType="phone" />
+                    <Input {...field}
+                           type="tel"
+                           maxLength={11}
+                           placeholder="请输入新手机号"
+                           validationType="phone" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

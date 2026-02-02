@@ -302,7 +302,7 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
   return (
       <>
         <div className="space-y-6">
-          <FormValidator onSubmit={handleSubmit} className="space-y-6 ml-2">
+          <FormValidator onSubmit={handleSubmit} className="space-y-6 mx-2">
             {/* 版本信息 */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -314,7 +314,6 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                 <Label htmlFor="versionNumber" className="flex items-center gap-1">
                   版本号 <Asterisk className="h-3 w-3 text-red-500" />
                 </Label>
-                <p className="text-xs text-muted-foreground">数据集的版本标识，如2.0、2.1等</p>
                 <Input
                     id="versionNumber"
                     name="versionNumber"
@@ -332,14 +331,13 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                 <Label htmlFor="versionDescription" className="flex items-center gap-1">
                   版本描述 <Asterisk className="h-3 w-3 text-red-500" />
                 </Label>
-                <p className="text-xs text-muted-foreground">简要描述此版本的主要更新内容</p>
                 <Textarea
                     id="versionDescription"
                     name="versionDescription"
                     rows={3}
                     value={formData.versionDescription}
                     onChange={handleInputChange}
-                    placeholder="描述此版本的主要变更内容"
+                    placeholder="简要描述此版本的主要更新内容"
                     maxLength={500}
                     required
                     validationType="custom"
@@ -350,10 +348,27 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
 
             {/* 文件上传 */}
             <div className="space-y-4 border-t pt-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <File className="h-5 w-5" />
-                文件上传
-              </h3>
+              <div className={"flex justify-between items-center"}>
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <File className="h-5 w-5" />
+                  文件上传
+                </h3>
+                <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleAnalyzeData}
+                    disabled={!dataFileInfo || !dictFileInfo || uploading || analyzing}
+                >
+                  {analyzing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        分析中...
+                      </>
+                  ) : (
+                      '分析数据'
+                  )}
+                </Button>
+              </div>
 
               <div className="grid grid-cols-1 gap-6">
                 <div className="space-y-4">
@@ -437,23 +452,6 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
             </div>
 
             <div className="flex justify-end gap-4 pt-6 border-t">
-              {dataFileInfo && dictFileInfo && (
-                  <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={handleAnalyzeData}
-                      disabled={uploading || analyzing}
-                  >
-                    {analyzing ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          分析中...
-                        </>
-                    ) : (
-                        '分析数据'
-                    )}
-                  </Button>
-              )}
               <Button
                   type="button"
                   variant="outline"
@@ -521,15 +519,6 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
               </ScrollArea>
             </div>
 
-            <DialogFooter className="pt-4">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setShowStatisticsModal(false)}
-              >
-                关闭
-              </Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
       </>

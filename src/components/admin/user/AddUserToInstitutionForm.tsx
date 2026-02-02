@@ -148,7 +148,7 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
       if (missingFields.length > 0) {
         toast({
           title: "错误",
-          description: `请填写以下必填字段：${missingFields.map(item => item.label).join('、')}`,
+          description: `请填写以下必填信息：${missingFields.map(item => item.label).join('、')}`,
           variant: "destructive",
         });
         setLoading(false);
@@ -443,7 +443,7 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
                       </p>
                   )}
                   <p className="text-xs text-blue-600">
-                    <strong>提示：</strong>如果不选择任何角色，用户将只有基础访问权限。
+                    <strong>提示：</strong>如果不选择任何角色，用户的访问权限将与普通用户相同。
                   </p>
                 </div>
 
@@ -497,24 +497,11 @@ const AddUserToInstitutionForm = ({ institutionId: propInstitutionId, onUserAdde
                     );
                   })}
                 </div>
-
-                {selectedRoles.length > 0 && (
-                    <div className="mt-4 p-3 bg-blue-100 rounded">
-                      <p className="text-sm font-medium text-blue-800">已选择的角色：</p>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {selectedRoles.map(role => (
-                            <span key={role} className="px-2 py-1 bg-blue-200 text-blue-800 text-xs rounded-full">
-                        {getPermissionRoleDisplayName(role)}
-                      </span>
-                        ))}
-                      </div>
-                    </div>
-                )}
               </div>
 
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t">
                 <div className="text-xs text-muted-foreground space-y-1">
-                  <div>必填字段：姓名、手机号、证件类型、证件号码{isPlatformAdmin && '、所属机构'}</div>
+                  <div>必填信息：姓名、手机号、证件类型、证件号码{isPlatformAdmin && '、所属机构'}</div>
                   <div>创建账号后须使用手机验证码登录，登录后修改密码后才可以使用密码登录。</div>
                 </div>
                 <div className="flex gap-2">

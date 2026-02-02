@@ -382,28 +382,28 @@ export default function AuditLogsTab() {
                   Array.from({ length: pagination.size }).map((_, index) => (
                     <TableRow key={`skeleton-${index}`}>
                       <TableCell>
-                        <Skeleton className="h-8 w-32" />
+                        <Skeleton className="h-6 w-32" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-8 w-20" />
+                        <Skeleton className="h-6 w-20" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-8 w-24" />
+                        <Skeleton className="h-6 w-24" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-8 w-24 rounded-full" />
+                        <Skeleton className="h-6 w-24 rounded-full" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-8 w-40" />
+                        <Skeleton className="h-6 w-40" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-8 w-28" />
+                        <Skeleton className="h-6 w-28" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-8 w-16 rounded-md" />
+                        <Skeleton className="h-6 w-16 rounded-md" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-8 w-16 rounded-md" />
+                        <Skeleton className="h-6 w-16 rounded-md" />
                       </TableCell>
                     </TableRow>
                   ))
@@ -415,7 +415,10 @@ export default function AuditLogsTab() {
                   </TableRow>
                 ) : (
                   auditLogs.map((log) => (
-                    <TableRow key={log.id}>
+                    <TableRow key={log.id} onDoubleClick={( e) => {
+                      setCurrentAuditLog(log);
+                      setDetailDialogOpen(true);
+                    }}>
                       <TableCell className={'font-mono text-sm whitespace-nowrap'}>{formatDateTime(log.createdAt)}</TableCell>
                       <TableCell
                           title={log.operatorId}
@@ -446,9 +449,9 @@ export default function AuditLogsTab() {
                       </TableCell>
                       <TableCell>
                         <Button 
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
-                          className="h-8"
+                          className="h-6"
                           onClick={() => {
                             setCurrentAuditLog(log);
                             setDetailDialogOpen(true);

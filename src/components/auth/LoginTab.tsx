@@ -250,7 +250,7 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
       } else if (apiError.response?.status === 401) {
         errorMessage = "手机号或密码错误";
       } else if (apiError.response?.status === 403) {
-        errorMessage = "账号已被禁用，请联系管理员";
+        errorMessage = "暂时无法登录，请联系管理员";
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }

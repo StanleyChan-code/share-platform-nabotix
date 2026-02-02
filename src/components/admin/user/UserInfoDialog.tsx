@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import {
-    Dialog as InfoDialog,
+    Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { formatDateTime } from '@/lib/utils';
 import { getPermissionRoleDisplayName } from '@/lib/permissionUtils';
 import { ID_TYPES, EducationLevels } from '@/lib/enums';
@@ -14,6 +13,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { userApi } from '@/integrations/api/userApi';
 import { institutionApi } from '@/integrations/api/institutionApi';
 import { useToast } from '@/hooks/use-toast';
+import {ScrollArea} from "@/components/ui/scroll-area.tsx";
+import {User} from "lucide-react";
 
 // 定义组件属性接口
 interface UserInfoDialogProps {
@@ -242,34 +243,25 @@ const UserInfoDialog: React.FC<UserInfoDialogProps> = ({
     ));
 
     return (
-        <InfoDialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
-                className="max-w-3xl max-h-[90vh] overflow-y-auto bg-background border-border shadow-2xl rounded-2xl"
+                className="max-w-3xl max-h-[90vh] bg-background border-border shadow-2xl rounded-2xl"
             >
                 <DialogHeader className="pb-4 border-b border-border">
-                    <DialogTitle className="text-2xl font-bold text-foreground flex items-center">
-                        <div className="w-2 h-6 bg-gradient-to-br from-primary to-primary/60 rounded-lg mr-3"></div>
+                    <DialogTitle className="text-xl font-bold text-foreground flex items-center">
+                        <User className={"w-5 h-5 mr-2"} />
                         用户详细信息
                     </DialogTitle>
-                    <p className="text-muted-foreground mt-1">
-                        查看用户的完整信息和权限配置
-                    </p>
                 </DialogHeader>
 
-                {userInfoContent}
-
-                {/* 底部操作按钮 */}
-                <div className="flex justify-end p-6 pt-4 border-t border-border bg-muted/10 rounded-b-2xl">
-                    <Button
-                        variant="outline"
-                        onClick={() => onOpenChange(false)}
-                        className="px-6"
-                    >
-                        关闭
-                    </Button>
+                <div className="flex-1 overflow-hidden overflow-y-auto max-h-[70vh]">
+                    <ScrollArea className="h-full w-full px-8">
+                        {userInfoContent}
+                    </ScrollArea>
                 </div>
+
             </DialogContent>
-        </InfoDialog>
+        </Dialog>
     );
 };
 

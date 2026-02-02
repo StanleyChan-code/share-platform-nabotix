@@ -299,7 +299,7 @@ export function VersionsTab({
                                     添加新版本
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col"
+                            <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
                                            onInteractOutside={(e) => e.preventDefault()}
                             >
                                 <DialogHeader>
@@ -309,7 +309,7 @@ export function VersionsTab({
                                     </DialogTitle>
                                 </DialogHeader>
                                 <div className="flex-1 overflow-hidden overflow-y-auto">
-                                    <ScrollArea className="h-full w-full pr-4 py-2">
+                                    <ScrollArea className="h-full w-full pr-2 py-2">
                                         <AddDatasetVersionForm
                                             datasetId={datasetId}
                                             onSuccess={handleVersionAdded}

@@ -64,7 +64,7 @@ export function DatasetFilters({
                 )}
             </div>
 
-            <div className="relative min-w-[150px]">
+            <div className="relative w-[250px]">
                 <InstitutionSelector
                     value={selectedInstitution}
                     onChange={onSelectedInstitutionChange}

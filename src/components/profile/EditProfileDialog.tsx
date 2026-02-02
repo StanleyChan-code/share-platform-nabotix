@@ -107,7 +107,7 @@ const EditProfileDialog = ({ open, onOpenChange, userProfile, onUpdateSuccess }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>编辑个人信息</DialogTitle>
           <DialogDescription>

@@ -228,7 +228,7 @@ const EditOutputDialog = ({open, onOpenChange, output, onEdit}: EditOutputDialog
         if (!editedOutput.datasetId || !editedOutput.type) {
             toast({
                 title: "提交失败",
-                description: "请填写所有必填字段",
+                description: "请填写所有必填内容",
                 variant: "destructive"
             });
             return;
@@ -385,7 +385,7 @@ const EditOutputDialog = ({open, onOpenChange, output, onEdit}: EditOutputDialog
             }
         }}>
             <DialogContent
-                className="sm:max-w-[500px] md:max-w-[600px] lg:max-w-[700px] max-h-[85vh] overflow-hidden flex flex-col"
+                className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col"
                 onInteractOutside={(e) => e.preventDefault()}
             >
                 <DialogHeader>

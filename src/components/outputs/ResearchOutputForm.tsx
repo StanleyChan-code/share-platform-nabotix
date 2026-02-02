@@ -199,7 +199,7 @@ const ResearchOutputForm = ({
                         {isLoadingPubmed ? (
                             <Loader2 className="h-5 w-5 animate-spin" />
                         ) : (
-                            "搜索"
+                            "查找"
                         )}
                     </Button>
                 </div>

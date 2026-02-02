@@ -223,22 +223,22 @@ const EditUserDialog = ({open, onOpenChange, user, onUserUpdated}: EditUserDialo
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
-                className="max-w-2xl max-h-[90vh] flex flex-col"
+                className="max-w-3xl max-h-[90vh] flex flex-col"
                 onInteractOutside={(e) => e.preventDefault()}
             >
-                <DialogHeader className="pb-4">
+                <DialogHeader>
                     <DialogTitle className="text-xl font-bold flex items-center gap-2">
                         <User className="h-5 w-5"/>
-                        编辑用户信息
+                        编辑用户基础信息
                     </DialogTitle>
                     <div className="space-y-2">
                         <p className="text-sm text-muted-foreground">
-                            请完善用户信息，确保必填字段准确无误
+                            请完善用户信息，确保内容准确无误
                         </p>
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
                             <div className="flex items-center gap-1">
                                 <Asterisk className="h-3 w-3 text-red-500"/>
-                                <span>标记的字段为必填项</span>
+                                <span>标记的内容为必填项</span>
                             </div>
                             <div className="w-px h-3 bg-border"></div>
                             <span>用户名和邮箱为选填项</span>

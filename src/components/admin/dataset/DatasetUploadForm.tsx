@@ -817,7 +817,7 @@ export function DatasetUploadForm({onSuccess}: DatasetUploadFormProps) {
                                         <Label htmlFor="versionNumber" className="flex items-center gap-1">
                                             版本号 <Asterisk className="h-3 w-3 text-red-500"/>
                                         </Label>
-                                        <p className="text-xs text-muted-foreground">数据集的版本标识，如1.0、2.1等</p>
+                                        <p className="text-xs text-muted-foreground">数据集的版本标识，如1.0, 2.1等</p>
                                         <Input
                                             id="versionNumber"
                                             name="versionNumber"
@@ -1184,10 +1184,28 @@ export function DatasetUploadForm({onSuccess}: DatasetUploadFormProps) {
 
                         {/* 文件上传 */}
                         <div className="space-y-4">
-                            <h3 className="text-lg font-semibold flex items-center gap-2">
-                                <File className="h-5 w-5"/>
-                                文件上传
-                            </h3>
+                            <div className="flex justify-between">
+                                <h3 className="text-lg font-semibold flex items-center gap-2">
+                                    <File className="h-5 w-5"/>
+                                    文件上传
+                                </h3>
+
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        onClick={handleAnalyzeData}
+                                        disabled={!dataFileInfo || !dictFileInfo || uploading || analyzing}
+                                    >
+                                        {analyzing ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin"/>
+                                                分析中...
+                                            </>
+                                        ) : (
+                                            '分析数据'
+                                        )}
+                                    </Button>
+                            </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 <div className="space-y-2 pt-2 border-t">
@@ -1211,23 +1229,6 @@ export function DatasetUploadForm({onSuccess}: DatasetUploadFormProps) {
 
                                 <div className="space-y-2 pt-2 border-t">
                                     <Label className="flex items-center gap-1">
-                                        数据分享文件 <Asterisk className="h-3 w-3 text-red-500"/>
-                                    </Label>
-                                    <p className="text-xs text-muted-foreground">
-                                        支持 CSV、Excel 格式，最大 500MB。用户申请后可下载的文件。
-                                    </p>
-                                    <FileUploader
-                                        ref={sharingFileRef}
-                                        onUploadComplete={handleSharingFileUpload}
-                                        onResetComplete={handleSharingFileReset}
-                                        maxSize={500 * 1024 * 1024}
-                                        acceptedFileTypes={['.csv', '.xlsx', '.xls']}
-                                        required
-                                    />
-                                </div>
-
-                                <div className="space-y-2 pt-2 border-t">
-                                    <Label className="flex items-center gap-1">
                                         数据字典文件 <Asterisk className="h-3 w-3 text-red-500"/>
                                     </Label>
                                     <p className="text-xs text-muted-foreground">
@@ -1241,6 +1242,23 @@ export function DatasetUploadForm({onSuccess}: DatasetUploadFormProps) {
                                         acceptedFileTypes={['.csv', '.xlsx', '.xls']}
                                         templateFile="data_dictionary.xlsx"
                                         templateLabel="数据字典模板"
+                                        required
+                                    />
+                                </div>
+
+                                <div className="space-y-2 pt-2 border-t">
+                                    <Label className="flex items-center gap-1">
+                                        数据分享文件 <Asterisk className="h-3 w-3 text-red-500"/>
+                                    </Label>
+                                    <p className="text-xs text-muted-foreground">
+                                        支持 CSV、Excel 格式，最大 500MB。用户申请后可下载的文件。
+                                    </p>
+                                    <FileUploader
+                                        ref={sharingFileRef}
+                                        onUploadComplete={handleSharingFileUpload}
+                                        onResetComplete={handleSharingFileReset}
+                                        maxSize={500 * 1024 * 1024}
+                                        acceptedFileTypes={['.csv', '.xlsx', '.xls']}
                                         required
                                     />
                                 </div>
@@ -1345,23 +1363,6 @@ export function DatasetUploadForm({onSuccess}: DatasetUploadFormProps) {
                         </div>
 
                         <div className="flex justify-end gap-4 pt-6 border-t">
-                            {dataFileInfo && dictFileInfo && (
-                                <Button
-                                    type="button"
-                                    variant="secondary"
-                                    onClick={handleAnalyzeData}
-                                    disabled={uploading || analyzing}
-                                >
-                                    {analyzing ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin"/>
-                                            分析中...
-                                        </>
-                                    ) : (
-                                        '分析数据'
-                                    )}
-                                </Button>
-                            )}
                             <Button
                                 type="button"
                                 variant="outline"
@@ -1427,16 +1428,6 @@ export function DatasetUploadForm({onSuccess}: DatasetUploadFormProps) {
                             />
                         </ScrollArea>
                     </div>
-
-                    <DialogFooter className="pt-4">
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => setShowStatisticsModal(false)}
-                        >
-                            关闭
-                        </Button>
-                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </>

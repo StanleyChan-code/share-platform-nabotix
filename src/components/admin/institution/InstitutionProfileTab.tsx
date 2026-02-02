@@ -413,7 +413,7 @@ const InstitutionProfileTab = ({ institutionId, onInstitutionUpdated }: Institut
                 <div className="text-xs text-muted-foreground space-y-1">
                   <div className="flex items-center gap-1">
                     <Asterisk className="h-3 w-3 text-red-500" />
-                    <span>标记的字段为必填项</span>
+                    <span>标记的内容为必填项</span>
                   </div>
                   <div>修改后请确保信息的准确性</div>
                 </div>

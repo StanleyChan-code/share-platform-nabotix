@@ -279,11 +279,11 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
     return (
         <>
             <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+                <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <FileText className="h-5 w-5"/>
-                            <span>申请详情 - {application.projectTitle}</span>
+                            <span className={" line-clamp-1 max-w-[90%]"}>申请详情 - {application.projectTitle}</span>
                         </DialogTitle>
                     </DialogHeader>
 
@@ -425,12 +425,6 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
                                     </div>
                                 </TabsContent>
                             </Tabs>
-
-                            <div className="flex justify-end gap-2 pt-4 border-t mt-4">
-                                <Button variant="outline" onClick={() => onOpenChange(false)}>
-                                    关闭
-                                </Button>
-                            </div>
                         </ScrollArea>
                     </div>
                 </DialogContent>
