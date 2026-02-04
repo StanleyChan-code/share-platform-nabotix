@@ -204,7 +204,7 @@ export function DatasetTreeView({datasets, onDatasetClick}: DatasetTreeViewProps
                                             {dataset.titleCn}
                                         </h3>
 
-                                        {/* 研究领域和采样方法 */}
+                                        {/* 研究领域和抽样方法 */}
                                         <div className="flex items-center gap-3 mb-2">
                                             {dataset.subjectArea?.name && (
                                                 <div className="flex items-center gap-1 text-sm text-green-600">
@@ -215,7 +215,7 @@ export function DatasetTreeView({datasets, onDatasetClick}: DatasetTreeViewProps
                                             {dataset.samplingMethod && (
                                                 <Badge variant="outline"
                                                        className="text-xs bg-orange-50 text-orange-700">
-                                                    采样方法: {dataset.samplingMethod}
+                                                    抽样方法: {dataset.samplingMethod}
                                                 </Badge>
                                             )}
                                         </div>

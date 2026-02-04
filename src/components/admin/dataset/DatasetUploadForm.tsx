@@ -16,7 +16,6 @@ import {
     Tag,
     Shield,
     File,
-    CheckCircle,
     AlertCircle
 } from "lucide-react";
 import {useState, useEffect, useRef, useCallback} from "react";
@@ -1192,7 +1191,6 @@ export function DatasetUploadForm({onSuccess}: DatasetUploadFormProps) {
 
                                     <Button
                                         type="button"
-                                        variant="secondary"
                                         onClick={handleAnalyzeData}
                                         disabled={!dataFileInfo || !dictFileInfo || uploading || analyzing}
                                     >

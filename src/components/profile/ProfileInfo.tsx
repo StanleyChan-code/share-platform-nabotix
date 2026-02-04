@@ -10,8 +10,8 @@ import {
   GraduationCap,
   Briefcase,
   Shield,
-  Hash,
-  Info
+  Award,
+  Tag
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { EducationLevels, ID_TYPES, InstitutionTypes } from "@/lib/enums";
@@ -22,16 +22,6 @@ import EditProfileDialog from "@/components/profile/EditProfileDialog";
 interface ProfileInfoProps {
   userProfile: UserInfo;
   onUpdateProfile: (formData: any) => void;
-}
-
-// 用户信息表单类型
-interface EditFormData {
-  realName: string;
-  phone: string;
-  title: string;
-  field: string;
-  email: string;
-  education: string;
 }
 
 const ProfileInfo = ({ userProfile, onUpdateProfile }: ProfileInfoProps) => {
@@ -79,13 +69,13 @@ const ProfileInfo = ({ userProfile, onUpdateProfile }: ProfileInfoProps) => {
     value: string;
     className?: string;
   }) => (
-      <div className={`flex items-start gap-3 py-3 ${className}`}>
+      <div className={`flex items-start gap-3 py-3 px-2 ${className}`}>
         <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex-shrink-0">
           <Icon className="h-5 w-5" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-muted-foreground mb-1">{label}</p>
-          <p className="text-base font-medium truncate">{value || "未填写"}</p>
+          <p className="text-base font-medium">{value || "未填写"}</p>
         </div>
       </div>
   );
@@ -139,57 +129,47 @@ const ProfileInfo = ({ userProfile, onUpdateProfile }: ProfileInfoProps) => {
           </div>
 
           <CardContent className="p-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-1">
-                <InfoItem
-                    icon={User}
-                    label="姓名"
-                    value={userProfile.user.realName}
-                />
-                <InfoItem
-                    icon={Phone}
-                    label="联系电话"
-                    value={userProfile.user.phone}
-                />
-                <InfoItem
-                    icon={Shield}
-                    label={userProfile.user.idType ? getIdTypeDisplayName(userProfile.user.idType) : "证件号码"}
-                    value={userProfile.user.idNumber ? maskIdNumber(userProfile.user.idType, userProfile.user.idNumber) : ""}
-                />
-                <InfoItem
-                    icon={Briefcase}
-                    label="职称"
-                    value={userProfile.user.title}
-                />
-                <InfoItem
-                    icon={Calendar}
-                    label="注册日期"
-                    value={userProfile.user.createdAt ? formatDate(userProfile.user.createdAt) : ""}
-                />
-              </div>
-
-              <div className="space-y-1">
-                <InfoItem
-                    icon={Mail}
-                    label="联系邮箱"
-                    value={userProfile.user.email}
-                />
-                <InfoItem
-                    icon={GraduationCap}
-                    label="学历"
-                    value={getEducationDisplayName(userProfile.user.education)}
-                />
-                <InfoItem
-                    icon={Building2}
-                    label="所属机构"
-                    value={institution?.fullName || "未分配"}
-                />
-                <InfoItem
-                    icon={Briefcase}
-                    label="专业领域"
-                    value={userProfile.user.field}
-                />
-              </div>
+            <div className="grid gap-2 md:grid-cols-2">
+              <InfoItem
+                  icon={User}
+                  label="姓名"
+                  value={userProfile.user.realName}
+              />
+              <InfoItem
+                  icon={Phone}
+                  label="联系电话"
+                  value={userProfile.user.phone}
+              />
+              <InfoItem
+                  icon={Shield}
+                  label={userProfile.user.idType ? getIdTypeDisplayName(userProfile.user.idType) : "证件号码"}
+                  value={userProfile.user.idNumber ? maskIdNumber(userProfile.user.idType, userProfile.user.idNumber) : ""}
+              />
+              <InfoItem
+                  icon={Mail}
+                  label="联系邮箱"
+                  value={userProfile.user.email}
+              />
+              <InfoItem
+                  icon={GraduationCap}
+                  label="学历"
+                  value={getEducationDisplayName(userProfile.user.education)}
+              />
+              <InfoItem
+                  icon={Briefcase}
+                  label="专业领域"
+                  value={userProfile.user.field}
+              />
+              <InfoItem
+                  icon={Award}  // 使用Award icon表示职称/荣誉
+                  label="职称"
+                  value={userProfile.user.title}
+              />
+              <InfoItem
+                  icon={Calendar}
+                  label="注册日期"
+                  value={userProfile.user.createdAt ? formatDate(userProfile.user.createdAt) : ""}
+              />
             </div>
           </CardContent>
         </Card>
@@ -208,42 +188,37 @@ const ProfileInfo = ({ userProfile, onUpdateProfile }: ProfileInfoProps) => {
                 </CardHeader>
               </div>
               <CardContent className="p-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div className="space-y-1">
-                    <InfoItem
-                        icon={Building2}
-                        label="机构全称"
-                        value={institution.fullName}
-                    />
-                    <InfoItem
-                        icon={Building2}
-                        label="机构简称"
-                        value={institution.shortName || "未填写"}
-                    />
-                    <InfoItem
-                        icon={Building2}
-                        label="机构类型"
-                        value={getInstitutionTypeDisplayName(institution.type)}
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <InfoItem
-                        icon={Phone}
-                        label="机构电话"
-                        value={institution.contactPhone || "未填写"}
-                    />
-                    <InfoItem
-                        icon={Mail}
-                        label="机构邮箱"
-                        value={institution.contactEmail || "未填写"}
-                    />
-                    <InfoItem
-                        icon={Building2}
-                        label="进驻日期"
-                        value={formatDate(institution.createdAt) || "未填写"}
-                    />
-                  </div>
+                <div className="grid gap-2 md:grid-cols-2">
+                  <InfoItem
+                      icon={Building2}
+                      label="机构全称"
+                      value={institution.fullName}
+                  />
+                  <InfoItem
+                      icon={Tag}  // 使用Tag表示机构类型标签
+                      label="机构类型"
+                      value={getInstitutionTypeDisplayName(institution.type)}
+                  />
+                  <InfoItem
+                      icon={Building2}
+                      label="机构简称"
+                      value={institution.shortName || "未填写"}
+                  />
+                  <InfoItem
+                      icon={Phone}
+                      label="机构电话"
+                      value={institution.contactPhone || "未填写"}
+                  />
+                  <InfoItem
+                      icon={Mail}
+                      label="机构邮箱"
+                      value={institution.contactEmail || "未填写"}
+                  />
+                  <InfoItem
+                      icon={Calendar}
+                      label="进驻日期"
+                      value={formatDate(institution.createdAt) || "未填写"}
+                  />
                 </div>
               </CardContent>
             </Card>

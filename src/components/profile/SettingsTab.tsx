@@ -1,10 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { VerificationCodeButton } from "@/components/ui/VerificationCodeButton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Shield, Key, Loader2, Asterisk } from "lucide-react";
 import { useState, useRef } from "react"; // 添加 useRef
 import { useToast } from "@/hooks/use-toast";
-import { sendVerificationCode } from "@/integrations/api/authApi";
 import { api } from "@/integrations/api/client";
 import { FormValidator, Input } from "@/components/ui/FormValidator.tsx";
 import { Label } from "@/components/ui/label.tsx";
@@ -19,42 +19,13 @@ const SettingsTab = ({ user }: SettingsTabProps) => {
   const [verificationCode, setVerificationCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [isSendingCode, setIsSendingCode] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const { toast } = useToast();
 
   // 添加缺失的 ref
   const newPasswordRef = useRef<any>(null);
 
-  const handleSendVerificationCode = async () => {
-    if (!user?.phone) {
-      toast({
-        title: "无法发送验证码",
-        description: "用户手机号不存在",
-        variant: "destructive",
-      });
-      return;
-    }
 
-    setIsSendingCode(true);
-    try {
-      await sendVerificationCode(user.phone, "UPDATE_PASSWORD");
-      setPhone(user.phone);
-      toast({
-        title: "验证码已发送",
-        description: "验证码已发送至您的手机，5分钟内有效",
-      });
-    } catch (error: any) {
-      console.error('Error sending verification code:', error);
-      toast({
-        title: "发送失败",
-        description: error.response?.data?.message || "发送验证码时发生错误",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSendingCode(false);
-    }
-  };
 
   const handleResetPassword = async () => {
     if (!user?.phone) {
@@ -191,21 +162,15 @@ const SettingsTab = ({ user }: SettingsTabProps) => {
                               disabled
                               className="flex-1"
                           />
-                          <Button
-                              type="button"
-                              onClick={handleSendVerificationCode}
-                              disabled={isSendingCode || !user?.phone}
+                          <VerificationCodeButton
+                              phone={user?.phone || ""}
+                              businessType="UPDATE_PASSWORD"
                               variant="outline"
-                          >
-                            {isSendingCode ? (
-                                <>
-                                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                                  发送中...
-                                </>
-                            ) : (
-                                "发送验证码"
-                            )}
-                          </Button>
+                              disabled={!user?.phone}
+                              onSendSuccess={() => {
+                                setPhone(user?.phone || "");
+                              }}
+                          />
                         </div>
                       </div>
 

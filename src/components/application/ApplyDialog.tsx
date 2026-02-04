@@ -202,7 +202,7 @@ const ApplyDialog = ({ open, onOpenChange, datasetId, onSubmitted }: ApplyDialog
         }
 
         if (!isDatasetAvailableToUser()) {
-            toast.error("该数据集暂未对用户所属机构开放申请");
+            toast.error("该数据集暂未对您的所属机构开放申请");
             return;
         }
 
@@ -348,10 +348,10 @@ const ApplyDialog = ({ open, onOpenChange, datasetId, onSubmitted }: ApplyDialog
 
                                     {/* 机构限制提示 */}
                                     {!isDatasetAvailableToUser() && (
-                                        <Alert variant="destructive" className="mt-3">
-                                            <AlertTriangle className="h-4 w-4" />
-                                            <AlertDescription>
-                                                该数据集暂未对用户所属机构开放申请
+                                        <Alert variant="destructive">
+                                            <AlertTriangle className="h-5 w-5" />
+                                            <AlertDescription className="text-md">
+                                                该数据集暂未对您的所属机构开放申请
                                             </AlertDescription>
                                         </Alert>
                                     )}

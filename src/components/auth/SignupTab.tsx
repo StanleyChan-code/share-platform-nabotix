@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { VerificationCodeButton } from "@/components/ui/VerificationCodeButton";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { ApiError } from "@/integrations/api/client";
-import { register, sendVerificationCode } from "@/integrations/api/authApi";
+import { register } from "@/integrations/api/authApi";
 import { Phone, Lock, Send, CreditCard, Shield, BadgeCheck } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {FormValidator, Input, ValidatedSelect} from "@/components/ui/FormValidator";
@@ -19,7 +20,6 @@ interface SignupTabProps {
 
 const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
   const [loading, setLoading] = useState(false);
-  const [sendCodeLoading, setSendCodeLoading] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -28,7 +28,6 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
   const [idType, setIdType] = useState("");
   const [idNumber, setIdNumber] = useState("");
   const [institutionId, setInstitutionId] = useState<string[] | null>(null);
-  const [countdown, setCountdown] = useState(0);
   const passwordRef = useRef<any>(null);
   const confirmPasswordRef = useRef<any>(null);
   const { toast } = useToast();
@@ -143,64 +142,7 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
     return true;
   };
 
-  // 倒计时处理
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => {
-        setCountdown(countdown - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown]);
 
-  const handleSendVerificationCode = async () => {
-    // 先验证手机号格式
-    const phoneValidation = validatePhone(phone);
-    if (phoneValidation !== true) {
-      toast({
-        title: "手机号格式错误",
-        description: phoneValidation as string,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (countdown > 0) {
-      toast({
-        title: "请稍候",
-        description: `请在 ${countdown} 秒后重新发送验证码`,
-      });
-      return;
-    }
-
-    setSendCodeLoading(true);
-    try {
-      const response = await sendVerificationCode(phone, "REGISTER");
-
-      if (response.data.success) {
-        toast({
-          title: "发送成功",
-          description: "验证码已发送至您的手机，5分钟内有效",
-        });
-        setCountdown(60);
-      } else {
-        toast({
-          title: "发送失败",
-          description: response.data.message,
-          variant: "destructive",
-        });
-      }
-    } catch (error: unknown) {
-      const apiError = error as ApiError;
-      toast({
-        title: "发送失败",
-        description: apiError.response?.data?.message || "发送验证码时发生错误，请稍后重试",
-        variant: "destructive",
-      });
-    } finally {
-      setSendCodeLoading(false);
-    }
-  };
 
   const handleSubmit = async (formData: Record<string, any>) => {
     // 手动验证证件类型选择
@@ -456,40 +398,38 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-medium opacity-0">发送</Label>
-            <Button
-                type="button"
-                onClick={handleSendVerificationCode}
-                disabled={sendCodeLoading || countdown > 0}
-                className="w-full h-11 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                variant="default"
-            >
-              <Send className="h-4 w-4 mr-1" />
-              {sendCodeLoading ? "发送中..." : countdown > 0 ? `${countdown}秒后重试` : "发送验证码"}
-            </Button>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="signup-verification-code" className="text-sm font-medium flex items-center gap-1">
-            验证码 <span className="text-red-500">*</span>
-          </Label>
-          <div className="relative">
-            <Shield className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-                id="signup-verification-code"
-                name="verificationCode"
-                type="text"
-                placeholder="请输入6位数字验证码"
-                value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value)}
-                className="pl-10 h-11"
-                maxLength={6}
-                required
-                validationType="custom"
-                customValidation={validateVerificationCode}
-                errorMessage="请输入6位数字验证码"
-            />
+            <Label htmlFor="signup-verification-code" className="text-sm font-medium">
+              验证码 <span className="text-red-500">*</span>
+            </Label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Shield className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                    id="signup-verification-code"
+                    name="verificationCode"
+                    type="text"
+                    placeholder="请输入6位数字验证码"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value)}
+                    className="pl-10 h-11"
+                    maxLength={6}
+                    required
+                    validationType="custom"
+                    customValidation={validateVerificationCode}
+                    errorMessage="请输入6位数字验证码"
+                />
+              </div>
+              <VerificationCodeButton
+                  phone={phone}
+                  businessType="REGISTER"
+                  variant="default"
+                  validatePhone={(value) => {
+                    const result = validatePhone(value);
+                    return result === true ? "" : (result as string);
+                  }}
+                  className="whitespace-nowrap px-4 h-11 min-w-[120px] bg-blue-500 hover:bg-blue-600 text-white"
+              />
+            </div>
           </div>
         </div>
 

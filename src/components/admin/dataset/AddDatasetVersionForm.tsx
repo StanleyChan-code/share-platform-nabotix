@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button.tsx';
 import { Label } from '@/components/ui/label.tsx';
-import {File, Loader2, Asterisk, CheckCircle, AlertCircle, Download, User} from 'lucide-react';
+import {File, Loader2, Asterisk} from 'lucide-react';
 import { toast } from 'sonner';
 import { datasetApi, AddDatasetVersionRequest } from '@/integrations/api/datasetApi.ts';
 import { FileInfo } from '@/integrations/api/fileApi.ts';
@@ -355,7 +355,6 @@ export function AddDatasetVersionForm({ datasetId, onSuccess }: AddDatasetVersio
                 </h3>
                 <Button
                     type="button"
-                    variant="secondary"
                     onClick={handleAnalyzeData}
                     disabled={!dataFileInfo || !dictFileInfo || uploading || analyzing}
                 >

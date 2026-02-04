@@ -21,7 +21,7 @@ import {
     AlertCircle,
     Database,
     Trash2,
-    Download, Star, DollarSign, UserCheck, Settings, Target
+    Download, Star, DollarSign, UserCheck, Settings, Target, RotateCw
 } from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
@@ -410,6 +410,23 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                                         </TooltipTrigger>
                                         <TooltipContent>
                                             <p>下载数据集</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                )}
+                                {application.status === 'DENIED' && application.applicantId === getCurrentUserFromSession().id && (
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-10 w-10 p-2 text-blue-600 hover:text-blue-700"
+                                                onClick={() => onViewDataset(application, 'termsandfiles')}
+                                            >
+                                                <RotateCw className="h-4 w-4"/>
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>重新申请</p>
                                         </TooltipContent>
                                     </Tooltip>
                                 )}

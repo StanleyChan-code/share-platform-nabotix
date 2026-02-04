@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
-import { Checkbox } from "@/components/ui/checkbox.tsx";
 import {
   Users,
   Database,
@@ -13,7 +12,7 @@ import {
   Mail,
   MapPin,
   Share,
-  Layers2, SwatchBook, Phone, Eye
+  SwatchBook, Phone, Eye, Target, Tag
 } from "lucide-react";
 import { formatDate } from "@/lib/utils.ts";
 import { Button } from "@/components/ui/button.tsx";
@@ -26,6 +25,7 @@ import { InstitutionSelector } from "@/components/admin/institution/InstitutionS
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import {canUploadDataset} from "@/lib/permissionUtils.ts";
 import { CopyButton } from "@/components/ui/CopyButton.tsx";
+import {DatasetTypes} from "@/lib/enums.ts";
 
 interface OverviewTabProps {
   dataset: any;
@@ -64,7 +64,7 @@ export function OverviewTab({
   // 获取允许申请的机构信息
   useEffect(() => {
     const fetchApplicationInstitutions = async () => {
-      if (useAdvancedQuery && dataset.applicationInstitutionIds && dataset.applicationInstitutionIds.length > 0) {
+      if (dataset.applicationInstitutionIds && dataset.applicationInstitutionIds.length > 0) {
         setLoadingInstitutions(true);
         try {
           const institutions = await Promise.all(
@@ -154,6 +154,38 @@ export function OverviewTab({
       </div>
   );
 
+    // 申请机构列表展示组件
+  const InstitutionDisplay = ({ loading, institutions, isRestricted, isAdvancedMode = false }) => {
+    if (!isRestricted && isAdvancedMode) {
+      return <p className="text-sm font-medium">无限制（任何机构均可申请）</p>;
+    }
+
+    if (loading) {
+      return (
+          <div className="flex flex-wrap gap-2">
+            {[1, 2, 3].map(i => (
+                <Skeleton key={i} className="h-6 w-20 rounded-full" />
+            ))}
+          </div>
+      );
+    }
+
+    return (
+        <div>
+          <div className="flex flex-wrap gap-2">
+            {institutions.map((inst, index) => (
+                <Badge key={index} variant="secondary" className="px-3 py-1">
+                  {inst.abbreviation || inst.fullName}
+                </Badge>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            仅限以上 {institutions.length} 个机构可申请
+          </p>
+        </div>
+    );
+  };
+
   return (
       <div className="space-y-6 p-2">
         {/* 统计信息卡片组 - 按照图片样式 */}
@@ -233,16 +265,25 @@ export function OverviewTab({
 
           <CardContent className="space-y-6">
             {/* 标题和学科分类 */}
-            <div className="p-4 bg-muted/20 rounded-lg">
-              <h3 className="font-semibold text-lg mb-6">{dataset.titleCn}</h3>
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <h3 className="font-semibold text-lg mb-3 break-all whitespace-pre-wrap">{dataset.titleCn}</h3>
               
               {/* 学科分类、抽样方法、基线数据集水平排列 */}
-              <div className="flex flex-wrap gap-6 mb-3">
+              <div className="flex flex-wrap gap-6 mb-4">
                 {dataset.subjectArea && (
                     <InfoItem
-                        icon={Layers2}
+                        icon={Target}
                         label="学科分类"
                         value={dataset.subjectArea.name}
+                        className="flex-shrink-0"
+                    />
+                )}
+
+                {dataset.type && (
+                    <InfoItem
+                        icon={Tag}
+                        label="数据集类型"
+                        value={DatasetTypes[dataset.type] || '未知类型'}
                         className="flex-shrink-0"
                     />
                 )}
@@ -262,7 +303,7 @@ export function OverviewTab({
                         label="基线数据集"
                         value={
                           <p
-                              className="p-0 justify-start text-left line-clamp-2 whitespace-pre-wrap break-all cursor-pointer hover:text-blue-600"
+                              className="p-0 justify-start text-left line-clamp-1 max-w-36 whitespace-pre-wrap break-all cursor-pointer hover:text-blue-600"
                               onClick={() => setIsParentDatasetModalOpen(true)}
                           >
                             {parentDataset.titleCn}
@@ -427,84 +468,35 @@ export function OverviewTab({
               </div>
             </div>
 
+
             {/* 允许申请的机构 */}
-            {useAdvancedQuery && (
-                <div className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-medium text-sm">申请权限设置</h4>
-                  </div>
-
-                  {isEditing ? (
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-2">允许申请的机构</p>
-                        <div className="space-y-4">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="noInstitutionRestriction"
-                              checked={editableFields.applicationInstitutionIds === null}
-                              onCheckedChange={(checked) => {
-                                setEditableFields(prev => ({
-                                  ...prev,
-                                  applicationInstitutionIds: checked ? null : []
-                                }));
-                              }}
-                            />
-                            <label htmlFor="noInstitutionRestriction" className="text-sm font-medium">
-                              不限制申请机构（任何机构均可申请）
-                            </label>
-                          </div>
-
-                          {editableFields.applicationInstitutionIds !== null && (
-                            <InstitutionSelector
-                              value={editableFields.applicationInstitutionIds}
-                              onChange={(value) => {
-                                setEditableFields(prev => ({
-                                  ...prev,
-                                  applicationInstitutionIds: value || []
-                                }));
-                              }}
-                              allowMultiple={true}
-                              placeholder="请选择允许申请的机构（可多选）"
-                            />
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {editableFields.applicationInstitutionIds === null || editableFields.applicationInstitutionIds?.length === 0
-                              ? "任何机构均可申请此数据集"
-                              : `仅限 ${editableFields.applicationInstitutionIds.length} 个机构申请`}
-                        </p>
-                      </div>
+            <div className="p-4 border rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-medium text-sm">允许申请的机构</h4>
+              </div>
+              <div className="space-y-4">
+                  {useAdvancedQuery && isEditing ? (
+                      <InstitutionSelector
+                          value={editableFields.applicationInstitutionIds}
+                          onChange={(value) => {
+                            setEditableFields((prev: any) => ({
+                              ...prev,
+                              applicationInstitutionIds: value || []
+                            }));
+                          }}
+                          allowMultiple={true}
+                          placeholder="不限制申请机构（任何机构均可申请）"
+                      />
                   ) : (
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-2">允许申请的机构</p>
-                        {dataset.applicationInstitutionIds === null || dataset.applicationInstitutionIds?.length === 0 ? (
-                            <p className="text-sm font-medium text-green-600">无限制（任何机构均可申请）</p>
-                        ) : (
-                            <div>
-                              {loadingInstitutions ? (
-                                  <div className="flex flex-wrap gap-2">
-                                    {[1, 2, 3].map(i => (
-                                        <Skeleton key={i} className="h-6 w-20 rounded-full" />
-                                    ))}
-                                  </div>
-                              ) : (
-                                  <div className="flex flex-wrap gap-2">
-                                    {applicationInstitutions.map((inst, index) => (
-                                        <Badge key={index} variant="secondary" className="px-3 py-1">
-                                          {inst.abbreviation || inst.fullName}
-                                        </Badge>
-                                    ))}
-                                  </div>
-                              )}
-                              <p className="text-xs text-muted-foreground mt-2">
-                                仅限以上 {applicationInstitutions.length} 个机构可申请
-                              </p>
-                            </div>
-                        )}
-                      </div>
+                      <InstitutionDisplay
+                          loading={loadingInstitutions}
+                          institutions={applicationInstitutions}
+                          isRestricted={dataset.applicationInstitutionIds !== null && dataset.applicationInstitutionIds?.length > 0}
+                          isAdvancedMode={true}
+                      />
                   )}
-                </div>
-            )}
+              </div>
+            </div>
 
             {/* 版本信息 */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/20 rounded-lg">

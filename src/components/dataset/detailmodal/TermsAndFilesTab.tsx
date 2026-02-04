@@ -4,7 +4,7 @@ import {FileText, Download, Shield, AlertTriangle, CheckCircle, ClockIcon, XCirc
 import { downloadFile } from "@/lib/utils";
 import {api} from "@/integrations/api/client.ts";
 import {useToast} from "@/hooks/use-toast.ts";
-import {redirectToAuth} from "@/lib/authUtils.ts";
+import {getCurrentUserFromSession, redirectToAuth} from "@/lib/authUtils.ts";
 import {useEffect, useState} from "react";
 import ApplyDialog from "@/components/application/ApplyDialog.tsx";
 import ApplicationDetailDialog from "@/components/admin/ApplicationDetailDialog.tsx";
@@ -114,8 +114,7 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
 
         // 只有数据分享文件需要检查申请状态
         if (fileType === 'data') {
-            const isApproved = applicationStatus?.status === "APPROVED" || useAdvancedQuery;
-            if (!isApproved) {
+            if (!hasDataFilePermission) {
                 toast({
                     title: "无下载权限",
                     description: "您需要先申请并获得批准才能下载数据文件",
@@ -176,8 +175,10 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
         }
     };
 
-    // 用户是否有下载数据文件的权限（申请已批准）
-    const hasDataFilePermission = applicationStatus?.status === "APPROVED";
+    // 用户是否有下载数据文件的权限（申请已批准，或者是自己上传的数据集）
+    const hasDataFilePermission = applicationStatus?.status === "APPROVED" ||
+        dataset?.provider?.id && dataset?.provider?.id === getCurrentUserFromSession()?.id ||
+        useAdvancedQuery;
 
     // 获取当前显示的数据集版本
     const currentVersion = selectedVersion || getLatestApprovedVersion(dataset.versions);
@@ -348,21 +349,21 @@ export function TermsAndFilesTab({dataset, useAdvancedQuery = false}: TermsAndFi
                                 size="sm"
                                 className="gap-2"
                                 onClick={() => {
-                                    if (hasDataFilePermission || useAdvancedQuery) {
+                                    if (hasDataFilePermission) {
                                         handleDownload('data');
                                     } else {
                                         setApplyDialogOpen(true);
                                     }
                                 }}
-                                disabled={!currentVersion?.id || (!useAdvancedQuery && pendingApplication !== null)}
+                                disabled={!currentVersion?.id || (!hasDataFilePermission && pendingApplication !== null)}
                             >
                                 <>
-                                    {(hasDataFilePermission || useAdvancedQuery) ? (
+                                    {(hasDataFilePermission) ? (
                                         <Download className="h-4 w-4"/>
                                     ) : (
                                         <FileText className="h-4 w-4"/>
                                     )}
-                                    {(hasDataFilePermission || useAdvancedQuery) ? "下载" : "申请数据集"}
+                                    {(hasDataFilePermission) ? "下载" : "申请数据集"}
                                 </>
                             </Button>
                         </div>

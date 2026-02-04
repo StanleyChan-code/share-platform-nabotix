@@ -1,16 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { VerificationCodeButton } from "@/components/ui/VerificationCodeButton";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ApiError } from "@/integrations/api/client";
-import { login, sendVerificationCode } from "@/integrations/api/authApi";
-import { Phone, Lock, Shield, Eye, EyeOff, User, Mail } from "lucide-react";
+import { login } from "@/integrations/api/authApi";
+import { Phone, Lock, Shield, Eye, EyeOff } from "lucide-react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { FormValidator, Input } from "@/components/ui/FormValidator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { refreshUserInfo, isAuthenticated, clearTokens, getCurrentUserInfoFromSession } from "@/lib/authUtils";
-import {AxiosError} from "axios";
+import { refreshUserInfo, clearTokens, getCurrentUserInfoFromSession } from "@/lib/authUtils";
 
 interface LoginTabProps {
   phone: string;
@@ -28,13 +28,9 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
   const [verificationCode, setVerificationCode] = useState("");
   const [loginType, setLoginType] = useState<LoginType>("PASSWORD");
   const [loading, setLoading] = useState(false);
-  const [sendCodeLoading, setSendCodeLoading] = useState(false);
-  const [countdown, setCountdown] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const [isFormValid, setIsFormValid] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-
-  const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const phoneInputRef = useRef<any>(null);
   const passwordInputRef = useRef<any>(null);
   const verificationCodeInputRef = useRef<any>(null);
@@ -44,29 +40,6 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-
-  // 清理定时器
-  useEffect(() => {
-    return () => {
-      if (countdownRef.current) {
-        clearTimeout(countdownRef.current);
-      }
-    };
-  }, []);
-
-  // 处理倒计时
-  useEffect(() => {
-    if (countdown > 0) {
-      countdownRef.current = setTimeout(() => {
-        setCountdown(countdown - 1);
-      }, 1000);
-    }
-    return () => {
-      if (countdownRef.current) {
-        clearTimeout(countdownRef.current);
-      }
-    };
-  }, [countdown]);
 
   // 验证手机号格式
   const validatePhone = useCallback((phone: string): string => {
@@ -118,73 +91,6 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
       setIsFormValid(isValid);
     }
   }, [phone, password, verificationCode, loginType, validateForm]);
-
-  // 发送验证码前的验证
-  const validateBeforeSendCode = useCallback((): boolean => {
-    const phoneError = validatePhone(phone);
-    if (phoneError) {
-      toast({
-        title: "手机号格式错误",
-        description: phoneError,
-        variant: "destructive",
-      });
-      return false;
-    }
-
-    if (countdown > 0) {
-      toast({
-        title: "请稍后重试",
-        description: `${countdown}秒后可重新发送验证码`,
-      });
-      return false;
-    }
-
-    return true;
-  }, [phone, countdown, validatePhone, toast]);
-
-  const handleSendVerificationCode = async () => {
-    if (!validateBeforeSendCode()) return;
-
-    setSendCodeLoading(true);
-    try {
-      const response = await sendVerificationCode(phone, "LOGIN");
-
-      if (response.data.success) {
-        toast({
-          title: "验证码已发送",
-          description: "请注意查收短信，验证码5分钟内有效",
-        });
-        setCountdown(60);
-
-        // 自动聚焦到验证码输入框
-        setTimeout(() => {
-          verificationCodeInputRef.current?.focus();
-        }, 100);
-      } else {
-        throw new Error(response.data.message || "发送验证码失败");
-      }
-    } catch (error: unknown) {
-      const apiError = error as ApiError;
-      let errorMessage = "网络错误，请检查网络连接";
-
-      if (apiError.response?.data?.message) {
-        errorMessage = apiError.response.data.message;
-      } else {
-        const axiosError = error as AxiosError;
-        if (axiosError.code !== "ERR_NETWORK") {
-          errorMessage = axiosError.message;
-        }
-      }
-
-      toast({
-        title: "发送失败",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    } finally {
-      setSendCodeLoading(false);
-    }
-  };
 
   // 处理登录类型切换
   const handleLoginTypeChange = (type: LoginType) => {
@@ -420,29 +326,19 @@ const LoginTab = ({ phone, setPhone, onLoginSuccess }: LoginTabProps) => {
                         autoComplete="one-time-code"
                     />
                   </div>
-                  <Button
-                      type="button"
-                      onClick={handleSendVerificationCode}
-                      disabled={sendCodeLoading || countdown > 0 || !phone || !!validatePhone(phone)}
-                      className={cn(
-                          "whitespace-nowrap px-4 h-11 min-w-[120px]",
-                          countdown > 0 || !!validatePhone(phone)
-                              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                              : "bg-blue-500 hover:bg-blue-600 text-white"
-                      )}
-                      variant={countdown > 0 ? "outline" : "default"}
-                  >
-                    {sendCodeLoading ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent mr-1" />
-                          发送中
-                        </>
-                    ) : countdown > 0 ? (
-                        `${countdown}s`
-                    ) : (
-                        "发送验证码"
-                    )}
-                  </Button>
+                  <VerificationCodeButton
+                      phone={phone}
+                      businessType="LOGIN"
+                      variant="default"
+                      className="whitespace-nowrap px-4 h-11 min-w-[120px] bg-blue-500 hover:bg-blue-600 text-white"
+                      onSendSuccess={() => {
+                        // 自动聚焦到验证码输入框
+                        setTimeout(() => {
+                          verificationCodeInputRef.current?.focus();
+                        }, 100);
+                      }}
+                      validatePhone={validatePhone}
+                  />
                 </div>
               </div>
             </TabsContent>

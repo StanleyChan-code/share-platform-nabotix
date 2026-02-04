@@ -16,7 +16,7 @@ import {
     ChevronDown,
     X,
     Phone,
-    AlertCircle
+    AlertCircle, Building
 } from "lucide-react";
 import {useToast} from "@/hooks/use-toast";
 import {logout} from "@/integrations/api/authApi";
@@ -496,10 +496,10 @@ export function Navigation() {
                                             )}
                                         </div>
                                         <div className="hidden sm:flex flex-col items-start">
-                                            <span className="text-sm font-medium text-gray-900">
+                                            <span className="text-sm font-medium text-gray-900 max-w-32 truncate">
                                                 {userProfile?.user?.realName || '用户'}
                                             </span>
-                                            <span className="text-xs text-muted-foreground">
+                                            <span className="text-xs text-muted-foreground max-w-32 truncate">
                                                 {userProfile?.institution?.fullName || '未设置机构'}
                                             </span>
                                         </div>
@@ -507,7 +507,7 @@ export function Navigation() {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end"
-                                                     className="w-64 border-blue-200/50 shadow-xl rounded-xl">
+                                                     className="w-72 border-blue-200/50 shadow-xl rounded-xl">
                                     {/* 用户信息头部 */}
                                     <div className="p-4 border-b border-blue-200/30">
                                         <div className="flex items-center gap-3">
@@ -516,12 +516,16 @@ export function Navigation() {
                                                 <User className="h-6 w-6 text-white"/>
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="font-semibold text-gray-900 truncate">
+                                                <p className="font-semibold text-gray-900">
                                                     {userProfile?.user?.realName || '用户'}
                                                 </p>
                                                 <p className="text-sm text-muted-foreground truncate flex items-center py-1">
                                                     <Phone className="h-4 w-4 mr-1"/>
                                                     {userProfile?.user?.phone?.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') || '未设置手机'}
+                                                </p>
+                                                <p className="text-sm text-muted-foreground flex items-start py-1">
+                                                    <div><Building className="h-4 w-4 mr-1 mt-1"/></div>
+                                                    {userProfile?.institution?.fullName || '未设置机构'}
                                                 </p>
                                                 <div className="flex items-center justify-between mt-1">
                                                     <div className="flex flex-wrap gap-1 flex-1">
@@ -544,7 +548,7 @@ export function Navigation() {
                                     <DropdownMenuItem onClick={() => navigate('/profile?tab=profile')}
                                                       className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-blue-50/50">
                                         <User className="h-4 w-4 text-blue-600"/>
-                                        <span className="font-medium">个人资料</span>
+                                        <span className="font-medium">个人中心</span>
                                     </DropdownMenuItem>
 
                                     {hasAdminPermission() && (
@@ -629,19 +633,12 @@ export function Navigation() {
                                                 <div
                                                     className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl flex items-center justify-center shadow-sm relative">
                                                     <User className="h-5 w-5 text-white"/>
-                                                    {/* 移动端用户头像上的红点 */}
-                                                    {hasPendingItems && hasAdminPermission() && (
-                                                        <span
-                                                            className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 border-2 border-white text-[10px] font-bold">
-                                                            {pendingTotalCount > 99 ? '99+' : pendingTotalCount}
-                                                        </span>
-                                                    )}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="font-semibold text-gray-900 text-sm truncate">
+                                                    <p className="font-semibold text-gray-900 text-sm">
                                                         {userProfile?.user?.realName || '用户'}
                                                     </p>
-                                                    <p className="text-xs text-muted-foreground truncate">
+                                                    <p className="text-xs text-muted-foreground">
                                                         {userProfile?.institution?.fullName || '未设置机构'}
                                                     </p>
                                                     <div className="flex items-center justify-between mt-1">

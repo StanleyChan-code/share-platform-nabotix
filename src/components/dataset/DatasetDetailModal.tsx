@@ -222,10 +222,12 @@ export function DatasetDetailModal({
             <Dialog open={open} onOpenChange={onOpenChange}>
                 <DialogContent className="max-w-5xl h-[85vh] overflow-hidden flex flex-col">
                     <DialogHeader>
-                        <DialogTitle className="text-2xl flex items-start gap-2">
-                            {currentDataset.titleCn}
+                        <DialogTitle className="flex items-start">
+                            <div className="text-2xl gap-2 truncate break-all whitespace-pre-wrap line-clamp-1 max-w-[calc(90%-54px)]">
+                                {currentDataset.titleCn}
+                            </div>
                             {currentDataset.parentDatasetId && (
-                                <span className="text-sm text-muted-foreground">随访数据集</span>
+                                <span className="text-sm text-muted-foreground ml-1">随访数据集</span>
                             )}
                         </DialogTitle>
 
@@ -233,7 +235,7 @@ export function DatasetDetailModal({
                         {(followups.length > 0) && (
                             <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t">
                                 <div className="flex flex-wrap gap-2 items-center">
-                                    <span className="text-sm text-muted-foreground">随访数据集:</span>
+                                    <span className="text-muted-foreground">随访数据集</span>
                                     {[...followups]
                                         .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
                                         .map((followup: any) => (
@@ -245,7 +247,7 @@ export function DatasetDetailModal({
                                                 onClick={() => handleOpenFollowUp(followup)}
                                             >
                                                 <Link2 className="h-4 w-4"/>
-                                                {followup.titleCn}
+                                                <span className="truncate break-all whitespace-pre-wrap line-clamp-1 max-w-36">{followup.titleCn}</span>
                                                 <ArrowRight className="h-3 w-3"/>
                                             </Button>
                                         ))}

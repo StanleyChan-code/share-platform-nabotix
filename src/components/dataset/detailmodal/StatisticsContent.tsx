@@ -1,14 +1,10 @@
 import React, {useMemo, useState} from 'react';
 import {CheckCircle, ChevronDown, ChevronRight, ClockIcon, Download, Filter, Layers, XCircle} from 'lucide-react';
-import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import {toast} from "@/hooks/use-toast.ts";
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
 import InfiniteScroll from 'react-infinite-scroll-component';
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table.tsx";
 import {useNavigate} from "react-router-dom";
-import {Button} from "@/components/ui/button.tsx";
-import {api} from "@/integrations/api/client.ts";
 
 export interface CategoryDistribution {
     name: string;
@@ -387,10 +383,14 @@ export function StatisticsContent({
                                                 <tr>
                                                     <TableHead className="w-[15%] bg-slate-50/50">变量名</TableHead>
                                                     <TableHead className="w-[15%] bg-slate-50/50">标签</TableHead>
-                                                    <TableHead className="w-[12%] text-right bg-slate-50/50">有效值
-                                                        (占比)</TableHead>
-                                                    <TableHead className="w-[12%] text-right bg-slate-50/50">缺失值
-                                                        (占比)</TableHead>
+                                                    <TableHead className="w-[12%] text-right bg-slate-50/50">
+                                                        <p>有效值</p>
+                                                        <p>(占比)</p>
+                                                    </TableHead>
+                                                    <TableHead className="w-[12%] text-right bg-slate-50/50">
+                                                        <p>缺失值</p>
+                                                        <p>(占比)</p>
+                                                    </TableHead>
 
                                                     {group === 'Numeric' ? (
                                                         <>

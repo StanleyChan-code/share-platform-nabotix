@@ -65,12 +65,15 @@ const DatasetsTab = () => {
     const [selectedType, setSelectedType] = useState<string>("all"); // 数据集类型筛选状态
     const [isTopLevel, setIsTopLevel] = useState<boolean | "all">("all");
     const [institutionId, setInstitutionId] = useState<string[] | null>(null);
-    // 根据用户角色设置默认审核状态筛选
+    // 根据用户角色设置默认审核状态筛选和是否显示“只看自己”选项
+    let showOnlyOwn = false;
     const initialReviewStatus = (() => {
         const roles = getCurrentUserRolesFromSession();
         if (roles.includes(PermissionRoles.INSTITUTION_SUPERVISOR) || roles.includes(PermissionRoles.DATASET_APPROVER)) {
+            showOnlyOwn = true;
             return "PENDING_INSTITUTION_REVIEW"; // 机构管理员和机构数据集审核员默认选待机构审核
         } else if (roles.includes(PermissionRoles.PLATFORM_ADMIN)) {
+            showOnlyOwn = true;
             return "PENDING_PLATFORM_REVIEW"; // 平台管理员默认选待平台审核
         } else {
             return "ALL"; // 其他角色默认选全部
@@ -575,15 +578,18 @@ const DatasetsTab = () => {
                             {/* 右侧按钮组 */}
                             <div className="flex flex-wrap gap-2 justify-end">
                                 {/* 只看自己开关 */}
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm">只看自己</span>
-                                    <Switch
-                                        checked={filterByCurrentUser}
-                                        onCheckedChange={(checked) => {
-                                            setFilterByCurrentUser(checked);
-                                        }}
-                                    />
-                                </div>
+                                {showOnlyOwn && (
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm">只看自己</span>
+                                        <Switch
+                                            checked={filterByCurrentUser}
+                                            onCheckedChange={(checked) => {
+                                                setFilterByCurrentUser(checked);
+                                            }}
+                                        />
+                                    </div>
+                                )}
+
 
                                 {/* 刷新按钮 */}
                                 <Button variant="outline"

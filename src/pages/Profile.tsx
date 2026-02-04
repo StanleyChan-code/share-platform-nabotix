@@ -175,7 +175,7 @@ const Profile = () => {
                     {/* 用户信息卡片 */}
                     <Card
                         className="bg-gradient-to-br from-white to-blue-50/30 border-blue-200/50 shadow-lg hover:shadow-xl transition-shadow duration-300">
-                        <CardContent className="p-6">
+                        <CardContent className="py-4 px-6">
                             <div className="flex items-center gap-4">
                                 {/* 用户头像区域 */}
                                 <div
@@ -206,21 +206,15 @@ const Profile = () => {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                    <div className="flex flex-col sm:flex-row items-center gap-4 text-sm text-muted-foreground">
                                         <div className="flex items-center gap-1">
                                             <Building className="h-4 w-4"/>
-                                            <span
-                                                className="truncate max-w-[160px]">{institution?.fullName || '未设置机构'}</span>
+                                            <span className="truncate max-w-80">{institution?.fullName || '未设置机构'}</span>
                                         </div>
-                                        <div className="flex items-center gap-1">
-                                            <Calendar className="h-4 w-4"/>
-                                            <span>注册 {userProfile?.user.createdAt ? formatDate(userProfile.user.createdAt) : '未知'}</span>
-                                        </div>
-
 
                                         <div className="flex items-center gap-2">
-                                            <div className="p-2 bg-amber-100 rounded-lg">
-                                                <Star className="h-2 w-2 text-amber-600"/>
+                                            <div className="p-1 bg-amber-100 rounded-lg">
+                                                <Star className="h-3 w-3 text-amber-600"/>
                                             </div>
                                             <div>
                                                 <p className="text-sm font-medium text-gray-700">

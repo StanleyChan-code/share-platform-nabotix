@@ -386,7 +386,6 @@ const OutputDetailDialog = ({
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
-                                                        title={currentOutput.dataset.titleCn}
                                                     >
                                                         {currentOutput.dataset.titleCn}
                                                     </a>
