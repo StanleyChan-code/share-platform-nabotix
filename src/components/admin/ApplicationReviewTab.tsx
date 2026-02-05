@@ -83,7 +83,7 @@ const ApplicationReviewTab: React.FC = () => {
 
     const handleResetFilters = () => {
         setSearchTerm("");
-        setSelectedStatus(initialStatus);
+        setSelectedStatus("all");
     };
 
     const handleViewDataset = (application: Application) => {

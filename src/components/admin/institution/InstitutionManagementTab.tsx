@@ -14,7 +14,7 @@ import {
     Eye,
     EyeOff,
     Trash2,
-    Edit
+    Edit, Pencil, RefreshCw
 } from "lucide-react";
 import {
     AlertDialog,
@@ -36,7 +36,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog.tsx";
 import AddInstitutionForm from "@/components/admin/institution/AddInstitutionForm.tsx";
-import {formatDate} from "@/lib/utils.ts";
+import {cn, formatDate} from "@/lib/utils.ts";
 import InstitutionProfileTab from "@/components/admin/institution/InstitutionProfileTab.tsx";
 import {institutionApi, Institution} from "@/integrations/api/institutionApi.ts";
 import ReactPaginate from "react-paginate";
@@ -126,14 +126,9 @@ const InstitutionManagementTab = () => {
         // 防抖的useEffect会自动处理搜索
     };
 
-    const handleInstitutionAdded = () => {
+    const handleInstitutionRefresh = () => {
         // 重新获取机构数据
         fetchInstitutions(currentPage, debouncedSearchTerm);
-
-        toast({
-            title: "刷新数据",
-            description: "机构列表已更新",
-        });
     };
 
     const handlePageClick = (event: { selected: number }) => {
@@ -219,7 +214,7 @@ const InstitutionManagementTab = () => {
             <AddInstitutionForm
                 open={showAddInstitutionForm}
                 onOpenChange={setShowAddInstitutionForm}
-                onInstitutionAdded={handleInstitutionAdded}
+                onInstitutionAdded={handleInstitutionRefresh}
             />
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
@@ -234,8 +229,11 @@ const InstitutionManagementTab = () => {
                             maxLength={100}
                         />
                     </div>
-                    <Button type="submit" className="w-full sm:w-auto">
-                        搜索
+                    <Button type="button" variant="outline"
+                            disabled={loading}
+                            onClick={handleInstitutionRefresh} className="w-full sm:w-auto">
+                        <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")}/>
+                        刷新
                     </Button>
                 </form>
                 <Button
@@ -274,7 +272,13 @@ const InstitutionManagementTab = () => {
                                     <TableRow
                                         key={institution.id}
                                     >
-                                        <TableCell className="font-medium">{institution.fullName}</TableCell>
+                                        <TableCell className="font-medium">
+                                            <span onClick={(e) => {
+                                                e.stopPropagation();
+                                                setEditInstitution(institution);
+                                                setEditDialogOpen(true);
+                                            }} className="cursor-pointer hover:underline">{institution.fullName}</span>
+                                        </TableCell>
                                         <TableCell>{InstitutionTypes[institution.type]}</TableCell>
                                         <TableCell>{institution.contactPerson}</TableCell>
                                         <TableCell>{formatDate(institution.createdAt)}</TableCell>
@@ -311,21 +315,21 @@ const InstitutionManagementTab = () => {
                                                         className="h-10 w-10 p-0"
                                                         title="修改机构"
                                                     >
-                                                        <Edit className="h-4 w-4" />
+                                                        <Pencil className="h-4 w-4" />
                                                     </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            openDeleteDialog(institution.id, institution.fullName);
-                                                        }}
-                                                        disabled={!canDelete}
-                                                        className="h-10 w-10 p-0 text-red-600 hover:text-red-700"
-                                                        title="删除机构"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
+                                                    {/*<Button*/}
+                                                    {/*    variant="outline"*/}
+                                                    {/*    size="sm"*/}
+                                                    {/*    onClick={(e) => {*/}
+                                                    {/*        e.stopPropagation();*/}
+                                                    {/*        openDeleteDialog(institution.id, institution.fullName);*/}
+                                                    {/*    }}*/}
+                                                    {/*    disabled={!canDelete}*/}
+                                                    {/*    className="h-10 w-10 p-0 text-red-600 hover:text-red-700"*/}
+                                                    {/*    title="删除机构"*/}
+                                                    {/*>*/}
+                                                    {/*    <Trash2 className="h-4 w-4" />*/}
+                                                    {/*</Button>*/}
                                                 </div>
                                             </TableCell>
                                     </TableRow>
@@ -398,7 +402,8 @@ const InstitutionManagementTab = () => {
             </AlertDialog>
 
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-                <DialogContent className="max-w-3xl">
+                <DialogContent className="max-w-3xl"
+                               onInteractOutside={(e) => e.preventDefault()}>
                     <DialogHeader>
                         <DialogTitle>修改机构信息 - {editInstitution?.fullName}</DialogTitle>
                         <DialogDescription>

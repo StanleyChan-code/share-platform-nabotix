@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {ReactNode, useState} from 'react';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Badge} from '@/components/ui/badge';
 import {
@@ -331,21 +331,29 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
         }
     };
 
+    const ItemInfoLabel = ({label, value, icon}: {label: string, value: string | number, icon?: ReactNode}) => (
+        <div className="flex items-center gap-2 overflow-hidden">
+            {icon}
+            <span className="font-medium whitespace-nowrap flex-shrink-0">{label}:</span>
+            <span className="truncate" title={value.toString()}>{value}</span>
+        </div>
+    );
+
     return (
         <>
             <Card key={application.id} className="hover:shadow-md transition-shadow border-l-4 border-l-primary">
                 <CardHeader className={"pb-3"}>
-                    <div className="flex justify-between items-start gap-4">
-                        <div className="space-y-1 flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                        <div className="space-y-1 flex-1 min-w-32">
                             <CardTitle className="text-lg flex items-center gap-2">
-                            <span className="truncate text-lg hover:underline hover:cursor-pointer" onClick={() => onViewDetails(application)}>
+                            <span className="truncate text-lg hover:underline hover:cursor-pointer w-64 sm:w-full" onClick={() => onViewDetails(application)}>
                                 {application.projectTitle}
                             </span>
                             </CardTitle>
                             {application.dataset.titleCn && (
                                 <div className="text-sm text-muted-foreground flex flex-row items-center gap-2 min-w-0 flex-1 max-w-full">
                                     <Database className="h-4 w-4 flex-shrink-0"/>
-                                    <h3 className="truncate">
+                                    <h3 className="truncate w-64 sm:w-full">
                                         数据集: <span
                                         onClick={() => onViewDataset(application, 'overview')}
                                         className={"hover:underline hover:cursor-pointer"}>{application.dataset.titleCn}</span>
@@ -353,15 +361,16 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                                 </div>
                             )}
                         </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                                <Badge
-                                    variant={getStatusBadgeVariant(application.status)}
-                                    className="flex items-center whitespace-nowrap min-w-[120px] justify-center"
-                                >
-                                    {getStatusIcon(application.status)}
-                                    <span className={"text-sm"}>{getStatusText(application.status)}</span>
-                                </Badge>
-                            <div className="flex gap-1">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-shrink-0">
+                            <Badge
+                                variant={getStatusBadgeVariant(application.status)}
+                                className="flex items-center whitespace-nowrap min-w-[120px] justify-center"
+                            >
+                                {getStatusIcon(application.status)}
+                                <span className={"text-sm"}>{getStatusText(application.status)}</span>
+                            </Badge>
+                            <div className="flex flex-col md:flex-row gap-1">
+                                <div>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button
@@ -449,6 +458,7 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                                         </TooltipContent>
                                     </Tooltip>
                                 )}
+                                </div>
                                 {/* 显示审核按钮 */}
                                 {variant === 'review' && (
                                     <div className="flex gap-1">
@@ -537,62 +547,34 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                         <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                                <User className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                                <span className="font-medium">申请人:</span>
-                                <span className="truncate"
-                                      title={application.applicantName}>{application.applicantName}</span>
-                            </div>
-                            {application.providerName && (
-                                <div className="flex items-center gap-2">
-                                    <UserCheck className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                                    <span className="font-medium">数据集提供者: </span>
-                                    <span className="truncate">{application.providerName}</span>
-                                </div>
-                            )}
+                            <ItemInfoLabel label="申请人" value={application.applicantName} icon={<User className="h-4 w-4 text-muted-foreground flex-shrink-0"/>}/>
+                            <ItemInfoLabel label="数据集提供者" value={application.providerName} icon={<UserCheck className="h-4 w-4 text-muted-foreground flex-shrink-0"/>}/>
                             {application.supervisorName && (
-                                <div className="flex items-center gap-2">
-                                    <User className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                                    <span className="font-medium">机构审核人: </span>
-                                    <span className="truncate">{application.supervisorName}</span>
-                                </div>
+                                <ItemInfoLabel label="机构审核人" value={application.supervisorName} icon={<User className="h-4 w-4 text-muted-foreground flex-shrink-0"/>}/>
                             )}
-
-                            <div className="flex items-center gap-2">
-                                <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                                <span className="font-medium">申请时间:</span>
-                                <span>{formatDateTime(application.submittedAt)}</span>
-                            </div>
+                            <ItemInfoLabel label="申请时间" value={formatDateTime(application.submittedAt)} icon={<Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0"/>}/>
                         </div>
 
                         <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                                <Star className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                                <span className="font-medium">项目负责人:</span>
-                                <span className="ml-2 truncate">{application.projectLeader}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <DollarSign className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                                <span className="font-medium">资金来源:</span>
-                                <span className="ml-2 truncate">{application.fundingSource}</span>
-                            </div>
+                            <ItemInfoLabel label="项目负责人" value={application.projectLeader} icon={<Star className="h-4 w-4 text-muted-foreground flex-shrink-0"/>}/>
+                            <ItemInfoLabel label="资金来源" value={application.fundingSource} icon={<DollarSign className="h-4 w-4 text-muted-foreground flex-shrink-0"/>}/>
                         </div>
 
                         <div className="space-y-1 text-xs text-muted-foreground">
                             {application.providerReviewedAt && (
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1 overflow-hidden">
                                     <UserCheck className="h-3 w-3 text-muted-foreground flex-shrink-0"/>
                                     提供者审核: {formatDateTime(application.providerReviewedAt)}
                                 </div>
                             )}
                             {application.institutionReviewedAt && (
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1 overflow-hidden">
                                     <Settings className="h-3 w-3 text-muted-foreground flex-shrink-0"/>
                                     机构审核: {formatDateTime(application.institutionReviewedAt)}
                                 </div>
                             )}
                             {application.approvedAt && (
-                                <div className="flex items-center gap-1 text-green-600 font-medium">
+                                <div className="flex items-center gap-1 overflow-hidden text-green-600 font-medium">
                                     <CheckCircle className="h-3 w-3 flex-shrink-0"/>
                                     审结时间: {formatDateTime(application.approvedAt)}
                                 </div>
@@ -608,14 +590,14 @@ const ApplicationItem: React.FC<ApplicationItemProps> = ({
                                 <div className="text-sm mt-1 space-y-2 ml-4">
                                     <div className="flex items-start gap-2">
                                         <UserCheck className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                                        <p className="whitespace-pre-wrap break-all whitespace-pre-wrap gap-2">
+                                        <p className="whitespace-pre-wrap break-all line-clamp-3 gap-2">
                                             <span className="font-medium text-blue-600">数据集提供者意见：</span>
                                             <span>{application.providerReviewResult !== null ? application.providerNotes || "无" : "待审核"}</span>
                                         </p>
                                     </div>
                                     <div className="flex items-start gap-2">
                                         <Settings className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                                        <p className="break-all whitespace-pre-wrap gap-2">
+                                        <p className="whitespace-pre-wrap break-all line-clamp-3 gap-2">
                                             <span className="font-medium text-purple-600">机构审核意见：</span>
                                             <span>{application.institutionReviewResult !== null ? application.adminNotes || "无" : "待审核"}</span>
                                         </p>

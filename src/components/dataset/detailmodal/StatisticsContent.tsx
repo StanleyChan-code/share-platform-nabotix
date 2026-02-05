@@ -407,8 +407,8 @@ export function StatisticsContent({
                                                         </>
                                                     ) : (
                                                         <>
-                                                            <TableHead className="w-[30%] bg-slate-50/50">类别分布 (Top
-                                                                5)</TableHead>
+                                                            <TableHead className="w-[30%] bg-slate-50/50">类别分布
+                                                                (Top 5)</TableHead>
                                                             <TableHead
                                                                 className="text-right bg-slate-50/50">众数</TableHead>
                                                         </>

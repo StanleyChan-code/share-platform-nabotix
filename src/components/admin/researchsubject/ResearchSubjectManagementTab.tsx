@@ -23,7 +23,7 @@ import {
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {useToast} from "@/hooks/use-toast";
 import {api} from "@/integrations/api/client";
-import {Plus, Edit, Save, X, Eye, EyeOff} from "lucide-react";
+import {Plus, Edit, Save, X, Eye, EyeOff, Pencil} from "lucide-react";
 import {Input} from "@/components/ui/FormValidator.tsx";
 
 interface ResearchSubject {
@@ -275,7 +275,9 @@ const ResearchSubjectManagementTab = () => {
                         <TableBody>
                             {subjects.map((subject) => (
                                 <TableRow key={subject.id}>
-                                    <TableCell className="font-medium">{subject.name}</TableCell>
+                                    <TableCell className="font-medium">
+                                        <span onClick={() => handleEdit(subject)} className="cursor-pointer hover:underline">{subject.name}</span>
+                                    </TableCell>
                                     <TableCell>{subject.nameEn || "-"}</TableCell>
                                     {/*<TableCell className="whitespace-pre-wrap break-all">{subject.description || "-"}</TableCell>*/}
                                     <TableCell>
@@ -301,7 +303,7 @@ const ResearchSubjectManagementTab = () => {
                                                 className="h-10"
                                                 onClick={() => handleEdit(subject)}
                                             >
-                                                <Edit className="h-4 w-4"/>
+                                                <Pencil className="h-4 w-4"/>
                                             </Button>
                                             {/*<Button*/}
                                             {/*  variant="outline"*/}

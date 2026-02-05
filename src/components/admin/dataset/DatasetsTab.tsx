@@ -1,4 +1,4 @@
-import React, {useCallback, useRef, useState, useEffect} from 'react';
+import React, {useCallback, useRef, useState, useEffect, ReactNode} from 'react';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card.tsx';
 import {Badge} from '@/components/ui/badge.tsx';
 import {Skeleton} from '@/components/ui/skeleton.tsx';
@@ -50,6 +50,7 @@ import {refreshDatasetPendingCount} from "@/lib/pendingCountsController";
 const DatasetsTab = () => {
     const [filterByCurrentUser, setFilterByCurrentUser] = useState(false);
     const [selectedDataset, setSelectedDataset] = React.useState<any>(null);
+    const [datasetDefaultTab, setDatasetDefaultTab] = React.useState<string>('overview');
     const [isDatasetModalOpen, setIsDatasetModalOpen] = React.useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
     const [datasetToDelete, setDatasetToDelete] = React.useState<Dataset | null>(null);
@@ -252,6 +253,22 @@ const DatasetsTab = () => {
     };
 
     const handleViewDataset = (dataset: Dataset) => {
+
+        // 检查是否有待审核的版本，如果是高级查询模式，则默认跳转到版本标签页
+        if (dataset && dataset.versions) {
+            const hasPendingVersion = dataset.versions.some(
+                (version: any) =>
+                    version.institutionApproved === null ||
+                    (version.institutionApproved && version.approved === null)
+            );
+            if (hasPendingVersion) {
+                setDatasetDefaultTab('versions');
+            } else {
+                setDatasetDefaultTab('overview');
+            }
+        } else {
+            setDatasetDefaultTab('overview');
+        }
         setSelectedDataset(dataset);
         setIsDatasetModalOpen(true);
     };
@@ -309,6 +326,16 @@ const DatasetsTab = () => {
             paginatedListRef.current.refresh();
         }
     };
+
+    const ItemInfoLabel = ({label, value, icon}: {label: string, value: string | number, icon?: ReactNode}) => (
+        <div className="flex items-center gap-2 overflow-hidden">
+            {icon}
+            <span className="font-medium whitespace-nowrap flex-shrink-0">{label}:</span>
+            <span className="truncate" title={value.toString()}>
+                {value}
+            </span>
+        </div>
+    );
 
     const renderDatasetItem = (dataset: Dataset) => (
         <Card key={dataset.id} className="hover:shadow-md transition-shadow border-l-4 border-l-primary">
@@ -397,65 +424,23 @@ const DatasetsTab = () => {
             <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                     <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                            <span className="font-medium">数据集负责人:</span>
-                            <span className="truncate" title={dataset.datasetLeader}>
-                {dataset.datasetLeader}
-              </span>
-                        </div>
+                        <ItemInfoLabel label="数据集负责人" value={dataset.datasetLeader} icon={<User className="h-4 w-4 text-muted-foreground flex-shrink-0"/>}/>
                         {dataset.provider && (
-                            <div className="flex items-center gap-2">
-                                <UserCheck className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                                <span className="font-medium">数据集提供者: </span>
-                                <span className="truncate">
-                  {dataset.provider.realName}
-                </span>
-                            </div>
+                            <ItemInfoLabel label="数据集提供者" value={dataset.provider.realName} icon={<UserCheck className="h-4 w-4 text-muted-foreground flex-shrink-0"/>}/>
                         )}
-                        <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                            <span className="font-medium">创建时间:</span>
-                            <span>{formatDateTime(dataset.createdAt)}</span>
-                        </div>
+                        <ItemInfoLabel label="创建时间" value={formatDateTime(dataset.createdAt)} icon={<Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0"/>}/>
                     </div>
 
                     <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                            <Building className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                            <span className="font-medium">采集单位:</span>
-                            <span className="truncate" title={dataset.dataCollectionUnit}>
-                {dataset.dataCollectionUnit}
-              </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                            <span className="font-medium">版本数:</span>
-                            <span>{dataset.versions.length}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <CalendarCheck className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                            <span className="font-medium">首次发布时间:</span>
-                            <span className="truncate">{formatDateTime(dataset.firstPublishedDate) || '未发布'}</span>
-                        </div>
+                        <ItemInfoLabel label="采集单位" value={dataset.dataCollectionUnit} icon={<Building className="h-4 w-4 text-muted-foreground flex-shrink-0"/>}/>
+                        <ItemInfoLabel label="版本数" value={dataset.versions.length} icon={<FileText className="h-4 w-4 text-muted-foreground flex-shrink-0"/>}/>
+                        <ItemInfoLabel label="首次发布时间" value={formatDateTime(dataset.firstPublishedDate) || '未发布'} icon={<CalendarCheck className="h-4 w-4 text-muted-foreground flex-shrink-0"/>}/>
                     </div>
 
                     <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                            <Target className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                            <span className="font-medium">学科领域:</span>
-                            <span>{dataset.subjectArea?.name || '未指定'}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <BookOpen className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                            <span className="font-medium">数据集类型:</span>
-                            <span>{DatasetTypes[dataset.type as keyof typeof DatasetTypes] || dataset.type}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                            <span className="font-medium">更新时间:</span>
-                            <span>{formatDateTime(dataset.updatedAt)}</span>
-                        </div>
+                        <ItemInfoLabel label="学科领域" value={dataset.subjectArea?.name || '未指定'} icon={<Target className="h-4 w-4 text-muted-foreground flex-shrink-0"/>}/>
+                        <ItemInfoLabel label="数据集类型" value={DatasetTypes[dataset.type as keyof typeof DatasetTypes] || dataset.type} icon={<BookOpen className="h-4 w-4 text-muted-foreground flex-shrink-0"/>}/>
+                        <ItemInfoLabel label="更新时间" value={formatDateTime(dataset.updatedAt)} icon={<Clock className="h-4 w-4 text-muted-foreground flex-shrink-0"/>}/>
                     </div>
                 </div>
             </CardContent>
@@ -718,6 +703,7 @@ const DatasetsTab = () => {
                             // 关闭模态框后刷新列表
                             handleRefresh();
                         }}
+                        defaultTab={datasetDefaultTab}
                     />
                 )}
 

@@ -415,7 +415,7 @@ const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
                                                         {item.date ? formatDate(item.date) : '待处理'}
                                                     </div>
                                                     {item.notes && (
-                                                        <div className="mt-2 p-2 bg-muted rounded text-sm">
+                                                        <div className="mt-2 p-2 whitespace-pre-wrap break-all bg-muted rounded text-sm">
                                                             {item.notes}
                                                         </div>
                                                     )}

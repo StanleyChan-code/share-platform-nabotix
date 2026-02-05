@@ -373,8 +373,7 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
         </div>
 
         {/* 手机号与验证码行 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="md:col-span-2 space-y-2">
+          <div className="space-y-2">
             <Label htmlFor="signup-phone" className="text-sm font-medium flex items-center gap-1">
               手机号 <span className="text-red-500">*</span>
             </Label>
@@ -395,7 +394,6 @@ const SignupTab = ({ phone, setPhone, onSignupSuccess }: SignupTabProps) => {
                   errorMessage="请输入有效的手机号码"
               />
             </div>
-          </div>
 
           <div className="space-y-2">
             <Label htmlFor="signup-verification-code" className="text-sm font-medium">

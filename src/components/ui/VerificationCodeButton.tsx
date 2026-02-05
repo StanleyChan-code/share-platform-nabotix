@@ -146,6 +146,7 @@ const VerificationCodeButton = React.forwardRef<HTMLButtonElement, VerificationC
     return (
       <Button
         ref={ref}
+        type="button"
         onClick={handleSendCode}
         disabled={isDisabled}
         className={cn(className)}

@@ -28,7 +28,7 @@ export function DatasetDetailModal({
                                        onOpenChange,
                                        useAdvancedQuery = false,
                                        onDatasetUpdated,
-                                       defaultTab: propDefaultTab = 'overview'
+                                       defaultTab: propDefaultTab = null
                                    }: DatasetDetailModalProps) {
     const [detailDataset, setDetailDataset] = useState<any>(null);
     const [loading, setLoading] = useState<boolean>(true);
@@ -38,11 +38,6 @@ export function DatasetDetailModal({
     const [parentDataset, setParentDataset] = useState<Dataset>(null);
     const [followUpModals, setFollowUpModals] = useState<{ [key: string]: boolean }>({}); // 管理随访数据集对话框
     const [defaultTab, setDefaultTab] = useState<string>(propDefaultTab);
-
-    // 更新默认标签页当外部属性变化时
-    useEffect(() => {
-        setDefaultTab(propDefaultTab);
-    }, [propDefaultTab]);
 
     // Fetch detailed dataset with timeline when modal opens
     useEffect(() => {
@@ -90,23 +85,12 @@ export function DatasetDetailModal({
                     }
                 }
 
-                // 检查是否有待审核的版本，如果是高级查询模式，则默认跳转到版本标签页
-                if (useAdvancedQuery && datasetResponse?.data?.versions) {
-
-                    const hasPendingVersion = datasetResponse?.data?.versions.some(
-                        (version: any) =>
-                            version.institutionApproved === null ||
-                            (version.institutionApproved && version.approved === null)
-                    );
-
-                    if (hasPendingVersion) {
-                        setDefaultTab('versions');
-                    } else {
-                        setDefaultTab(propDefaultTab); // 使用传入的默认标签页
-                    }
+                if (!propDefaultTab) {
+                    setDefaultTab('overview');
                 } else {
                     setDefaultTab(propDefaultTab); // 使用传入的默认标签页
                 }
+
             } catch (err) {
                 console.error('Error fetching detailed dataset:', err);
                 setError('获取数据集详情时发生错误');
@@ -135,6 +119,8 @@ export function DatasetDetailModal({
     useEffect(() => {
         if (propDefaultTab) {
             setDefaultTab(propDefaultTab);
+        } else {
+            setDefaultTab('overview');
         }
     }, [propDefaultTab]);
 
@@ -247,7 +233,7 @@ export function DatasetDetailModal({
                                                 onClick={() => handleOpenFollowUp(followup)}
                                             >
                                                 <Link2 className="h-4 w-4"/>
-                                                <span className="truncate break-all whitespace-pre-wrap line-clamp-1 max-w-36">{followup.titleCn}</span>
+                                                <span className="truncate break-all whitespace-pre-wrap line-clamp-1 max-w-64">{followup.titleCn}</span>
                                                 <ArrowRight className="h-3 w-3"/>
                                             </Button>
                                         ))}
